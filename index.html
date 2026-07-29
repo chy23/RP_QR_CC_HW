@@ -264,11 +264,14 @@
                         </ul>
                     </div>
 
-                    <div class="mb-4 flex items-center justify-between">
-                        <label class="font-semibold">條碼寬度 (全域預設)：</label>
-                        <span id="tab3-visual-size-text" class="text-sm font-mono text-blue-600 font-bold">7.0 cm</span>
+                    <div class="mb-4 border p-3 rounded bg-gray-50">
+                        <label class="font-semibold block mb-2 text-sm text-gray-700">全域條碼預設尺寸 (公分)：</label>
+                        <div class="flex gap-2 items-center">
+                            寬: <input type="number" id="tab3-visual-w" value="3.5" step="0.1" class="border p-1 rounded w-16 text-center" onchange="updateVisualSize()">
+                            高: <input type="number" id="tab3-visual-h" value="2.0" step="0.1" class="border p-1 rounded w-16 text-center" onchange="updateVisualSize()">
+                            <button onclick="updateVisualSize()" class="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded ml-auto">套用全部</button>
+                        </div>
                     </div>
-                    <input type="range" id="tab3-visual-size" min="2" max="15" step="0.1" value="7" class="w-full mb-4" oninput="updateVisualSize()">
                     <p class="text-xs text-gray-500 mb-6">提示：您也可以直接拖曳紅色條碼框的右下角，自由調整個別的長寬大小。</p>
 
                     <button onclick="generateVisualFloatingPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 w-full rounded shadow font-bold text-lg">確認套印並下載</button>
@@ -1955,21 +1958,40 @@
         let visualQrStates = []; // [{ pageIndex, x, y, size, keep, stamp }]
 
         function updateVisualSize() {
-            const sizeCm = parseFloat(document.getElementById('tab3-visual-size').value) || 7;
-            const textEl = document.getElementById('tab3-visual-size-text');
-            if(textEl) textEl.innerText = sizeCm.toFixed(1) + ' cm';
+            const wCm = parseFloat(document.getElementById('tab3-visual-w').value) || 3.5;
+            const hCm = parseFloat(document.getElementById('tab3-visual-h').value) || 2.0;
             
-            // update all qr boxes
             const ptToCm = 1 / 28.346;
+            const widthPt = wCm / ptToCm;
+            const heightPt = hCm / ptToCm;
             
             const boxes = document.querySelectorAll('.qr-box');
             boxes.forEach(box => {
-                const widthPt = sizeCm / ptToCm;
-                const heightPt = widthPt * 1.1;
-                
                 box.style.width = (widthPt * visualPdfScale) + 'px';
                 box.style.height = (heightPt * visualPdfScale) + 'px';
             });
+        }
+        
+        function snapQr(pageIndex, pos) {
+            const wrapper = document.getElementById('pdf-zoom-container').children[pageIndex - 1];
+            const box = document.getElementById('qr-box-' + pageIndex);
+            if(!wrapper || !box) return;
+            
+            const margin = 20; // 20px padding from edge
+            
+            if(pos === 'tl') {
+                box.style.left = margin + 'px';
+                box.style.top = margin + 'px';
+            } else if(pos === 'tr') {
+                box.style.left = (wrapper.offsetWidth - box.offsetWidth - margin) + 'px';
+                box.style.top = margin + 'px';
+            } else if(pos === 'bl') {
+                box.style.left = margin + 'px';
+                box.style.top = (wrapper.offsetHeight - box.offsetHeight - margin) + 'px';
+            } else if(pos === 'br') {
+                box.style.left = (wrapper.offsetWidth - box.offsetWidth - margin) + 'px';
+                box.style.top = (wrapper.offsetHeight - box.offsetHeight - margin) + 'px';
+            }
         }
 
         async function renderVisualPdfPreview() {
@@ -2023,6 +2045,12 @@
                             <div class="font-bold text-gray-700 border-b pb-1 mb-1">第 ${i} 頁</div>
                             <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="keep-page-${i}" checked onchange="toggleBox(${i})"> 保留此頁匯出</label>
                             <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="stamp-page-${i}" ${i===1?'checked':''} onchange="toggleBox(${i})"> 在此頁蓋條碼</label>
+                            <div class="flex gap-1 mt-1 justify-between">
+                                <button onclick="snapQr(${i}, 'tl')" class="text-xs bg-gray-100 border hover:bg-gray-200 px-1.5 py-0.5 rounded shadow-sm">左上</button>
+                                <button onclick="snapQr(${i}, 'tr')" class="text-xs bg-gray-100 border hover:bg-gray-200 px-1.5 py-0.5 rounded shadow-sm">右上</button>
+                                <button onclick="snapQr(${i}, 'bl')" class="text-xs bg-gray-100 border hover:bg-gray-200 px-1.5 py-0.5 rounded shadow-sm">左下</button>
+                                <button onclick="snapQr(${i}, 'br')" class="text-xs bg-gray-100 border hover:bg-gray-200 px-1.5 py-0.5 rounded shadow-sm">右下</button>
+                            </div>
                         `;
                         wrapper.appendChild(controls);
                         
@@ -2148,11 +2176,6 @@
                     const originalPdfBytes = await fileInput.files[0].arrayBuffer();
                     const mergedPdf = await PDFLib.PDFDocument.create();
                     
-                    const sizeCm = parseFloat(document.getElementById('tab3-visual-size').value) || 7;
-                    const cmToPt = 28.346;
-                    const qrWidthPt = sizeCm * cmToPt;
-                    const qrHeightPt = qrWidthPt * 1.1;
-
                     for (const student of db.students) {
                         const pdfDoc = await PDFLib.PDFDocument.load(originalPdfBytes);
                         const pages = pdfDoc.getPages();
