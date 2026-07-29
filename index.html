@@ -1164,6 +1164,24 @@
             }
         }
 
+
+        function updateTaskRange(taskId, noticeName, rangeValue) {
+            if (!db.ranges) db.ranges = [];
+            const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
+            if (existing) {
+                existing.range = rangeValue;
+            } else {
+                db.ranges.push({ taskId, noticeName, range: rangeValue });
+            }
+            saveData();
+        }
+
+        function getTaskRange(taskId, noticeName) {
+            if (!db.ranges) return '';
+            const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
+            return existing ? existing.range : '';
+        }
+
 function getSubjects() {
             const subjects = new Set();
             db.tasks.forEach(t => {
