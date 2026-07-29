@@ -133,6 +133,16 @@
                     <ul id="task-list" class="mt-2 h-64 overflow-y-auto bg-white border rounded p-2"></ul>
                 </div>
             </div>
+            <div class="mt-4 border p-4 rounded bg-blue-50">
+                <h3 class="text-lg font-semibold mb-2 text-blue-800">☁️ 自動同步 Google 試算表設定</h3>
+                <p class="text-sm text-gray-700 mb-2">請將 Google Apps Script 的「網頁應用程式網址」貼在此處。設定後，每次掃描確認登記時，系統會在背景自動上傳資料至您的試算表。</p>
+                <div class="flex gap-2 mb-2">
+                    <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/..." class="border p-2 flex-grow rounded">
+                    <button onclick="saveGasUrl()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">儲存網址</button>
+                    <button onclick="testGasUrl()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">測試連線</button>
+                </div>
+                <div id="gas-status" class="text-sm font-bold"></div>
+            </div>
             <div class="mt-6 flex justify-between">
                 <button onclick="exportRawCodes()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow">匯出防偽代碼清單 (Excel)</button>
                 <button onclick="resetData()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow">清除所有系統資料</button>
@@ -774,6 +784,75 @@
         let currentStatSubject = '國語';
         let scanSession = { active: false, dateStr: '', tasks: [], records: [] };
 
+
+        // --- Google Sheets Sync Logic ---
+        let gasUrl = localStorage.getItem('rp_qr_gas_url') || '';
+        
+        // Wait for DOM
+        setTimeout(() => {
+            const el = document.getElementById('gas-url');
+            if(el) el.value = gasUrl;
+        }, 500);
+
+        function saveGasUrl() {
+            const url = document.getElementById('gas-url').value.trim();
+            localStorage.setItem('rp_qr_gas_url', url);
+            gasUrl = url;
+            document.getElementById('gas-status').innerHTML = '<span class="text-green-600">✅ 網址已儲存！</span>';
+            setTimeout(() => { document.getElementById('gas-status').innerHTML = ''; }, 3000);
+        }
+
+        function testGasUrl() {
+            if(!gasUrl) {
+                alert('請先填寫並儲存網址！'); return;
+            }
+            document.getElementById('gas-status').innerHTML = '<span class="text-blue-600">測試連線中...</span>';
+            fetch(gasUrl, {
+                method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'ping' })
+            }).then(res => res.json())
+              .then(data => {
+                  if(data.status === 'success') {
+                      document.getElementById('gas-status').innerHTML = '<span class="text-green-600">✅ 連線成功！試算表可正常接收資料。</span>';
+                  } else {
+                      document.getElementById('gas-status').innerHTML = '<span class="text-red-600">❌ 連線失敗：' + JSON.stringify(data) + '</span>';
+                  }
+              }).catch(err => {
+                  document.getElementById('gas-status').innerHTML = '<span class="text-red-600">❌ 網路錯誤，請確保網址正確且 GAS 權限設為「所有人」。</span>';
+              });
+        }
+
+        function syncToGoogleSheets(newRecordsArray) {
+            if(!gasUrl || newRecordsArray.length === 0) return;
+            
+            const payload = newRecordsArray.map(r => {
+                const student = db.students.find(s => s.id === r.studentId);
+                const task = db.tasks.find(t => t.id === r.taskId);
+                return {
+                    timestamp: r.timestamp || r.fullTimestamp,
+                    studentName: student ? student.name : '未知學生',
+                    subject: task ? task.subject : '',
+                    taskName: task ? task.name : '未知作業',
+                    range: r.noticeName || '',
+                    status: '已繳交'
+                };
+            });
+            
+            fetch(gasUrl, {
+                method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'upload_records',
+                    records: payload
+                })
+            }).then(res => res.json()).then(data => {
+                console.log("GAS Sync Success:", data);
+            }).catch(err => {
+                console.error("GAS Sync Error:", err);
+            });
+        }
+
         function initScanSessionDropdown() {
             const container = document.getElementById('scan-session-tasks');
             if(!container) return;
@@ -922,6 +1001,19 @@
 
             saveData();
             renderStatistics();
+            
+            // Sync to Google Sheets
+            const recordsToSync = scanSession.records.map(r => {
+                const taskDef = scanSession.tasks.find(t => t.id === r.taskId);
+                const taskRange = taskDef ? taskDef.range : '';
+                return {
+                    studentId: r.studentId,
+                    taskId: r.taskId,
+                    noticeName: taskRange,
+                    timestamp: r.fullTimestamp
+                };
+            });
+            syncToGoogleSheets(recordsToSync);
             
             scanSession.active = false;
             document.getElementById('session-modal').style.display = 'none';
