@@ -265,16 +265,28 @@
                     </div>
 
                     <div class="mb-4 flex items-center justify-between">
-                        <label class="font-semibold">條碼寬度：</label>
+                        <label class="font-semibold">條碼寬度 (全域預設)：</label>
                         <span id="tab3-visual-size-text" class="text-sm font-mono text-blue-600 font-bold">7.0 cm</span>
                     </div>
                     <input type="range" id="tab3-visual-size" min="2" max="15" step="0.1" value="7" class="w-full mb-4" oninput="updateVisualSize()">
+                    <p class="text-xs text-gray-500 mb-6">提示：您也可以直接拖曳紅色條碼框的右下角，自由調整個別的長寬大小。</p>
 
                     <button onclick="generateVisualFloatingPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 w-full rounded shadow font-bold text-lg">確認套印並下載</button>
                 </div>
 
-                <div class="lg:col-span-2 border-2 border-dashed border-gray-300 rounded bg-gray-100 overflow-y-auto p-4 flex flex-col gap-6" id="visual-pdf-preview" style="height: 700px; display:none;">
-                    <!-- Pages will be injected here -->
+                <div class="lg:col-span-2 border-2 border-dashed border-gray-300 rounded bg-gray-100 overflow-auto p-4 flex flex-col gap-6" id="visual-pdf-preview" style="height: 700px; display:none; position: relative;">
+                    <!-- Zoom Controls -->
+                    <div id="pdf-zoom-controls" class="sticky top-0 left-0 z-50 flex justify-end mb-2 gap-2 opacity-90">
+                        <div class="bg-white border rounded shadow p-1 flex items-center space-x-2">
+                            <span class="text-sm font-bold text-gray-700 ml-2">🔍 預覽縮放：</span>
+                            <button onclick="changePdfZoom(-0.1)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded font-bold">-</button>
+                            <span id="pdf-zoom-text" class="text-sm font-mono text-blue-600 font-bold w-12 text-center">100%</span>
+                            <button onclick="changePdfZoom(0.1)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded font-bold">+</button>
+                        </div>
+                    </div>
+                    <div id="pdf-zoom-container" style="transform-origin: top left; transition: transform 0.2s ease; display: flex; flex-direction: column; gap: 24px;">
+                        <!-- Pages will be injected here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -762,7 +774,7 @@
         function initScanSessionDropdown() {
             const container = document.getElementById('scan-session-tasks');
             if(!container) return;
-            container.innerHTML = '';
+            document.getElementById('pdf-zoom-container').innerHTML = '';
             db.tasks.forEach(t => {
                 const row = document.createElement('div');
                 row.className = "flex items-center justify-between text-sm hover:bg-gray-100 p-1 rounded w-full border-b last:border-0";
@@ -1975,8 +1987,9 @@
                     
                     const container = document.getElementById('visual-pdf-preview');
                     if(!container) return;
-                    container.innerHTML = '';
                     container.style.display = 'flex';
+                    document.getElementById('pdf-zoom-container').innerHTML = '';
+                    
                     visualQrStates = [];
                     
                     const page1 = await pdf.getPage(1);
@@ -2027,7 +2040,7 @@
                         
                         setupDraggable(box, wrapper);
                         
-                        container.appendChild(wrapper);
+                        document.getElementById('pdf-zoom-container').appendChild(wrapper);
                     }
                     updateVisualSize();
                 } catch(e) {
@@ -2052,6 +2065,18 @@
             }
         }
 
+        
+        let pdfZoomLevel = 1.0;
+        
+        function changePdfZoom(delta) {
+            pdfZoomLevel += delta;
+            if(pdfZoomLevel < 0.5) pdfZoomLevel = 0.5;
+            if(pdfZoomLevel > 3.0) pdfZoomLevel = 3.0;
+            
+            document.getElementById('pdf-zoom-text').innerText = Math.round(pdfZoomLevel * 100) + '%';
+            document.getElementById('pdf-zoom-container').style.transform = `scale(${pdfZoomLevel})`;
+        }
+
         let currentDragBox = null;
         let currentDragContainer = null;
         let dragStartX = 0;
@@ -2059,8 +2084,9 @@
 
         document.addEventListener('mousemove', function(e) {
             if(!currentDragBox) return;
-            const dx = e.clientX - dragStartX;
-            const dy = e.clientY - dragStartY;
+            // Adjust drag speed based on zoom level
+            const dx = (e.clientX - dragStartX) / (typeof pdfZoomLevel !== 'undefined' ? pdfZoomLevel : 1);
+            const dy = (e.clientY - dragStartY) / (typeof pdfZoomLevel !== 'undefined' ? pdfZoomLevel : 1);
             dragStartX = e.clientX;
             dragStartY = e.clientY;
             
