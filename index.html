@@ -1123,22 +1123,24 @@
                     ctx.fillStyle = '#000000';
                     ctx.textBaseline = 'top';
                     
+                    const maxTextWidth = customW - textX - margin;
+                    
                     // Name
                     ctx.font = `bold ${customH * 0.22}px sans-serif`;
-                    ctx.fillText(student.name, textX, margin + (customH * 0.05));
+                    ctx.fillText(student.name, textX, margin + (customH * 0.05), maxTextWidth);
                     
                     // Seat
                     ctx.font = `${customH * 0.18}px monospace`;
-                    ctx.fillText(`座號: ${student.id}`, textX, margin + (customH * 0.35));
+                    ctx.fillText(`座號: ${student.id}`, textX, margin + (customH * 0.35), maxTextWidth);
                     
                     // Task Name
                     ctx.font = `${customH * 0.18}px sans-serif`;
                     const taskStr = isSimplified ? task.name : `[${task.subject}] ${task.name}`;
-                    ctx.fillText(taskStr, textX, margin + (customH * 0.65));
+                    ctx.fillText(taskStr, textX, margin + (customH * 0.65), maxTextWidth);
                     
                     if (!isSimplified && noticeName) {
                         ctx.fillStyle = '#b91c1c';
-                        ctx.fillText(noticeName, textX, margin + (customH * 0.85));
+                        ctx.fillText(noticeName, textX, margin + (customH * 0.85), maxTextWidth);
                     }
                     
                     resolve(canvas.toDataURL('image/png'));
