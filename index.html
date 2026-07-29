@@ -209,7 +209,7 @@
                         </div>
                     </div>
                     
-                    <label class="block mb-1 font-semibold">條碼定位與尺寸 (公分)：</label>
+                    <label class="block mb-1 font-semibold">條碼定位與標籤寬度 (公分)：</label>
                     <div class="flex gap-2 mb-2">
                         <select id="tab3-anchor" class="border p-1 w-full rounded" onchange="applyAnchor()">
                             <option value="custom">自訂座標微調</option>
@@ -1149,7 +1149,7 @@
 
                             // We pass custom pixel width/height to createLabelImage so the resolution is sharp. 
                             // 7cm x 2.9cm is about 2.4 aspect ratio. Let's use 600x250.
-                            const dataUrl = await createLabelImage(student, task, '', true, 600, 400);
+                            const dataUrl = await createLabelImage(student, task, '', true, 700, 290);
                             const imgBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
                             const pdfImg = await pdfDoc.embedPng(imgBytes);
 
@@ -1270,6 +1270,38 @@
             fileReader.readAsArrayBuffer(fileInput.files[0]);
         }
 
+        
+        async function previewWord() {
+            const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
+            if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
+            
+            showLoading();
+            setTimeout(async () => {
+                const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id));
+                
+                let tableHtml = '<table class="w-full border-collapse border border-gray-300 text-sm">';
+                tableHtml += '<thead><tr><th class="border border-gray-300 p-2">學生姓名</th>';
+                for (const t of selectedTasks) {
+                    tableHtml += `<th class="border border-gray-300 p-2">[${t.subject}] ${t.name}</th>`;
+                }
+                tableHtml += '</tr></thead><tbody>';
+
+                for (const student of db.students) {
+                    tableHtml += `<tr><td class="border border-gray-300 p-2 text-center font-bold">${student.name}</td>`;
+                    for (const task of selectedTasks) {
+                        const dataUrl = await createLabelImage(student, task, '', true, 350, 145);
+                        tableHtml += `<td class="border border-gray-300 p-2 text-center"><img src="${dataUrl}" style="width: 140px; height: 58px; margin: 0 auto;"></td>`;
+                    }
+                    tableHtml += '</tr>';
+                }
+                tableHtml += '</tbody></table>';
+
+                document.getElementById('word-preview-content').innerHTML = tableHtml;
+                document.getElementById('word-preview-container').classList.remove('hidden');
+                hideLoading();
+            }, 100);
+        }
+
         async function generateWord() {
             const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
             if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
@@ -1295,7 +1327,7 @@
                             new TableCell({ children: [new Paragraph(student.name)] })
                         ];
                         for (const task of selectedTasks) {
-                            const dataUrl = await createLabelImage(student, task, '', true, 600, 400);
+                            const dataUrl = await createLabelImage(student, task, '', true, 700, 290);
                             const base64Data = dataUrl.split(',')[1];
                             studentCells.push(new TableCell({
                                 children: [
@@ -1303,7 +1335,7 @@
                                         children: [
                                             new ImageRun({
                                                 data: Uint8Array.from(atob(base64Data), c => c.charCodeAt(0)),
-                                                transformation: { width: 150, height: 100 }
+                                                transformation: { width: 140, height: 58 }
                                             })
                                         ]
                                     })
