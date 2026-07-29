@@ -11,7 +11,7 @@
     <!-- qrcode (base64 generator) -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <!-- pdf-lib -->
-    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.5/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <!-- SheetJS (xlsx) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- docx -->
@@ -220,11 +220,36 @@
         let db = { students: [], tasks: [], records: [] };
         const STORAGE_KEY = 'doc_productivity_db';
 
+        const DEFAULT_TASKS = [
+            // 固定簿冊
+            { id: 't_fixed_1', subject: '國語', name: '國習', type: 'fixed' },
+            { id: 't_fixed_2', subject: '國語', name: '甲本', type: 'fixed' },
+            { id: 't_fixed_3', subject: '國語', name: '乙本', type: 'fixed' },
+            { id: 't_fixed_4', subject: '數學', name: '數習', type: 'fixed' },
+            { id: 't_fixed_5', subject: '數學', name: '數練', type: 'fixed' },
+            { id: 't_fixed_6', subject: '社會', name: '社作', type: 'fixed' },
+            { id: 't_fixed_7', subject: '社會', name: '社習', type: 'fixed' },
+            // 浮動卷單
+            { id: 't_float_1', subject: '國語', name: '國卷', type: 'floating' },
+            { id: 't_float_2', subject: '國語', name: '國學單', type: 'floating' },
+            { id: 't_float_3', subject: '國語', name: '作文', type: 'floating' },
+            { id: 't_float_4', subject: '數學', name: '數卷', type: 'floating' },
+            { id: 't_float_5', subject: '社會', name: '社卷', type: 'floating' },
+            { id: 't_float_6', subject: '聯絡簿', name: '通知單', type: 'floating' }
+        ];
+
         function loadData() {
             const data = localStorage.getItem(STORAGE_KEY);
             if (data) {
                 db = JSON.parse(data);
             }
+            
+            // 如果 tasks 為空，載入預設的作業清單
+            if (db.tasks.length === 0) {
+                db.tasks = [...DEFAULT_TASKS];
+                saveData();
+            }
+
             renderStudents();
             renderTasks();
             initAllSelects();
@@ -390,7 +415,7 @@
 
         function resetData() {
             if(confirm("警告：這將清除所有學生、作業與掃描紀錄！確定嗎？")) {
-                db = { students: [], tasks: [], records: [] };
+                db = { students: [], tasks: [...DEFAULT_TASKS], records: [] };
                 saveData();
                 renderStudents();
                 renderTasks();
