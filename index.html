@@ -112,10 +112,21 @@
                 <div class="md:col-span-1 border p-4 rounded bg-gray-50">
                     <h3 class="text-xl font-semibold mb-2">條碼輸入</h3>
                     <div class="mb-4">
-                        <input type="text" id="manual-scan-input" placeholder="手動輸入 (如: STU001-國習 或 STU001-通知單_校外教學)" class="border p-2 w-full rounded mb-2" onkeydown="if(event.key === 'Enter') handleManualScan()">
+                        <label class="block mb-2 font-semibold">外接掃描槍輸入：</label>
+                        <input type="text" id="scanner-input" class="border p-2 rounded w-full mb-2" placeholder="請將游標停在此處，使用實體掃描槍..." autofocus onkeydown="if(event.key === 'Enter') { processScan(this.value); this.value = ''; }">
+                        <button onclick="toggleCameraScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow w-full flex items-center justify-center gap-2">
+                            <span>📷</span> 開啟相機/手機鏡頭掃描
+                        </button>
+                        <div id="camera-container" class="mt-4 hidden border-2 border-dashed border-gray-300 rounded p-2 text-center bg-gray-50">
+                            <div id="reader" style="width: 100%; max-width: 500px; margin: 0 auto;"></div>
+                            <button onclick="toggleCameraScanner()" class="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm">關閉鏡頭</button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-700 mb-1">手動輸入代碼登錄：</h4>
+                        <input type="text" id="manual-scan-input" placeholder="手動輸入 (如: STU001-國習)" class="border p-2 w-full rounded mb-2" onkeydown="if(event.key === 'Enter') handleManualScan()">
                         <button onclick="handleManualScan()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full">登錄</button>
                     </div>
-                    <div id="reader" class="w-full bg-white border"></div>
                     <div class="mt-2 text-sm text-gray-600" id="scan-status">掃描器狀態：尚未啟動</div>
                 </div>
 
@@ -322,6 +333,56 @@
             { id: 't_float_5', subject: '社會', name: '社卷', type: 'floating' },
             { id: 't_float_6', subject: '聯絡簿', name: '通知單', type: 'floating' }
         ];
+
+        
+        // Camera Scanner Logic
+        let html5QrcodeScanner = null;
+        let lastScanCode = "";
+        let lastScanTime = 0;
+
+        function playBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = 800;
+                gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.1);
+            } catch(e) {}
+        }
+
+        function toggleCameraScanner() {
+            const container = document.getElementById('camera-container');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                if (!html5QrcodeScanner) {
+                    html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+                        fps: 10, 
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0,
+                        showTorchButtonIfSupported: true
+                    }, false);
+                }
+                html5QrcodeScanner.render((decodedText) => {
+                    const now = Date.now();
+                    if (decodedText === lastScanCode && (now - lastScanTime) < 2000) return;
+                    lastScanCode = decodedText;
+                    lastScanTime = now;
+                    playBeep();
+                    processScan(decodedText);
+                }, (err) => { /* ignore */ });
+            } else {
+                container.classList.add('hidden');
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.clear().catch(err => console.error(err));
+                }
+            }
+        }
 
         function loadData() {
             const data = localStorage.getItem(STORAGE_KEY);
