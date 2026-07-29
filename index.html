@@ -40,7 +40,7 @@
     <!-- 狀態設定 Modal -->
     <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex-col items-center justify-center text-gray-800" style="display: none;">
         <div class="bg-white p-6 rounded shadow-lg w-80 text-center">
-            <h3 class="text-lg font-bold mb-4">手動設定交件狀態</h3>
+            <h3 id="status-modal-title" class="text-lg font-bold mb-4">手動設定交件狀態</h3>
             <div class="flex flex-col gap-3">
                 <button onclick="setManualStatus('ontime')" class="bg-green-500 hover:bg-green-600 text-white py-2 rounded shadow">標記為「準時已交」</button>
                 <button onclick="setManualStatus('late')" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded shadow">標記為「遲交」</button>
@@ -871,8 +871,9 @@
             let headHTML = '<tr><th class="p-2 border align-bottom">姓名</th>';
             uniqueTaskKeys.forEach(k => {
                 const rangeVal = getTaskRange(k.taskId, k.noticeName);
-                headHTML += `<th class="p-2 border text-center max-w-[120px]">
-                                <div class="font-bold mb-1 truncate" title="${k.label}">${k.label}</div>
+                headHTML += `<th class="p-2 border text-center max-w-[120px] relative group">
+                                <div class="font-bold mb-1 truncate pr-4" title="${k.label}">${k.label}</div>
+                                <button onclick="toggleRecord(null, '${k.taskId}', '${k.noticeName}')" class="absolute top-2 right-1 text-gray-400 hover:text-blue-500 text-xs hidden group-hover:block" title="整欄批次設定">⚙️</button>
                                 <input type="text" placeholder="輸入範圍..." value="${rangeVal}" 
                                        onchange="updateTaskRange('${k.taskId}', '${k.noticeName}', this.value)" 
                                        class="border text-xs p-1 w-full rounded font-normal bg-gray-50 focus:bg-white text-center">
@@ -929,6 +930,7 @@
         
         function toggleRecord(studentId, taskId, noticeName) {
             currentTargetRecord = { studentId, taskId, noticeName };
+            document.getElementById('status-modal-title').innerText = studentId === null ? '整欄批次手動設定' : '手動設定交件狀態';
             document.getElementById('status-modal').style.display = 'flex';
         }
 
@@ -940,18 +942,35 @@
         function setManualStatus(statusType) {
             if(!currentTargetRecord) return;
             const { studentId, taskId, noticeName } = currentTargetRecord;
-            const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
             
             const now = new Date();
             const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 
-            if (statusType === 'missing') {
-                if (index !== -1) db.records.splice(index, 1);
+            if (studentId === null) {
+                // Batch operation
+                db.students.forEach(student => {
+                    const index = db.records.findIndex(r => r.studentId === student.id && r.taskId === taskId && r.noticeName === noticeName);
+                    if (statusType === 'missing') {
+                        if (index !== -1) db.records.splice(index, 1);
+                    } else {
+                        if (index !== -1) {
+                            db.records[index].manualStatus = statusType;
+                        } else {
+                            db.records.push({ studentId: student.id, taskId, noticeName, timestamp: timeString, manualStatus: statusType });
+                        }
+                    }
+                });
             } else {
-                if (index !== -1) {
-                    db.records[index].manualStatus = statusType;
+                // Individual operation
+                const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
+                if (statusType === 'missing') {
+                    if (index !== -1) db.records.splice(index, 1);
                 } else {
-                    db.records.push({ studentId, taskId, noticeName, timestamp: timeString, manualStatus: statusType });
+                    if (index !== -1) {
+                        db.records[index].manualStatus = statusType;
+                    } else {
+                        db.records.push({ studentId, taskId, noticeName, timestamp: timeString, manualStatus: statusType });
+                    }
                 }
             }
             
