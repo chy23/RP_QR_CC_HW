@@ -38,6 +38,34 @@
     </div>
 
     <!-- 狀態設定 Modal -->
+
+    <!-- 結算確認 Modal -->
+    <div id="session-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex-col items-center justify-center text-gray-800" style="display: none;">
+        <div class="bg-white p-6 rounded shadow-lg w-11/12 max-w-lg text-left max-h-[90vh] flex flex-col">
+            <h3 class="text-xl font-bold mb-2 border-b pb-2 text-blue-700">掃描結算清單</h3>
+            <div class="flex justify-between mb-2">
+                <span id="session-summary-task" class="font-bold text-gray-700"></span>
+                <span id="session-summary-date" class="text-sm text-gray-500"></span>
+            </div>
+            
+            <div class="flex-grow overflow-auto mb-4 border rounded p-2 bg-gray-50">
+                <div class="mb-4">
+                    <h4 class="font-bold text-green-700 mb-1 border-b border-green-200">✅ 已繳交 (<span id="session-submitted-count">0</span>)</h4>
+                    <div id="session-submitted-list" class="text-sm flex flex-wrap gap-2"></div>
+                </div>
+                <div>
+                    <h4 class="font-bold text-red-600 mb-1 border-b border-red-200">❌ 缺交名單 (<span id="session-missing-count">0</span>)</h4>
+                    <div id="session-missing-list" class="text-sm flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2">
+                <button onclick="cancelScanSession()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">取消並繼續掃描</button>
+                <button onclick="confirmScanSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow font-bold">確認缺交無誤，存入系統</button>
+            </div>
+        </div>
+    </div>
+
     <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex-col items-center justify-center text-gray-800" style="display: none;">
         <div class="bg-white p-6 rounded shadow-lg w-80 text-center">
             <h3 id="status-modal-title" class="text-lg font-bold mb-4">手動設定交件狀態</h3>
@@ -123,25 +151,48 @@
             <h2 class="text-2xl font-bold mb-4 border-b pb-2">1. 掃描與統計</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- 掃描區 -->
-                <div class="md:col-span-1 border p-4 rounded bg-gray-50">
-                    <h3 class="text-xl font-semibold mb-2">條碼輸入</h3>
-                    <div class="mb-4">
-                        <label class="block mb-2 font-semibold">外接掃描槍輸入：</label>
-                        <input type="text" id="scanner-input" class="border p-2 rounded w-full mb-2" placeholder="請將游標停在此處，使用實體掃描槍..." autofocus onkeydown="if(event.key === 'Enter') { processScan(this.value); this.value = ''; }">
-                        <button onclick="toggleCameraScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow w-full flex items-center justify-center gap-2">
+                <div class="md:col-span-1 border p-4 rounded bg-gray-50 flex flex-col">
+                    <h3 class="text-xl font-semibold mb-4 border-b pb-2">批次掃描登記</h3>
+                    
+                    <!-- 掃描前設定 -->
+                    <div id="scan-setup-area" class="mb-4">
+                        <label class="block mb-1 font-semibold text-sm">1. 登記日期：</label>
+                        <input type="date" id="scan-session-date" class="border p-2 rounded w-full mb-3" />
+                        
+                        <label class="block mb-1 font-semibold text-sm">2. 選擇作業：</label>
+                        <select id="scan-session-task" class="border p-2 rounded w-full mb-3"></select>
+                        
+                        <label class="block mb-1 font-semibold text-sm">3. 輸入範圍/備註 (如: 第一課)：</label>
+                        <input type="text" id="scan-session-range" class="border p-2 rounded w-full mb-4" placeholder="選填，可留空" />
+                        
+                        <button onclick="startScanSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded shadow w-full font-bold text-lg">開始掃描</button>
+                    </div>
+
+                    <!-- 掃描進行中區域 -->
+                    <div id="scan-active-area" class="hidden flex-col h-full">
+                        <div class="bg-blue-100 text-blue-800 p-2 rounded mb-3 text-sm border border-blue-200">
+                            <strong>目前正在掃描：</strong><br>
+                            <span id="active-session-info" class="font-bold"></span>
+                        </div>
+                        
+                        <label class="block mb-2 font-semibold">條碼輸入：</label>
+                        <input type="text" id="scanner-input" class="border p-2 rounded w-full mb-2" placeholder="使用實體掃描槍..." autofocus onkeydown="if(event.key === 'Enter') { processScan(this.value); this.value = ''; }">
+                        <button onclick="toggleCameraScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow w-full flex items-center justify-center gap-2 mb-2">
                             <span>📷</span> 開啟相機/手機鏡頭掃描
                         </button>
-                        <div id="camera-container" class="mt-4 hidden border-2 border-dashed border-gray-300 rounded p-2 text-center bg-gray-50">
+                        <div id="camera-container" class="mt-2 hidden border-2 border-dashed border-gray-300 rounded p-2 text-center bg-gray-50 mb-4">
                             <div id="reader" style="width: 100%; max-width: 500px; margin: 0 auto;"></div>
                             <button onclick="toggleCameraScanner()" class="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm">關閉鏡頭</button>
                         </div>
+                        
+                        <!-- 暫存清單 -->
+                        <div class="flex-grow border rounded bg-white p-2 mb-4 overflow-auto min-h-[150px]">
+                            <div class="text-sm text-gray-500 mb-1 border-b pb-1 font-semibold">本次已掃描 (<span id="session-buffer-count">0</span> 人)</div>
+                            <ul id="session-buffer-list" class="text-sm space-y-1"></ul>
+                        </div>
+                        
+                        <button onclick="endScanSession()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded shadow w-full font-bold text-lg mt-auto">結束並確認缺交</button>
                     </div>
-                    <div class="mb-4">
-                        <h4 class="font-semibold text-gray-700 mb-1">手動輸入代碼登錄：</h4>
-                        <input type="text" id="manual-scan-input" placeholder="手動輸入 (如: STU001-國習)" class="border p-2 w-full rounded mb-2" onkeydown="if(event.key === 'Enter') handleManualScan()">
-                        <button onclick="handleManualScan()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full">登錄</button>
-                    </div>
-                    <div class="mt-2 text-sm text-gray-600" id="scan-status">掃描器狀態：尚未啟動</div>
                 </div>
 
                 <!-- 統計區 -->
@@ -640,7 +691,7 @@
         // ==========================================
         // 動態選單更新 (Tabs 2~6)
         // ==========================================
-        function initAllSelects() {
+        function initAllSelects() { initScanSessionDropdown();
             const fixedTasks = db.tasks.filter(t => t.type === 'fixed');
             const floatingTasks = db.tasks.filter(t => t.type === 'floating');
             const allTasks = db.tasks;
@@ -711,9 +762,132 @@
         }
 
         // ==========================================
-        // Tab 1: 掃描與統計
+        // Tab 1: 掃描與統計 (Session-based)
         // ==========================================
-        let currentStatSubject = '國語'; // 預設顯示分頁
+        let currentStatSubject = '國語';
+        let scanSession = { active: false, dateStr: '', taskId: '', taskName: '', range: '', records: [] };
+
+        function initScanSessionDropdown() {
+            const select = document.getElementById('scan-session-task');
+            if(!select) return;
+            select.innerHTML = '<option value="">-- 請選擇作業 --</option>';
+            db.tasks.forEach(t => {
+                select.innerHTML += `<option value="${t.id}">[${t.subject}] ${t.name}</option>`;
+            });
+            const dateInput = document.getElementById('scan-session-date');
+            if(dateInput && !dateInput.value) {
+                const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
+                dateInput.value = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
+            }
+        }
+
+        function startScanSession() {
+            const dateVal = document.getElementById('scan-session-date').value;
+            const taskVal = document.getElementById('scan-session-task').value;
+            const rangeVal = document.getElementById('scan-session-range').value.trim();
+            
+            if(!dateVal || !taskVal) {
+                alert('請先選擇日期與作業！');
+                return;
+            }
+            const taskDef = db.tasks.find(t => t.id === taskVal);
+            
+            scanSession = {
+                active: true,
+                dateStr: dateVal,
+                taskId: taskVal,
+                taskName: taskDef.name,
+                range: rangeVal,
+                records: []
+            };
+            
+            document.getElementById('scan-setup-area').classList.add('hidden');
+            document.getElementById('scan-active-area').classList.remove('hidden');
+            document.getElementById('scan-active-area').classList.add('flex');
+            
+            let info = `日期：${dateVal}<br>作業：${taskDef.name}`;
+            if(rangeVal) info += ` (${rangeVal})`;
+            document.getElementById('active-session-info').innerHTML = info;
+            
+            renderSessionBuffer();
+            setTimeout(() => document.getElementById('scanner-input').focus(), 100);
+        }
+
+        function renderSessionBuffer() {
+            document.getElementById('session-buffer-count').innerText = scanSession.records.length;
+            const list = document.getElementById('session-buffer-list');
+            list.innerHTML = '';
+            scanSession.records.forEach(r => {
+                const s = db.students.find(st => st.id === r.studentId);
+                list.innerHTML += `<li class="flex justify-between items-center bg-gray-50 p-1 rounded border">
+                    <span class="font-bold text-gray-700">${s ? s.name : '未知'}</span>
+                    <span class="text-xs text-gray-500">${r.timeOnly}</span>
+                </li>`;
+            });
+        }
+
+        function endScanSession() {
+            const submittedIds = scanSession.records.map(r => r.studentId);
+            const missingStudents = db.students.filter(s => !submittedIds.includes(s.id));
+            const submittedStudents = db.students.filter(s => submittedIds.includes(s.id));
+            
+            document.getElementById('session-summary-task').innerText = `${scanSession.taskName} ${scanSession.range ? '('+scanSession.range+')' : ''}`;
+            document.getElementById('session-summary-date').innerText = scanSession.dateStr;
+            
+            document.getElementById('session-submitted-count').innerText = submittedStudents.length;
+            const subList = document.getElementById('session-submitted-list');
+            subList.innerHTML = submittedStudents.map(s => `<span class="bg-green-100 text-green-800 px-2 py-1 rounded border border-green-200">${s.name}</span>`).join('');
+            
+            document.getElementById('session-missing-count').innerText = missingStudents.length;
+            const missList = document.getElementById('session-missing-list');
+            missList.innerHTML = missingStudents.map(s => `<span class="bg-red-100 text-red-800 px-2 py-1 rounded border border-red-200">${s.name}</span>`).join('');
+            
+            document.getElementById('session-modal').style.display = 'flex';
+        }
+
+        function cancelScanSession() {
+            document.getElementById('session-modal').style.display = 'none';
+            setTimeout(() => document.getElementById('scanner-input').focus(), 100);
+        }
+
+        function confirmScanSession() {
+            if(!scanSession.active) return;
+            
+            if (scanSession.range) {
+                if (!db.ranges) db.ranges = [];
+                const existingRange = db.ranges.find(r => r.taskId === scanSession.taskId && r.noticeName === scanSession.range);
+                if (!existingRange) {
+                    db.ranges.push({ taskId: scanSession.taskId, noticeName: scanSession.range, range: '' });
+                }
+            }
+
+            scanSession.records.forEach(r => {
+                const existing = db.records.findIndex(rec => rec.studentId === r.studentId && rec.taskId === scanSession.taskId && rec.noticeName === scanSession.range);
+                if(existing !== -1) {
+                    db.records[existing].timestamp = r.fullTimestamp;
+                    delete db.records[existing].manualStatus;
+                } else {
+                    db.records.push({
+                        studentId: r.studentId,
+                        taskId: scanSession.taskId,
+                        noticeName: scanSession.range,
+                        timestamp: r.fullTimestamp
+                    });
+                }
+            });
+
+            saveData();
+            renderStatistics();
+            
+            scanSession.active = false;
+            document.getElementById('session-modal').style.display = 'none';
+            document.getElementById('scan-setup-area').classList.remove('hidden');
+            document.getElementById('scan-active-area').classList.add('hidden');
+            document.getElementById('scan-active-area').classList.remove('flex');
+            
+            // clear inputs for next session
+            document.getElementById('scan-session-range').value = '';
+        }
 
         function handleManualScan() {
             const input = document.getElementById('manual-scan-input');
