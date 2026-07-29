@@ -616,16 +616,19 @@
             const floatingTasks = db.tasks.filter(t => t.type === 'floating');
             const allTasks = db.tasks;
 
-            const renderCheckboxes = (containerId, tasks, onChange) => {
+            const renderCheckboxes = (containerId, tasks, onChange, showType = false) => {
                 const el = document.getElementById(containerId);
                 if (!el) return;
                 const onChangeStr = onChange ? `onchange="${onChange}"` : '';
-                el.innerHTML = tasks.map(t => `
+                el.innerHTML = tasks.map(t => {
+                    const typeStr = showType ? (t.type === 'fixed' ? '[固] ' : '[浮] ') : '';
+                    return `
                     <label class="flex items-center space-x-2 py-1">
                         <input type="checkbox" value="${t.id}" class="form-checkbox text-blue-600 h-4 w-4" ${onChangeStr}>
-                        <span class="text-sm">[${t.subject}] ${t.name}</span>
+                        <span class="text-sm">${typeStr}[${t.subject}] ${t.name}</span>
                     </label>
-                `).join('');
+                    `;
+                }).join('');
             };
 
             const populateSelect = (selectId, tasks) => {
@@ -640,16 +643,16 @@
             const scanTargetTask = document.getElementById('scan-target-task');
             if(scanTargetTask) {
                 const currentVal = scanTargetTask.value;
-                scanTargetTask.innerHTML = '<option value="">-- 請選擇作業 --</option>' + allTasks.map(t => `<option value="${t.id}">[${t.subject}] ${t.name}</option>`).join('');
+                scanTargetTask.innerHTML = '<option value="">-- 請選擇作業 --</option>' + allTasks.map(t => `<option value="${t.id}">[${t.type==='fixed'?'固':'浮'}] [${t.subject}] ${t.name}</option>`).join('');
                 scanTargetTask.value = currentVal;
             }
             populateSelect('tab3-task-select', floatingTasks);
             
             // Tab 4
-            renderCheckboxes('tab4-task-checkboxes', allTasks, 'previewWord()');
+            renderCheckboxes('tab4-task-checkboxes', allTasks, 'previewWord()', true);
             
             // Tab 5
-            renderCheckboxes('tab5-task-checkboxes', allTasks);
+            renderCheckboxes('tab5-task-checkboxes', allTasks, null, true);
             const tab5StudentCheckboxes = document.getElementById('tab5-student-checkboxes');
             if(tab5StudentCheckboxes) {
                 tab5StudentCheckboxes.innerHTML = db.students.map(s => `
