@@ -2459,7 +2459,7 @@ function renderStatistics() {
                     <pre id="gas-code-block" class="whitespace-pre">function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
     
     if (data.action === 'ping') {
       return ContentService.createTextOutput(JSON.stringify({status: 'success'}))
@@ -2468,27 +2468,72 @@ function renderStatistics() {
     
     if (data.action === 'upload_records') {
       var records = data.records;
-      if (sheet.getLastRow() === 0) {
-        sheet.appendRow(["掃描時間", "學生姓名", "科目", "作業名稱", "範圍/備註", "狀態"]);
+      
+      // 1. 建立或取得「流水帳紀錄」分頁
+      var logSheet = ss.getSheetByName("所有掃描紀錄");
+      if (!logSheet) {
+        logSheet = ss.insertSheet("所有掃描紀錄");
+        logSheet.appendRow(["打卡時間", "科目", "作業名稱", "範圍", "學生姓名", "狀態"]);
+        logSheet.setFrozenRows(1);
       }
       
-      var rows = [];
-      for (var i = 0; i < records.length; i++) {
-        var r = records[i];
-        rows.push([r.timestamp, r.studentName, r.subject, r.taskName, r.range, r.status]);
-      }
+      records.forEach(function(row) {
+        // 寫入流水帳
+        logSheet.appendRow([row.timestamp, row.subject, row.taskName, row.range, row.studentName, row.status]);
+        
+        // 2. 建立或取得「科目專屬」的二維統計表
+        var subject = row.subject || "未分類";
+        var subjectSheet = ss.getSheetByName(subject);
+        if (!subjectSheet) {
+          subjectSheet = ss.insertSheet(subject);
+          subjectSheet.appendRow(["姓名"]); // A1 預設為姓名
+          subjectSheet.setFrozenRows(1);
+          subjectSheet.setFrozenColumns(1);
+        }
+        
+        var studentName = row.studentName;
+        var colHeader = row.taskName + (row.range ? "(" + row.range + ")" : "");
+        
+        var dataRange = subjectSheet.getDataRange();
+        var values = dataRange.getValues();
+        
+        // 找尋學生的列 (Row)
+        var studentRowIdx = -1;
+        for (var i = 1; i < values.length; i++) {
+          if (values[i][0] == studentName) {
+            studentRowIdx = i + 1;
+            break;
+          }
+        }
+        if (studentRowIdx === -1) {
+          studentRowIdx = values.length + 1;
+          subjectSheet.getRange(studentRowIdx, 1).setValue(studentName);
+        }
+        
+        // 找尋作業的欄 (Column)
+        var colIdx = -1;
+        var headers = values[0];
+        for (var j = 1; j < headers.length; j++) {
+          if (headers[j] == colHeader) {
+            colIdx = j + 1;
+            break;
+          }
+        }
+        if (colIdx === -1) {
+          colIdx = headers.length + 1;
+          subjectSheet.getRange(1, colIdx).setValue(colHeader);
+        }
+        
+        // 在對應的交叉點寫入打卡時間
+        subjectSheet.getRange(studentRowIdx, colIdx).setValue(row.timestamp);
+      });
       
-      if (rows.length > 0) {
-        sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
-      }
-      
-      return ContentService.createTextOutput(JSON.stringify({status: 'success', count: rows.length}))
+      return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
         .setMimeType(ContentService.MimeType.JSON);
     }
-    
-  } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({status: 'error', message: err.toString()}))
-        .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }</pre>
                 </div>
