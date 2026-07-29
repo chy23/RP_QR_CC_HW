@@ -170,8 +170,8 @@
                 <div>
                     <label class="block mb-1 font-semibold">單張標籤尺寸 (公分)：</label>
                     <div class="flex gap-2 mb-2">
-                        <input type="number" id="tab2-w" value="7" step="0.1" class="border p-2 rounded w-1/2" placeholder="標籤寬度(cm)">
-                        <input type="number" id="tab2-h" value="2.9" step="0.1" class="border p-2 rounded w-1/2" placeholder="高度 (cm)">
+                        <input type="number" id="tab2-w" value="3.5" step="0.1" class="border p-2 rounded w-1/2" placeholder="標籤寬度(cm)">
+                        <input type="number" id="tab2-h" value="2" step="0.1" class="border p-2 rounded w-1/2" placeholder="高度 (cm)">
                     </div>
                     <label class="block mb-1 text-sm text-gray-500">系統將根據 A4 尺寸 (21 x 29.7cm) 自動排版。</label>
                 </div>
@@ -271,8 +271,8 @@
                 <div>
                     <label class="block mb-1 font-semibold">單張標籤尺寸 (公分)：</label>
                     <div class="flex gap-2 mb-2">
-                        <input type="number" id="tab5-w" value="7" step="0.1" class="border p-2 rounded w-1/2" placeholder="標籤寬度(cm)">
-                        <input type="number" id="tab5-h" value="2.9" step="0.1" class="border p-2 rounded w-1/2" placeholder="高度 (cm)">
+                        <input type="number" id="tab5-w" value="3.5" step="0.1" class="border p-2 rounded w-1/2" placeholder="標籤寬度(cm)">
+                        <input type="number" id="tab5-h" value="2" step="0.1" class="border p-2 rounded w-1/2" placeholder="高度 (cm)">
                     </div>
                     <label class="block mb-1 text-sm text-gray-500">系統將根據 A4 尺寸自動排版。</label>
                 </div>
@@ -1183,8 +1183,8 @@
                     
                     
                     const cmToPt = 28.346;
-                    const wCm = parseFloat(document.getElementById('tab2-w').value) || 7;
-                    const hCm = parseFloat(document.getElementById('tab2-h').value) || 2.9;
+                    const wCm = parseFloat(document.getElementById('tab2-w').value) || 3.5;
+                    const hCm = parseFloat(document.getElementById('tab2-h').value) || 2;
                     const labelW = wCm * cmToPt;
                     const labelH = hCm * cmToPt;
                     
@@ -1471,8 +1471,8 @@
             if(studentIds.length === 0) { alert('請至少選擇一位學生'); return; }
             
             
-            const wCm = parseFloat(document.getElementById('tab5-w').value) || 7;
-            const hCm = parseFloat(document.getElementById('tab5-h').value) || 2.9;
+            const wCm = parseFloat(document.getElementById('tab5-w').value) || 3.5;
+            const hCm = parseFloat(document.getElementById('tab5-h').value) || 2;
             
             showLoading();
             setTimeout(async () => {
