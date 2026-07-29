@@ -60,7 +60,13 @@
                         <input type="text" id="new-student-name" placeholder="學生姓名" class="border p-2 mr-2 flex-grow rounded">
                         <button onclick="addStudent()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">新增</button>
                     </div>
-                    <button onclick="batchAddStudents()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded w-full mb-2">預設新增 25 人</button>
+                    <div class="flex gap-2 mb-2">
+                        <button onclick="batchAddStudents()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded w-1/2">預設新增 25 人</button>
+                        <label class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded w-1/2 text-center cursor-pointer">
+                            匯入 Excel / CSV
+                            <input type="file" id="import-students-file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="hidden" onchange="importStudents(event)">
+                        </label>
+                    </div>
                     <ul id="student-list" class="mt-2 h-64 overflow-y-auto bg-white border rounded p-2"></ul>
                 </div>
 
@@ -268,6 +274,65 @@
             }
             saveData();
             renderStudents();
+        }
+
+        function importStudents(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            showLoading();
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1}); // 轉為 2D 陣列
+                    
+                    if(json.length === 0) {
+                        alert("檔案內容為空");
+                        hideLoading();
+                        return;
+                    }
+
+                    // 尋找姓名欄位索引。如果有表頭包含「姓名」，就抓那欄；否則預設抓第一欄 (index 0)
+                    let nameColIndex = 0;
+                    let startIndex = 0;
+                    
+                    const headerRow = json[0];
+                    const headerIndex = headerRow.findIndex(cell => typeof cell === 'string' && cell.includes('姓名'));
+                    if (headerIndex !== -1) {
+                        nameColIndex = headerIndex;
+                        startIndex = 1; // 跳過表頭
+                    }
+
+                    let addedCount = 0;
+                    let startId = db.students.length > 0 ? Math.max(...db.students.map(s => s.id)) + 1 : 1;
+
+                    for(let i = startIndex; i < json.length; i++) {
+                        const row = json[i];
+                        const name = row[nameColIndex];
+                        if (name && String(name).trim() !== "") {
+                            const newId = startId++;
+                            const token = `STU${String(newId).padStart(3, '0')}`;
+                            db.students.push({ id: newId, name: String(name).trim(), token });
+                            addedCount++;
+                        }
+                    }
+
+                    saveData();
+                    renderStudents();
+                    alert(`成功匯入 ${addedCount} 位學生！`);
+                } catch(err) {
+                    console.error(err);
+                    alert("讀取檔案失敗，請確定格式正確。");
+                }
+                // 清空 input 讓下次選同一個檔案也能觸發
+                event.target.value = '';
+                hideLoading();
+            };
+            reader.readAsArrayBuffer(file);
         }
 
         function removeStudent(id) {
