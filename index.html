@@ -168,7 +168,7 @@
                     
                     <!-- 掃描前設定 -->
                     <div id="scan-setup-area" class="mb-4">
-                        <label class="block mb-1 font-semibold text-sm">1. 登記日期：</label>
+                        <label class="block mb-1 font-semibold text-sm">1. 應繳交日期：</label>
                         <input type="date" id="scan-session-date" class="border p-2 rounded w-full mb-3" />
                         
                         <label class="block mb-1 font-semibold text-sm">2. 選擇作業：</label>
@@ -895,7 +895,7 @@
                 if (uniqueTaskKeys.length === 0) return;
                 const aoa = [];
                 const rowTask = ['作業名稱'];
-                const rowDate = ['登記日期'];
+                const rowDate = ['應繳交日期'];
                 const rowRange = ['姓名 \ 範圍'];
                 uniqueTaskKeys.forEach(k => {
                     rowTask.push(k.label);
@@ -2570,7 +2570,7 @@ function renderStatistics() {
 
                 const aoa = [];
                 const rowTask = ['作業名稱'];
-                const rowDate = ['登記日期'];
+                const rowDate = ['應繳交日期'];
                 const rowRange = ['姓名 \ 範圍'];
                 finalTaskKeys.forEach(k => {
                     rowTask.push(k.label);
@@ -2683,7 +2683,7 @@ function renderStatistics() {
             targetSheet.clear();
             targetSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
             
-            // 設定凍結窗格 (前三列為表頭：作業名稱、登記日期、範圍)
+            // 設定凍結窗格 (前三列為表頭：作業名稱、應繳交日期、範圍)
             targetSheet.setFrozenRows(3);
             targetSheet.setFrozenColumns(1);
             
