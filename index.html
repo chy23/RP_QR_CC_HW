@@ -1110,7 +1110,69 @@
             }
         }
 
-        function renderStatistics() {
+                
+        function setStatSubject(subject) {
+            currentStatSubject = subject;
+            renderStatistics();
+        }
+        
+        function editSubject(oldSub) {
+            const newSub = prompt('請輸入新的分頁(科目)名稱：', oldSub);
+            if(newSub && newSub.trim() !== '' && newSub !== oldSub) {
+                db.tasks.forEach(t => { if(t.subject === oldSub) t.subject = newSub.trim(); });
+                if(currentStatSubject === oldSub) currentStatSubject = newSub.trim();
+                saveData();
+                renderStatistics();
+            }
+        }
+        
+        function deleteSubject(sub) {
+            if(confirm(`確定要刪除「${sub}」分頁嗎？這會刪除該分頁下的所有作業設定與紀錄！`)) {
+                const tasksToDelete = db.tasks.filter(t => t.subject === sub).map(t => t.id);
+                db.tasks = db.tasks.filter(t => t.subject !== sub);
+                db.records = db.records.filter(r => !tasksToDelete.includes(r.taskId));
+                if(db.ranges) db.ranges = db.ranges.filter(r => !tasksToDelete.includes(r.taskId));
+                if(currentStatSubject === sub) currentStatSubject = '';
+                saveData();
+                renderStatistics();
+            }
+        }
+        
+        function addSubject() {
+            const newSub = prompt('請輸入新的分頁(科目)名稱：');
+            if(newSub && newSub.trim() !== '') {
+                const id = 't_dummy_' + Date.now();
+                db.tasks.push({ id: id, subject: newSub.trim(), name: '新作業', type: 'fixed' });
+                currentStatSubject = newSub.trim();
+                saveData();
+                renderStatistics();
+            }
+        }
+
+        function addSubColumn(taskId) {
+            const noticeName = prompt('請輸入新欄位的範圍/備註 (例如: 第二課)：');
+            if (noticeName && noticeName.trim() !== '') {
+                if (!db.ranges) db.ranges = [];
+                const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName.trim());
+                if (!existing) {
+                    db.ranges.push({ taskId: taskId, noticeName: noticeName.trim(), range: '' });
+                    saveData();
+                    renderStatistics();
+                } else {
+                    alert('這個欄位已經存在了！');
+                }
+            }
+        }
+
+function getSubjects() {
+            const subjects = new Set();
+            db.tasks.forEach(t => {
+                if (t.subject) subjects.add(t.subject);
+            });
+            return Array.from(subjects);
+        }
+
+function renderStatistics() {
             const thead = document.getElementById('stat-thead');
             const tbody = document.getElementById('stat-tbody');
             const subtabs = document.getElementById('stat-subtabs');
