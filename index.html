@@ -267,8 +267,8 @@
                     <div class="mb-4 border p-3 rounded bg-gray-50">
                         <label class="font-semibold block mb-2 text-sm text-gray-700">全域條碼預設尺寸 (公分)：</label>
                         <div class="flex gap-2 items-center">
-                            寬: <input type="number" id="tab3-visual-w" value="2.0" step="0.1" class="border p-1 rounded w-16 text-center" onchange="updateVisualSize()">
-                            高: <input type="number" id="tab3-visual-h" value="3.5" step="0.1" class="border p-1 rounded w-16 text-center" onchange="updateVisualSize()">
+                            寬: <input type="number" id="tab3-visual-w" value="2.5" step="0.1" class="border p-1 rounded w-16 text-center" onchange="updateVisualSize()">
+                            高: <input type="number" id="tab3-visual-h" value="3.0" step="0.1" class="border p-1 rounded w-16 text-center" onchange="updateVisualSize()">
                             <button onclick="updateVisualSize()" class="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded ml-auto">套用全部</button>
                         </div>
                     </div>
@@ -1958,8 +1958,8 @@
         let visualQrStates = []; // [{ pageIndex, x, y, size, keep, stamp }]
 
         function updateVisualSize() {
-            const wCm = parseFloat(document.getElementById('tab3-visual-w').value) || 2.0;
-            const hCm = parseFloat(document.getElementById('tab3-visual-h').value) || 3.5;
+            const wCm = parseFloat(document.getElementById('tab3-visual-w').value) || 2.5;
+            const hCm = parseFloat(document.getElementById('tab3-visual-h').value) || 3.0;
             
             const ptToCm = 1 / 28.346;
             const widthPt = wCm / ptToCm;
