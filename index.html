@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文件生產力中心</title>
+    <title>QRcode自動清點作業系統</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -72,7 +72,10 @@
     </div>
 
     <div class="max-w-7xl mx-auto p-4">
-        <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">文件生產力中心</h1>
+        <h1 class="text-3xl font-bold text-center mb-6 text-blue-700 flex justify-center items-center gap-3">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+            QRcode自動清點作業系統
+        </h1>
         
         <!-- Tabs -->
         <div class="flex flex-wrap border-b mb-6 bg-white rounded-t-lg px-2 pt-2">
@@ -2401,34 +2404,110 @@ function renderStatistics() {
 
     
         function exportStatToExcel() {
-            const table = document.querySelector('#tab-1 table');
-            if(!table) {
-                alert('找不到統計表');
+            const wb = XLSX.utils.book_new();
+            const subjects = getSubjects();
+            
+            const filterLast = document.getElementById('stat-filter-last') && document.getElementById('stat-filter-last').checked;
+
+            if (subjects.length === 0) {
+                alert('目前沒有任何作業資料可以匯出');
+                return;
+            }
+
+            subjects.forEach(sub => {
+                const tasksInSub = db.tasks.filter(t => t.subject === sub);
+                let uniqueTaskKeys = []; 
+                
+                tasksInSub.forEach(t => {
+                    uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
+                });
+
+                if (db.ranges) {
+                    db.ranges.forEach(r => {
+                        if (r.noticeName) {
+                            const t = tasksInSub.find(t => t.id === r.taskId);
+                            if (t) {
+                                const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
+                                if (!exists) {
+                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                                }
+                            }
+                        }
+                    });
+                }
+
+                db.records.forEach(r => {
+                    if(r.noticeName) {
+                        const t = tasksInSub.find(t => t.id === r.taskId);
+                        if(t) {
+                            const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
+                            if(!exists) {
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                            }
+                        }
+                    }
+                });
+
+                let finalTaskKeys = uniqueTaskKeys;
+                if (filterLast && db.lastSessionTasks) {
+                    finalTaskKeys = uniqueTaskKeys.filter(k => {
+                        return db.lastSessionTasks.some(lt => lt.taskId === k.taskId && lt.noticeName === k.noticeName);
+                    });
+                }
+
+                if (finalTaskKeys.length === 0) return;
+
+                const aoa = [];
+                
+                const headerRow = ['姓名'];
+                finalTaskKeys.forEach(k => {
+                    const rangeVal = getTaskRange(k.taskId, k.noticeName);
+                    headerRow.push(k.label + (rangeVal ? `(${rangeVal})` : ''));
+                });
+                aoa.push(headerRow);
+                
+                db.students.forEach(s => {
+                    const row = [s.name];
+                    finalTaskKeys.forEach(k => {
+                        const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
+                        let cellValue = '缺交';
+                        if (record) {
+                            cellValue = record.timestamp;
+                            const taskDef = db.tasks.find(t => t.id === k.taskId);
+                            if (taskDef && taskDef.deadline) {
+                                let deadlineDate = new Date(taskDef.deadline);
+                                let isLate = false;
+                                if (record.manualStatus === 'late') {
+                                    isLate = true;
+                                } else if (record.manualStatus === 'ontime') {
+                                    isLate = false;
+                                } else {
+                                    let scanDate;
+                                    if (record.timestamp.includes('T') || record.timestamp.includes('-')) {
+                                        scanDate = new Date(record.timestamp);
+                                    } else {
+                                        const currentYear = new Date().getFullYear();
+                                        scanDate = new Date(`${currentYear}/${record.timestamp}`);
+                                    }
+                                    if (scanDate > deadlineDate) isLate = true;
+                                }
+                                if (isLate) cellValue = `[遲交] ${record.timestamp}`;
+                            }
+                        }
+                        row.push(cellValue);
+                    });
+                    aoa.push(row);
+                });
+                
+                const ws = XLSX.utils.aoa_to_sheet(aoa);
+                XLSX.utils.book_append_sheet(wb, ws, sub);
+            });
+            
+            if (wb.SheetNames.length === 0) {
+                alert('沒有任何資料可匯出！');
                 return;
             }
             
-            // Clone table to modify it before export (remove buttons, inputs)
-            const clone = table.cloneNode(true);
-            
-            // Convert inputs in the header to plain text
-            clone.querySelectorAll('th input[type="text"]').forEach(input => {
-                const text = document.createTextNode(input.value);
-                input.parentNode.replaceChild(text, input);
-            });
-            
-            // Remove all buttons (like settings gear, add column, etc)
-            clone.querySelectorAll('button').forEach(btn => btn.remove());
-            
-            // Clean up missing / checked display
-            clone.querySelectorAll('td').forEach(td => {
-                if(td.innerHTML.includes('text-red-500')) {
-                    td.innerText = '缺交';
-                } else if(td.innerHTML.includes('text-green-500') || td.innerHTML.includes('✅')) {
-                    td.innerText = '已交';
-                }
-            });
-            
-            const wb = XLSX.utils.table_to_book(clone, { sheet: "繳交統計" });
             const dateStr = new Date().toISOString().split('T')[0];
             XLSX.writeFile(wb, `作業繳交統計表_${dateStr}.xlsx`);
         }
