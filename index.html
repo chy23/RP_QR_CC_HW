@@ -990,6 +990,7 @@
         }
 
         function confirmScanSession() {
+            try {
             if(!scanSession.active) return;
             
             if (!db.ranges) db.ranges = [];
@@ -1036,6 +1037,9 @@
             });
             syncToGoogleSheets(recordsToSync);
             
+            // 儲存剛才掃描的作業清單，供「僅顯示剛才掃描的作業」過濾使用
+            db.lastSessionTasks = scanSession.tasks.map(t => ({ taskId: t.id, noticeName: t.range || '' }));
+            
             scanSession.active = false;
             document.getElementById('session-modal').style.display = 'none';
             document.getElementById('scan-setup-area').classList.remove('hidden');
@@ -1045,6 +1049,10 @@
             document.querySelectorAll('input[id^="range-input-"]').forEach(el => el.value = '');
             document.querySelectorAll('.scan-task-checkbox').forEach(el => el.checked = false);
             document.querySelectorAll('input[id^="range-input-"]').forEach(el => el.style.display = 'none');
+            } catch (err) {
+                alert("confirmScanSession Error: " + err.stack);
+                console.error(err);
+            }
         }
 
         function handleManualScan() {
@@ -1168,9 +1176,18 @@
                 }
             });
 
+            // 過濾：如果勾選了「僅顯示剛才掃描的作業」
+            const filterLast = document.getElementById('stat-filter-last') && document.getElementById('stat-filter-last').checked;
+            let finalTaskKeys = uniqueTaskKeys;
+            if (filterLast && db.lastSessionTasks) {
+                finalTaskKeys = uniqueTaskKeys.filter(k => {
+                    return db.lastSessionTasks.some(lt => lt.taskId === k.taskId && lt.noticeName === k.noticeName);
+                });
+            }
+
             // 生成 Header (包含手動輸入範圍)
-            let headHTML = '<tr><th class="p-2 border align-bottom">姓名</th>';
-            uniqueTaskKeys.forEach(k => {
+            let headHTML = '<tr><th class="p-2 border align-bottom min-w-[80px]">姓名</th>';
+            finalTaskKeys.forEach(k => {
                 const rangeVal = getTaskRange(k.taskId, k.noticeName);
                 headHTML += `<th class="p-2 border text-center max-w-[120px] relative group">
                                 <div class="font-bold mb-1 truncate pr-4" title="${k.label}">${k.label}</div>
@@ -1188,7 +1205,7 @@
             let bodyHTML = '';
             db.students.forEach(s => {
                 bodyHTML += `<tr><td class="p-2 border font-semibold whitespace-nowrap">${s.name}</td>`;
-                uniqueTaskKeys.forEach(k => {
+                finalTaskKeys.forEach(k => {
                     const taskDef = db.tasks.find(t => t.id === k.taskId);
                     const deadline = taskDef && taskDef.deadline ? new Date(taskDef.deadline + 'T23:59:59') : null;
                     const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
@@ -2302,7 +2319,40 @@
             }, 500);
         }
 
-    </script>
+    
+        function exportStatToExcel() {
+            const table = document.querySelector('#tab-1 table');
+            if(!table) {
+                alert('找不到統計表');
+                return;
+            }
+            
+            // Clone table to modify it before export (remove buttons, inputs)
+            const clone = table.cloneNode(true);
+            
+            // Convert inputs in the header to plain text
+            clone.querySelectorAll('th input[type="text"]').forEach(input => {
+                const text = document.createTextNode(input.value);
+                input.parentNode.replaceChild(text, input);
+            });
+            
+            // Remove all buttons (like settings gear, add column, etc)
+            clone.querySelectorAll('button').forEach(btn => btn.remove());
+            
+            // Clean up missing / checked display
+            clone.querySelectorAll('td').forEach(td => {
+                if(td.innerHTML.includes('text-red-500')) {
+                    td.innerText = '缺交';
+                } else if(td.innerHTML.includes('text-green-500') || td.innerHTML.includes('✅')) {
+                    td.innerText = '已交';
+                }
+            });
+            
+            const wb = XLSX.utils.table_to_book(clone, { sheet: "繳交統計" });
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `作業繳交統計表_${dateStr}.xlsx`);
+        }
+</script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
