@@ -88,6 +88,7 @@
                             <input type="text" id="new-task-name" placeholder="作業名稱 (如: 數習)" class="border p-2 flex-grow rounded">
                         </div>
                         <div class="flex gap-2 items-center">
+                            <input type="date" id="new-task-deadline" class="border p-2 rounded w-1/3" title="繳交期限 (選填)">
                             <select id="new-task-type" class="border p-2 rounded flex-grow">
                                 <option value="fixed">固定簿冊 (每學期固定)</option>
                                 <option value="floating">浮動卷單 (臨時通知單/考卷)</option>
@@ -356,30 +357,37 @@
             } catch(e) {}
         }
 
+        let html5QrCode = null;
         function toggleCameraScanner() {
             const container = document.getElementById('camera-container');
             if (container.classList.contains('hidden')) {
                 container.classList.remove('hidden');
-                if (!html5QrcodeScanner) {
-                    html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-                        fps: 10, 
-                        qrbox: { width: 250, height: 250 },
-                        aspectRatio: 1.0,
-                        showTorchButtonIfSupported: true
-                    }, false);
+                if (!html5QrCode) {
+                    html5QrCode = new Html5Qrcode("reader");
                 }
-                html5QrcodeScanner.render((decodedText) => {
-                    const now = Date.now();
-                    if (decodedText === lastScanCode && (now - lastScanTime) < 2000) return;
-                    lastScanCode = decodedText;
-                    lastScanTime = now;
-                    playBeep();
-                    processScan(decodedText);
-                }, (err) => { /* ignore */ });
+                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText, decodedResult) => {
+                        const now = Date.now();
+                        if (decodedText === lastScanCode && (now - lastScanTime) < 2000) return;
+                        lastScanCode = decodedText;
+                        lastScanTime = now;
+                        playBeep();
+                        processScan(decodedText);
+                    },
+                    (errorMessage) => { /* ignore */ }
+                ).catch((err) => {
+                    alert("無法啟動相機，請確定已允許權限並使用 HTTPS 連線。錯誤: " + err);
+                    container.classList.add('hidden');
+                });
             } else {
                 container.classList.add('hidden');
-                if (html5QrcodeScanner) {
-                    html5QrcodeScanner.clear().catch(err => console.error(err));
+                if (html5QrCode) {
+                    html5QrCode.stop().then(() => {
+                        html5QrCode.clear();
+                    }).catch(err => console.error("Failed to stop scanner", err));
                 }
             }
         }
@@ -822,8 +830,34 @@
             db.students.forEach(s => {
                 bodyHTML += `<tr><td class="p-2 border font-semibold whitespace-nowrap">${s.name}</td>`;
                 uniqueTaskKeys.forEach(k => {
+                    const taskDef = db.tasks.find(t => t.id === k.taskId);
+                    const deadline = taskDef && taskDef.deadline ? new Date(taskDef.deadline + 'T23:59:59') : null;
                     const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
-                    const mark = record ? `<span class="text-green-700 font-bold text-xs bg-green-100 px-1 rounded block truncate" title="${record.timestamp}">${record.timestamp}</span>` : '<span class="text-gray-300">-</span>';
+                    
+                    let mark = '<span class="text-red-500 font-bold text-xs bg-red-50 px-1 rounded block">缺交</span>';
+                    if (record) {
+                        // 判斷是否遲交
+                        let isLate = false;
+                        if (deadline) {
+                            // timestamp format: "MM/DD HH:mm" or ISO
+                            // To be safe, compare year if possible, but here we just check if it's late based on current year or raw timestamp if ISO
+                            let scanDate;
+                            if (record.timestamp.includes('T') || record.timestamp.includes('-')) {
+                                scanDate = new Date(record.timestamp);
+                            } else {
+                                // Fallback to current year + MM/DD HH:mm
+                                const currentYear = new Date().getFullYear();
+                                scanDate = new Date(`${currentYear}/${record.timestamp}`);
+                            }
+                            if (scanDate > deadline) isLate = true;
+                        }
+                        
+                        if (isLate) {
+                            mark = `<span class="text-yellow-700 font-bold text-xs bg-yellow-200 px-1 rounded block truncate" title="遲交: ${record.timestamp}">遲交:${record.timestamp}</span>`;
+                        } else {
+                            mark = `<span class="text-green-700 font-bold text-xs bg-green-100 px-1 rounded block truncate" title="準時: ${record.timestamp}">${record.timestamp}</span>`;
+                        }
+                    }
                     bodyHTML += `<td class="p-2 border text-center align-middle cursor-pointer hover:bg-gray-100" onclick="toggleRecord(${s.id}, '${k.taskId}', '${k.noticeName}')">${mark}</td>`;
                 });
                 bodyHTML += '</tr>';
@@ -854,6 +888,7 @@
         let pdfPreviewOriginalHeight = 841.89;
         let previewScale = 1;
 
+        let pdfDocumentGlobal = null;
         async function renderPdfPreview() {
             const fileInput = document.getElementById('tab3-pdf-upload');
             if(!fileInput.files.length) return;
@@ -864,27 +899,51 @@
             fileReader.onload = async function() {
                 const typedarray = new Uint8Array(this.result);
                 const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                const page = await pdf.getPage(1);
+                pdfDocumentGlobal = pdf;
                 
-                const viewport = page.getViewport({scale: 1.0});
-                pdfPreviewOriginalWidth = viewport.width;
-                pdfPreviewOriginalHeight = viewport.height;
+                // Update page selector
+                const pageSelect = document.getElementById('tab3-page');
+                pageSelect.innerHTML = '<option value="all">所有頁面</option>';
+                for(let i=1; i<=pdf.numPages; i++) {
+                    pageSelect.innerHTML += `<option value="${i}">第 ${i} 頁</option>`;
+                }
                 
                 const container = document.getElementById('pdf-preview-container');
                 container.style.display = 'block';
+                // We use a scrollable inner container if there are multiple pages
+                container.style.maxHeight = '600px';
+                container.style.overflowY = 'auto';
+                container.style.overflowX = 'hidden';
                 
-                const canvas = document.getElementById('pdf-preview-canvas');
-                const context = canvas.getContext('2d');
+                // Create a canvas for each page
+                const existingCanvases = container.querySelectorAll('canvas:not(#pdf-preview-canvas)');
+                existingCanvases.forEach(c => c.remove());
                 
-                // Scale to fit width
-                previewScale = container.clientWidth / viewport.width;
-                const scaledViewport = page.getViewport({scale: previewScale});
+                const page1 = await pdf.getPage(1);
+                const viewport = page1.getViewport({scale: 1.0});
+                pdfPreviewOriginalWidth = viewport.width;
+                pdfPreviewOriginalHeight = viewport.height;
+                previewScale = (container.clientWidth - 20) / viewport.width; // leave some space for scrollbar
                 
-                canvas.width = scaledViewport.width;
-                canvas.height = scaledViewport.height;
-                container.style.height = scaledViewport.height + 'px';
-                
-                await page.render({canvasContext: context, viewport: scaledViewport}).promise;
+                for(let i=1; i<=pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const scaledViewport = page.getViewport({scale: previewScale});
+                    
+                    let canvas;
+                    if(i === 1) {
+                        canvas = document.getElementById('pdf-preview-canvas');
+                    } else {
+                        canvas = document.createElement('canvas');
+                        canvas.style.display = 'block';
+                        canvas.style.marginBottom = '10px';
+                        container.insertBefore(canvas, document.getElementById('draggable-box').nextSibling);
+                    }
+                    
+                    canvas.width = scaledViewport.width;
+                    canvas.height = scaledViewport.height;
+                    const context = canvas.getContext('2d');
+                    await page.render({canvasContext: context, viewport: scaledViewport}).promise;
+                }
                 
                 setupDraggableBox();
                 updatePreviewBox();
@@ -1175,12 +1234,12 @@
             if(fileInput.files.length === 0) { alert('請先上傳底板 PDF'); return; }
 
             const pagesKeep = document.getElementById('tab3-pages-keep').value.trim();
-            const pagesStampStr = document.getElementById('tab3-pages-stamp').value.trim();
+            const targetPage = document.getElementById('tab3-page') ? document.getElementById('tab3-page').value : 'all';
 
             const cmToPt = 28.346;
             const qrX = (parseFloat(document.getElementById('tab3-x').value) || 1) * cmToPt;
             const qrY = (parseFloat(document.getElementById('tab3-y').value) || 1) * cmToPt;
-            const qrSize = (parseFloat(document.getElementById('tab3-size').value) || 7) * cmToPt;
+            const qrSize = (parseFloat(document.getElementById('tab3-size').value) || 4) * cmToPt;
 
             showLoading();
             const fileReader = new FileReader();
@@ -1333,7 +1392,16 @@
 
                     const doc = new Document({
                         sections: [{
-                            properties: {},
+                            properties: {
+                                page: {
+                                    margin: {
+                                        top: 720,
+                                        right: 720,
+                                        bottom: 720,
+                                        left: 720
+                                    }
+                                }
+                            },
                             children: [
                                 new Paragraph({
                                     children: [new TextRun({ text: "作業條碼對照表", bold: true, size: 32 })],
