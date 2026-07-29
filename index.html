@@ -141,6 +141,12 @@
                     <button onclick="saveGasUrl()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">儲存網址</button>
                     <button onclick="testGasUrl()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">測試連線</button>
                 </div>
+                <div class="mt-2">
+                    <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'flex'" class="text-indigo-600 hover:text-indigo-800 text-sm font-bold underline cursor-pointer flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        點此查看 Google 試算表設定教學與程式碼
+                    </button>
+                </div>
                 <div id="gas-status" class="text-sm font-bold"></div>
             </div>
             <div class="mt-6 flex justify-between">
@@ -785,6 +791,21 @@
         let scanSession = { active: false, dateStr: '', tasks: [], records: [] };
 
 
+        function copyGasCode(btn) {
+            const code = document.getElementById('gas-code-block').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '✅ 已複製！';
+                btn.classList.add('bg-green-500', 'hover:bg-green-600');
+                btn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                    btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                }, 2000);
+            });
+        }
+        
         // --- Google Sheets Sync Logic ---
         let gasUrl = localStorage.getItem('rp_qr_gas_url') || '';
         
@@ -2282,5 +2303,89 @@
         }
 
     </script>
+
+    <!-- GAS Tutorial Modal -->
+    <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-xl font-bold text-gray-800">🚀 Google 試算表自動連線設定教學</h3>
+                <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'none'" class="text-gray-500 hover:text-gray-800 font-bold text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-grow text-gray-800 space-y-4">
+                <p>為了取得那串神祕的「網頁應用程式網址」，請您跟著以下 3 個簡單的步驟操作：</p>
+                
+                <h4 class="text-lg font-bold text-blue-700 border-b pb-1">第一步：建立試算表與開啟 Apps Script</h4>
+                <ol class="list-decimal list-inside space-y-1 ml-2">
+                    <li>請到您的 Google 雲端硬碟，<strong>建立一個全新的 Google 試算表</strong>。</li>
+                    <li>點擊上方選單的 <strong>「擴充功能」 -> 「Apps Script」</strong>。</li>
+                    <li>畫面上會開啟一個新的程式碼編輯器網頁。</li>
+                </ol>
+
+                <h4 class="text-lg font-bold text-blue-700 border-b pb-1 mt-6">第二步：貼上接收資料的程式碼</h4>
+                <p>請將原本編輯器裡面的預設程式碼 <code>function myFunction() { }</code> 全部刪除，並<strong>完全複製貼上</strong>下方這段程式碼：</p>
+                
+                <div class="relative bg-gray-100 p-4 rounded border font-mono text-sm overflow-x-auto shadow-inner">
+                    <button onclick="copyGasCode(this)" class="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs shadow transition-colors">複製程式碼</button>
+                    <pre id="gas-code-block" class="whitespace-pre">function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    
+    if (data.action === 'ping') {
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    if (data.action === 'upload_records') {
+      var records = data.records;
+      if (sheet.getLastRow() === 0) {
+        sheet.appendRow(["掃描時間", "學生姓名", "科目", "作業名稱", "範圍/備註", "狀態"]);
+      }
+      
+      var rows = [];
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        rows.push([r.timestamp, r.studentName, r.subject, r.taskName, r.range, r.status]);
+      }
+      
+      if (rows.length > 0) {
+        sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({status: 'success', count: rows.length}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({status: 'error', message: err.toString()}))
+        .setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+                </div>
+                <p>貼上後，記得點擊上方的 <strong>「💾 儲存專案」</strong> 按鈕（磁碟片圖示）。</p>
+
+                <h4 class="text-lg font-bold text-blue-700 border-b pb-1 mt-6">第三步：發布並取得專屬網址</h4>
+                <ol class="list-decimal list-inside space-y-1 ml-2">
+                    <li>點擊編輯器右上角的 <strong>「部署」 -> 「新增部署作業」</strong>。</li>
+                    <li>點擊左上角的 <strong>「齒輪 ⚙️」圖示</strong>，選擇 <strong>「網頁應用程式 (Web App)」</strong>。</li>
+                    <li>填寫設定：
+                        <ul class="list-disc list-inside ml-6 text-sm text-gray-700 space-y-1 mt-1">
+                            <li><strong>說明</strong>：隨便填寫（例如：作業掃描接收器）</li>
+                            <li><strong>執行身分</strong>：請務必選擇 <strong>「我 (您自己的 email)」</strong></li>
+                            <li><strong>誰可以存取</strong>：請務必選擇 <strong>「所有人 (Anyone)」</strong> 
+                            <span class="text-red-500 font-bold">(注意：如果您選錯了，網頁會出現 CORS 阻擋錯誤而連線失敗)</span></li>
+                        </ul>
+                    </li>
+                    <li>點擊 <strong>「部署」</strong>。
+                        <div class="text-sm text-gray-500 ml-6 bg-gray-50 p-2 rounded border mt-1 mb-2">(若出現安全警告，請點擊「審查權限」-> 選擇帳號 -> 左下角的「進階」->「前往未經安全認證的專案」->「允許」)</div>
+                    </li>
+                    <li>成功後，複製畫面上以 <code>https://script.google.com/.../exec</code> 結尾的 <strong>「網頁應用程式網址」</strong>，並貼回本系統儲存即可！</li>
+                </ol>
+            </div>
+            <div class="p-4 border-t flex justify-end bg-gray-50 rounded-b-lg">
+                <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'none'" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded shadow font-bold">我了解了，關閉視窗</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
