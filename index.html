@@ -109,7 +109,7 @@
                 <div class="md:col-span-1 border p-4 rounded bg-gray-50">
                     <h3 class="text-xl font-semibold mb-2">條碼輸入</h3>
                     <div class="mb-4">
-                        <input type="text" id="manual-scan-input" placeholder="手動輸入 (如: STU001-國習)" class="border p-2 w-full rounded mb-2" onkeydown="if(event.key === 'Enter') handleManualScan()">
+                        <input type="text" id="manual-scan-input" placeholder="手動輸入 (如: STU001-國習 或 STU001-通知單_校外教學)" class="border p-2 w-full rounded mb-2" onkeydown="if(event.key === 'Enter') handleManualScan()">
                         <button onclick="handleManualScan()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full">登錄</button>
                     </div>
                     <div id="reader" class="w-full bg-white border"></div>
@@ -125,6 +125,12 @@
                             <button onclick="exportExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded text-sm shadow">匯出 Excel</button>
                         </div>
                     </div>
+                    
+                    <!-- Subject Sub-tabs -->
+                    <div class="flex flex-wrap border-b mb-2" id="stat-subtabs">
+                        <!-- 動態生成科目分頁 -->
+                    </div>
+
                     <div class="flex-grow overflow-auto bg-white border rounded">
                         <table class="w-full text-sm text-left">
                             <thead class="bg-gray-100 sticky top-0" id="stat-thead">
@@ -217,7 +223,7 @@
         // ==========================================
         // 系統核心與資料層
         // ==========================================
-        let db = { students: [], tasks: [], records: [] };
+        let db = { students: [], tasks: [], records: [], ranges: [] };
         const STORAGE_KEY = 'doc_productivity_db';
 
         const DEFAULT_TASKS = [
@@ -415,7 +421,7 @@
 
         function resetData() {
             if(confirm("警告：這將清除所有學生、作業與掃描紀錄！確定嗎？")) {
-                db = { students: [], tasks: [...DEFAULT_TASKS], records: [] };
+                db = { students: [], tasks: [...DEFAULT_TASKS], records: [], ranges: [] };
                 saveData();
                 renderStudents();
                 renderTasks();
@@ -456,6 +462,7 @@
         // Tab 1: 掃描與統計
         // ==========================================
         let html5QrcodeScanner = null;
+        let currentStatSubject = '國語'; // 預設顯示分頁
 
         function initScanner() {
             if(html5QrcodeScanner) return;
@@ -512,11 +519,14 @@
 
             const existing = db.records.find(r => r.studentId === student.id && r.taskId === task.id && r.noticeName === noticeName);
             if (!existing) {
+                const now = new Date();
+                const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                
                 db.records.push({
                     studentId: student.id,
                     taskId: task.id,
                     noticeName: noticeName,
-                    timestamp: new Date().toLocaleString()
+                    timestamp: timeString
                 });
                 saveData();
                 renderStatistics();
@@ -531,35 +541,82 @@
             }
         }
 
+        function updateTaskRange(taskId, noticeName, rangeValue) {
+            // Find or create a range record for this specific task + noticeName combination
+            if (!db.ranges) db.ranges = [];
+            const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
+            if (existing) {
+                existing.range = rangeValue;
+            } else {
+                db.ranges.push({ taskId, noticeName, range: rangeValue });
+            }
+            saveData();
+        }
+
+        function getTaskRange(taskId, noticeName) {
+            if (!db.ranges) return '';
+            const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
+            return existing ? existing.range : '';
+        }
+
+        function setStatSubject(subject) {
+            currentStatSubject = subject;
+            renderStatistics();
+        }
+
         function renderStatistics() {
             const thead = document.getElementById('stat-thead');
             const tbody = document.getElementById('stat-tbody');
-            if(!thead || !tbody) return;
+            const subtabs = document.getElementById('stat-subtabs');
+            if(!thead || !tbody || !subtabs) return;
+
+            // 1. 生成科目分頁按鈕
+            const subjects = [...new Set(db.tasks.map(t => t.subject))];
+            if (!subjects.includes(currentStatSubject) && subjects.length > 0) {
+                currentStatSubject = subjects[0];
+            }
+
+            let subtabsHTML = '';
+            subjects.forEach(sub => {
+                const activeClass = sub === currentStatSubject ? 'border-b-2 border-blue-500 text-blue-600 font-bold bg-blue-50' : 'text-gray-600 hover:bg-gray-100';
+                subtabsHTML += `<button onclick="setStatSubject('${sub}')" class="px-4 py-2 text-sm ${activeClass}">${sub}</button>`;
+            });
+            subtabs.innerHTML = subtabsHTML;
+
+            // 2. 過濾當前科目的 Tasks
+            const tasksInSub = db.tasks.filter(t => t.subject === currentStatSubject);
 
             // 取得目前有效的 tasks (可能帶有 noticeName)
-            // 從 records 中收集有出現的 (taskId + noticeName) 作為行
-            const uniqueTaskKeys = []; // [{taskId, noticeName, label}]
+            const uniqueTaskKeys = []; 
             
-            // 先加入定義在 db.tasks 中的
-            db.tasks.forEach(t => {
-                uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `[${t.subject}] ${t.name}` });
+            // 先加入定義在 db.tasks 中的 (只屬於當前科目)
+            tasksInSub.forEach(t => {
+                uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
             });
 
             // 補充 records 中有附帶 noticeName 的
             db.records.forEach(r => {
                 if(r.noticeName) {
-                    const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
-                    if(!exists) {
-                        const t = db.tasks.find(t => t.id === r.taskId);
-                        if(t) uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `[${t.subject}] ${t.name}_${r.noticeName}` });
+                    const t = tasksInSub.find(t => t.id === r.taskId);
+                    if(t) {
+                        const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
+                        if(!exists) {
+                            uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                        }
                     }
                 }
             });
 
-            // 生成 Header
-            let headHTML = '<tr><th class="p-2 border">姓名</th>';
+            // 生成 Header (包含手動輸入範圍)
+            let headHTML = '<tr><th class="p-2 border align-bottom">姓名</th>';
             uniqueTaskKeys.forEach(k => {
-                headHTML += `<th class="p-2 border truncate max-w-[100px]" title="${k.label}">${k.label}</th>`;
+                const rangeVal = getTaskRange(k.taskId, k.noticeName);
+                headHTML += `<th class="p-2 border text-center max-w-[120px]">
+                                <div class="font-bold mb-1 truncate" title="${k.label}">${k.label}</div>
+                                <input type="text" placeholder="輸入範圍..." value="${rangeVal}" 
+                                       onchange="updateTaskRange('${k.taskId}', '${k.noticeName}', this.value)" 
+                                       class="border text-xs p-1 w-full rounded font-normal bg-gray-50 focus:bg-white text-center">
+                             </th>`;
             });
             headHTML += '</tr>';
             thead.innerHTML = headHTML;
@@ -567,11 +624,11 @@
             // 生成 Body
             let bodyHTML = '';
             db.students.forEach(s => {
-                bodyHTML += `<tr><td class="p-2 border font-semibold">${s.name}</td>`;
+                bodyHTML += `<tr><td class="p-2 border font-semibold whitespace-nowrap">${s.name}</td>`;
                 uniqueTaskKeys.forEach(k => {
                     const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
-                    const mark = record ? '<span class="text-green-600 font-bold">✓</span>' : '<span class="text-red-300">✗</span>';
-                    bodyHTML += `<td class="p-2 border text-center">${mark}</td>`;
+                    const mark = record ? `<span class="text-green-700 font-bold text-xs bg-green-100 px-1 rounded block truncate" title="${record.timestamp}">${record.timestamp}</span>` : '<span class="text-gray-300">-</span>';
+                    bodyHTML += `<td class="p-2 border text-center align-middle">${mark}</td>`;
                 });
                 bodyHTML += '</tr>';
             });
