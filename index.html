@@ -91,6 +91,37 @@
         <!-- Tab 0: 前端資料建置 -->
         <div id="tab-0" class="tab-content active bg-white p-6 rounded-b shadow">
             <h2 class="text-2xl font-bold mb-4 border-b pb-2">0. 資料建置</h2>
+            
+            <!-- 班級資訊 -->
+            <div class="border p-4 rounded bg-gray-50 mb-6">
+                <h3 class="text-xl font-semibold mb-2">班級資訊</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">學校名稱</label>
+                        <input type="text" id="info-school" placeholder="例如: 快樂國小" class="border p-2 w-full rounded" onchange="saveClassInfo()">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">學年</label>
+                        <input type="text" id="info-year" placeholder="例如: 112" class="border p-2 w-full rounded" onchange="saveClassInfo()">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">學期</label>
+                        <select id="info-semester" class="border p-2 w-full rounded" onchange="saveClassInfo()">
+                            <option value="">請選擇</option>
+                            <option value="上學期">上學期</option>
+                            <option value="下學期">下學期</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">班級</label>
+                        <input type="text" id="info-class" placeholder="例如: 三年甲班" class="border p-2 w-full rounded" onchange="saveClassInfo()">
+                    </div>
+                    <div>
+                        <button onclick="saveClassInfo()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">儲存</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- 學生管理 -->
                 <div class="border p-4 rounded bg-gray-50">
@@ -516,6 +547,7 @@
                 saveData();
             }
 
+            updateHeaderClassInfo();
             renderStudents();
             renderTasks();
             initAllSelects();
@@ -544,7 +576,48 @@
         // ==========================================
         // Tab 0: 資料建置
         // ==========================================
-        function addStudent() {
+        
+        function saveClassInfo() {
+            db.classInfo = {
+                schoolName: document.getElementById('info-school').value.trim(),
+                academicYear: document.getElementById('info-year').value.trim(),
+                semester: document.getElementById('info-semester').value,
+                className: document.getElementById('info-class').value.trim()
+            };
+            saveData();
+            updateHeaderClassInfo();
+            // Show toast or alert if clicked button
+            if(event && event.type === 'click') alert('班級資訊已儲存！');
+        }
+
+        function updateHeaderClassInfo() {
+            if(!db.classInfo) return;
+            const parts = [
+                db.classInfo.schoolName, 
+                db.classInfo.academicYear ? `${db.classInfo.academicYear}學年` : '', 
+                db.classInfo.semester, 
+                db.classInfo.className
+            ].filter(Boolean);
+            document.getElementById('header-class-info').innerText = parts.join(' | ');
+            
+            // Populate inputs if they exist
+            if(document.getElementById('info-school')) document.getElementById('info-school').value = db.classInfo.schoolName || '';
+            if(document.getElementById('info-year')) document.getElementById('info-year').value = db.classInfo.academicYear || '';
+            if(document.getElementById('info-semester')) document.getElementById('info-semester').value = db.classInfo.semester || '';
+            if(document.getElementById('info-class')) document.getElementById('info-class').value = db.classInfo.className || '';
+        }
+        
+        function getClassPrefix() {
+            if(!db.classInfo) return "";
+            const parts = [
+                db.classInfo.schoolName, 
+                db.classInfo.academicYear, 
+                db.classInfo.semester, 
+                db.classInfo.className
+            ].filter(Boolean);
+            return parts.length > 0 ? parts.join('_') + "_" : "";
+        }
+function addStudent() {
             const nameInput = document.getElementById('new-student-name');
             const name = nameInput.value.trim();
             if (!name) return;
