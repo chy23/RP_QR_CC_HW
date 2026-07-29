@@ -1736,42 +1736,54 @@
             }
         }
 
+        let currentDragBox = null;
+        let currentDragContainer = null;
+        let dragStartX = 0;
+        let dragStartY = 0;
+
+        document.addEventListener('mousemove', function(e) {
+            if(!currentDragBox) return;
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            
+            let currentLeft = parseFloat(currentDragBox.style.left) || 0;
+            let currentTop = parseFloat(currentDragBox.style.top) || 0;
+            
+            let newLeft = currentLeft + dx;
+            let newTop = currentTop + dy;
+            
+            if(newLeft < 0) newLeft = 0;
+            if(newTop < 0) newTop = 0;
+            if(newLeft + currentDragBox.offsetWidth > currentDragContainer.offsetWidth) newLeft = currentDragContainer.offsetWidth - currentDragBox.offsetWidth;
+            if(newTop + currentDragBox.offsetHeight > currentDragContainer.offsetHeight) newTop = currentDragContainer.offsetHeight - currentDragBox.offsetHeight;
+            
+            currentDragBox.style.left = newLeft + 'px';
+            currentDragBox.style.top = newTop + 'px';
+        });
+
+        document.addEventListener('mouseup', function() {
+            currentDragBox = null;
+            currentDragContainer = null;
+        });
+
         function setupDraggable(box, container) {
-            let isDragging = false;
-            let startX, startY;
+            // Enable native CSS resizing
+            box.style.resize = 'both';
+            box.style.overflow = 'hidden';
             
             box.onmousedown = function(e) {
-                isDragging = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                e.preventDefault();
-            };
-            
-            document.onmousemove = function(e) {
-                if(!isDragging) return;
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                startX = e.clientX;
-                startY = e.clientY;
+                // Do not drag if clicking on the bottom-right resize handle
+                const rect = box.getBoundingClientRect();
+                const isResize = (e.clientX > rect.right - 20) && (e.clientY > rect.bottom - 20);
+                if(isResize) return;
                 
-                let currentLeft = parseFloat(box.style.left) || 0;
-                let currentTop = parseFloat(box.style.top) || 0;
-                
-                let newLeft = currentLeft + dx;
-                let newTop = currentTop + dy;
-                
-                // bounds check
-                if(newLeft < 0) newLeft = 0;
-                if(newTop < 0) newTop = 0;
-                if(newLeft + box.offsetWidth > container.offsetWidth) newLeft = container.offsetWidth - box.offsetWidth;
-                if(newTop + box.offsetHeight > container.offsetHeight) newTop = container.offsetHeight - box.offsetHeight;
-                
-                box.style.left = newLeft + 'px';
-                box.style.top = newTop + 'px';
-            };
-            
-            document.onmouseup = function() {
-                isDragging = false;
+                currentDragBox = box;
+                currentDragContainer = container;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                e.preventDefault(); // Prevents text selection while dragging
             };
         }
 
@@ -1817,15 +1829,25 @@
                                 const box = document.getElementById('qr-box-' + i);
                                 const leftPx = parseFloat(box.style.left) || 0;
                                 const topPx = parseFloat(box.style.top) || 0;
+                                const widthPx = box.offsetWidth;
+                                const heightPx = box.offsetHeight;
+                                
                                 // Convert visual px to PDF pt
                                 const leftPt = leftPx / visualPdfScale;
                                 const topPt = topPx / visualPdfScale;
+                                const customWidthPt = widthPx / visualPdfScale;
+                                const customHeightPt = heightPx / visualPdfScale;
                                 
                                 const pageHeightPt = pages[i-1].getSize().height;
                                 // PDF coordinates are from bottom-left
-                                const pdfY = pageHeightPt - topPt - qrHeightPt;
+                                const pdfY = pageHeightPt - topPt - customHeightPt;
                                 
-                                boxPositions[i-1] = { x: leftPt, y: pdfY };
+                                boxPositions[i-1] = { 
+                                    x: leftPt, 
+                                    y: pdfY,
+                                    w: customWidthPt,
+                                    h: customHeightPt
+                                };
                             }
                         }
                         
@@ -1847,8 +1869,8 @@
                                 page.drawImage(qrImage, {
                                     x: pos.x,
                                     y: pos.y,
-                                    width: qrWidthPt,
-                                    height: qrHeightPt
+                                    width: pos.w,
+                                    height: pos.h
                                 });
                             }
                         }
