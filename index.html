@@ -616,12 +616,13 @@
             const floatingTasks = db.tasks.filter(t => t.type === 'floating');
             const allTasks = db.tasks;
 
-            const renderCheckboxes = (containerId, tasks) => {
+            const renderCheckboxes = (containerId, tasks, onChange) => {
                 const el = document.getElementById(containerId);
                 if (!el) return;
+                const onChangeStr = onChange ? `onchange="${onChange}"` : '';
                 el.innerHTML = tasks.map(t => `
                     <label class="flex items-center space-x-2 py-1">
-                        <input type="checkbox" value="${t.id}" class="form-checkbox text-blue-600 h-4 w-4">
+                        <input type="checkbox" value="${t.id}" class="form-checkbox text-blue-600 h-4 w-4" ${onChangeStr}>
                         <span class="text-sm">[${t.subject}] ${t.name}</span>
                     </label>
                 `).join('');
@@ -634,9 +635,30 @@
             };
 
             renderCheckboxes('tab2-task-checkboxes', fixedTasks);
+            
+            // Tab 3 select
+            const scanTargetTask = document.getElementById('scan-target-task');
+            if(scanTargetTask) {
+                const currentVal = scanTargetTask.value;
+                scanTargetTask.innerHTML = '<option value="">-- 請選擇作業 --</option>' + allTasks.map(t => `<option value="${t.id}">[${t.subject}] ${t.name}</option>`).join('');
+                scanTargetTask.value = currentVal;
+            }
             populateSelect('tab3-task-select', floatingTasks);
-            renderCheckboxes('tab4-task-checkboxes', allTasks);
+            
+            // Tab 4
+            renderCheckboxes('tab4-task-checkboxes', allTasks, 'previewWord()');
+            
+            // Tab 5
             renderCheckboxes('tab5-task-checkboxes', allTasks);
+            const tab5StudentCheckboxes = document.getElementById('tab5-student-checkboxes');
+            if(tab5StudentCheckboxes) {
+                tab5StudentCheckboxes.innerHTML = db.students.map(s => `
+                    <label class="flex items-center space-x-2 p-2 border rounded hover:bg-gray-50">
+                        <input type="checkbox" value="${s.id}" checked>
+                        <span>${s.name} (${s.id}號)</span>
+                    </label>
+                `).join('');
+            }
         }
 
         function getCheckedTaskIds(containerId) {
@@ -1600,6 +1622,264 @@
 
         // Boot
         loadData();
+        // --- VISUAL PDF EDITOR ---
+        let visualPdfScale = 1;
+        let visualQrStates = []; // [{ pageIndex, x, y, size, keep, stamp }]
+
+        function updateVisualSize() {
+            const sizeCm = parseFloat(document.getElementById('tab3-visual-size').value) || 7;
+            const textEl = document.getElementById('tab3-visual-size-text');
+            if(textEl) textEl.innerText = sizeCm.toFixed(1) + ' cm';
+            
+            // update all qr boxes
+            const ptToCm = 1 / 28.346;
+            
+            const boxes = document.querySelectorAll('.qr-box');
+            boxes.forEach(box => {
+                const widthPt = sizeCm / ptToCm;
+                const heightPt = widthPt * 1.1;
+                
+                box.style.width = (widthPt * visualPdfScale) + 'px';
+                box.style.height = (heightPt * visualPdfScale) + 'px';
+            });
+        }
+
+        async function renderVisualPdfPreview() {
+            const fileInput = document.getElementById('tab3-pdf-upload');
+            if(!fileInput || !fileInput.files.length) return;
+            
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+            const fileReader = new FileReader();
+            fileReader.onload = async function() {
+                showLoading();
+                try {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    pdfDocumentGlobal = pdf;
+                    
+                    const container = document.getElementById('visual-pdf-preview');
+                    if(!container) return;
+                    container.innerHTML = '';
+                    container.style.display = 'flex';
+                    visualQrStates = [];
+                    
+                    const page1 = await pdf.getPage(1);
+                    const viewport1 = page1.getViewport({scale: 1.0});
+                    // scale to fit container width, leave padding
+                    visualPdfScale = (container.clientWidth - 40) / viewport1.width;
+                    if(visualPdfScale > 1.5) visualPdfScale = 1.5; // cap it
+                    
+                    for(let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const scaledViewport = page.getViewport({scale: visualPdfScale});
+                        
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'relative shadow-lg bg-white border mx-auto';
+                        wrapper.style.width = scaledViewport.width + 'px';
+                        wrapper.style.height = scaledViewport.height + 'px';
+                        
+                        const canvas = document.createElement('canvas');
+                        canvas.width = scaledViewport.width;
+                        canvas.height = scaledViewport.height;
+                        canvas.className = 'absolute top-0 left-0';
+                        wrapper.appendChild(canvas);
+                        
+                        const context = canvas.getContext('2d');
+                        await page.render({canvasContext: context, viewport: scaledViewport}).promise;
+                        
+                        // Controls
+                        const controls = document.createElement('div');
+                        controls.className = 'absolute top-2 left-2 flex flex-col gap-2 bg-white p-3 rounded shadow-md border z-20 opacity-90 hover:opacity-100';
+                        controls.innerHTML = `
+                            <div class="font-bold text-gray-700 border-b pb-1 mb-1">第 ${i} 頁</div>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="keep-page-${i}" checked onchange="toggleBox(${i})"> 保留此頁匯出</label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="stamp-page-${i}" ${i===1?'checked':''} onchange="toggleBox(${i})"> 在此頁蓋條碼</label>
+                        `;
+                        wrapper.appendChild(controls);
+                        
+                        // QR Box
+                        const box = document.createElement('div');
+                        box.id = 'qr-box-' + i;
+                        box.className = 'qr-box absolute border-2 border-red-500 cursor-move bg-red-200 bg-opacity-50 flex flex-col items-center justify-center text-xs font-bold text-red-700 z-10';
+                        box.style.display = i === 1 ? 'flex' : 'none';
+                        box.innerHTML = '姓名座號<br><br>條碼區塊';
+                        wrapper.appendChild(box);
+                        
+                        // Default position: Top right corner, offset slightly
+                        box.style.top = '20px';
+                        box.style.left = (scaledViewport.width - 120) + 'px';
+                        
+                        setupDraggable(box, wrapper);
+                        
+                        container.appendChild(wrapper);
+                    }
+                    updateVisualSize();
+                } catch(e) {
+                    alert("載入 PDF 發生錯誤: " + e.message);
+                }
+                hideLoading();
+            };
+            fileReader.readAsArrayBuffer(fileInput.files[0]);
+        }
+
+        function toggleBox(pageIndex) {
+            const keep = document.getElementById('keep-page-' + pageIndex).checked;
+            const stamp = document.getElementById('stamp-page-' + pageIndex).checked;
+            const box = document.getElementById('qr-box-' + pageIndex);
+            
+            if(!keep && stamp) {
+                // if not keeping, can't stamp
+                document.getElementById('stamp-page-' + pageIndex).checked = false;
+                box.style.display = 'none';
+            } else {
+                box.style.display = stamp ? 'flex' : 'none';
+            }
+        }
+
+        function setupDraggable(box, container) {
+            let isDragging = false;
+            let startX, startY;
+            
+            box.onmousedown = function(e) {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                e.preventDefault();
+            };
+            
+            document.onmousemove = function(e) {
+                if(!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                let currentLeft = parseFloat(box.style.left) || 0;
+                let currentTop = parseFloat(box.style.top) || 0;
+                
+                let newLeft = currentLeft + dx;
+                let newTop = currentTop + dy;
+                
+                // bounds check
+                if(newLeft < 0) newLeft = 0;
+                if(newTop < 0) newTop = 0;
+                if(newLeft + box.offsetWidth > container.offsetWidth) newLeft = container.offsetWidth - box.offsetWidth;
+                if(newTop + box.offsetHeight > container.offsetHeight) newTop = container.offsetHeight - box.offsetHeight;
+                
+                box.style.left = newLeft + 'px';
+                box.style.top = newTop + 'px';
+            };
+            
+            document.onmouseup = function() {
+                isDragging = false;
+            };
+        }
+
+        async function generateVisualFloatingPDF() {
+            const select = document.getElementById('tab3-task-select');
+            if(!select.value) { alert('請先選擇浮動作/通知單'); return; }
+            const task = db.tasks.find(t => t.id === select.value);
+            let noticeName = '';
+            if(task.name.includes('通知單')) {
+                const noticeInput = document.getElementById('tab3-notice-name');
+                if(noticeInput) noticeName = noticeInput.value.trim();
+            }
+
+            const fileInput = document.getElementById('tab3-pdf-upload');
+            if(!fileInput || fileInput.files.length === 0) { alert('請先上傳底板 PDF'); return; }
+            
+            showLoading();
+            setTimeout(async () => {
+                try {
+                    const originalPdfBytes = await fileInput.files[0].arrayBuffer();
+                    const mergedPdf = await PDFLib.PDFDocument.create();
+                    
+                    const sizeCm = parseFloat(document.getElementById('tab3-visual-size').value) || 7;
+                    const cmToPt = 28.346;
+                    const qrWidthPt = sizeCm * cmToPt;
+                    const qrHeightPt = qrWidthPt * 1.1;
+
+                    for (const student of db.students) {
+                        const pdfDoc = await PDFLib.PDFDocument.load(originalPdfBytes);
+                        const pages = pdfDoc.getPages();
+                        
+                        let keepIndices = [];
+                        let stampIndices = [];
+                        let boxPositions = {}; // pageIndex -> {x, y} in points
+                        
+                        for(let i = 1; i <= pages.length; i++) {
+                            const keep = document.getElementById('keep-page-' + i)?.checked;
+                            const stamp = document.getElementById('stamp-page-' + i)?.checked;
+                            
+                            if(keep) keepIndices.push(i - 1);
+                            if(stamp) {
+                                stampIndices.push(i - 1);
+                                const box = document.getElementById('qr-box-' + i);
+                                const leftPx = parseFloat(box.style.left) || 0;
+                                const topPx = parseFloat(box.style.top) || 0;
+                                // Convert visual px to PDF pt
+                                const leftPt = leftPx / visualPdfScale;
+                                const topPt = topPx / visualPdfScale;
+                                
+                                const pageHeightPt = pages[i-1].getSize().height;
+                                // PDF coordinates are from bottom-left
+                                const pdfY = pageHeightPt - topPt - qrHeightPt;
+                                
+                                boxPositions[i-1] = { x: leftPt, y: pdfY };
+                            }
+                        }
+                        
+                        if(keepIndices.length === 0) {
+                            alert('必須至少保留一頁！');
+                            hideLoading();
+                            return;
+                        }
+
+                        // Generate label image for this student
+                        const dataUrl = await createFloatingLabelImage(student, task, noticeName, 400);
+                        const qrBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
+                        const qrImage = await pdfDoc.embedPng(qrBytes);
+
+                        for (const idx of keepIndices) {
+                            const page = pages[idx];
+                            if (stampIndices.includes(idx)) {
+                                const pos = boxPositions[idx];
+                                page.drawImage(qrImage, {
+                                    x: pos.x,
+                                    y: pos.y,
+                                    width: qrWidthPt,
+                                    height: qrHeightPt
+                                });
+                            }
+                        }
+
+                        // Extract kept pages
+                        const extractedDoc = await PDFLib.PDFDocument.create();
+                        const copiedPages = await extractedDoc.copyPages(pdfDoc, keepIndices);
+                        copiedPages.forEach(p => extractedDoc.addPage(p));
+                        
+                        const extractedBytes = await extractedDoc.save();
+                        const copiedPdf = await PDFLib.PDFDocument.load(extractedBytes);
+                        
+                        const finalPages = await mergedPdf.copyPages(copiedPdf, copiedPdf.getPageIndices());
+                        finalPages.forEach(p => mergedPdf.addPage(p));
+                    }
+
+                    const finalBytes = await mergedPdf.save();
+                    const blob = new Blob([finalBytes], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${task.name}_浮動套印.pdf`;
+                    a.click();
+
+                } catch (e) {
+                    alert('產生 PDF 失敗: ' + e.message);
+                    console.error(e);
+                }
+                hideLoading();
+            }, 500);
+        }
 
     </script>
 </body>
