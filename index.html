@@ -427,6 +427,7 @@
             { id: 't_fixed_1', subject: '國語', name: '國習', type: 'fixed' },
             { id: 't_fixed_2', subject: '國語', name: '甲本', type: 'fixed' },
             { id: 't_fixed_3', subject: '國語', name: '乙本', type: 'fixed' },
+            { id: 't_fixed_8', subject: '國語', name: '考試本', type: 'fixed' },
             { id: 't_fixed_4', subject: '數學', name: '數習', type: 'fixed' },
             { id: 't_fixed_5', subject: '數學', name: '數練', type: 'fixed' },
             { id: 't_fixed_6', subject: '社會', name: '社作', type: 'fixed' },
@@ -506,6 +507,12 @@
             // 如果 tasks 為空，載入預設的作業清單
             if (db.tasks.length === 0) {
                 db.tasks = [...DEFAULT_TASKS];
+                saveData();
+            }
+            
+            // Migration: 確保現有使用者也會新增「考試本」
+            if (!db.tasks.find(t => t.id === 't_fixed_8')) {
+                db.tasks.push({ id: 't_fixed_8', subject: '國語', name: '考試本', type: 'fixed' });
                 saveData();
             }
 
