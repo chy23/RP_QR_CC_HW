@@ -98,7 +98,8 @@
                     <ul id="task-list" class="mt-2 h-64 overflow-y-auto bg-white border rounded p-2"></ul>
                 </div>
             </div>
-            <div class="mt-6 text-right">
+            <div class="mt-6 flex justify-between">
+                <button onclick="exportRawCodes()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow">匯出防偽代碼清單 (Excel)</button>
                 <button onclick="resetData()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow">清除所有系統資料</button>
             </div>
         </div>
@@ -155,12 +156,12 @@
                     <div id="tab2-task-checkboxes" class="border p-2 rounded w-full h-40 overflow-y-auto bg-gray-50 mb-2"></div>
                 </div>
                 <div>
-                    <label class="block mb-1 font-semibold">標籤尺寸與排版 (預設為 3x10 A4 版型)：</label>
+                    <label class="block mb-1 font-semibold">單張標籤尺寸 (公分)：</label>
                     <div class="flex gap-2 mb-2">
-                        <input type="number" id="tab2-cols" value="3" class="border p-2 rounded w-1/2" placeholder="欄數 (如: 3)">
-                        <input type="number" id="tab2-rows" value="10" class="border p-2 rounded w-1/2" placeholder="列數 (如: 10)">
+                        <input type="number" id="tab2-w" value="7" step="0.1" class="border p-2 rounded w-1/2" placeholder="寬度 (cm)">
+                        <input type="number" id="tab2-h" value="2.9" step="0.1" class="border p-2 rounded w-1/2" placeholder="高度 (cm)">
                     </div>
-                    <label class="block mb-1 text-sm text-gray-500">如果您的標籤紙不是標準 3x10，可以調整欄列數，系統會自動分配 A4 寬高。</label>
+                    <label class="block mb-1 text-sm text-gray-500">系統將根據 A4 尺寸 (21 x 29.7cm) 自動排版。</label>
                 </div>
             </div>
             <div class="flex gap-2">
@@ -197,18 +198,27 @@
                         </div>
                     </div>
                     
-                    <label class="block mb-1 font-semibold">條碼座標與大小 (拖曳右側預覽或手動輸入)：</label>
+                    <label class="block mb-1 font-semibold">條碼定位與尺寸 (公分)：</label>
+                    <div class="flex gap-2 mb-2">
+                        <select id="tab3-anchor" class="border p-1 w-full rounded" onchange="applyAnchor()">
+                            <option value="custom">自訂座標微調</option>
+                            <option value="tl">左上角</option>
+                            <option value="tr">右上角</option>
+                            <option value="bl">左下角</option>
+                            <option value="br">右下角</option>
+                        </select>
+                    </div>
                     <div class="flex gap-2">
-                        <input type="number" id="tab3-x" placeholder="X" value="50" class="border p-1 w-1/3 rounded" oninput="updatePreviewBox()">
-                        <input type="number" id="tab3-y" placeholder="Y" value="750" class="border p-1 w-1/3 rounded" oninput="updatePreviewBox()">
-                        <input type="number" id="tab3-size" placeholder="Size" value="60" class="border p-1 w-1/3 rounded" oninput="updatePreviewBox()">
+                        <input type="number" id="tab3-x" placeholder="X" value="1" step="0.1" class="border p-1 w-1/3 rounded" oninput="updatePreviewBox(); document.getElementById('tab3-anchor').value='custom'">
+                        <input type="number" id="tab3-y" placeholder="Y" value="1" step="0.1" class="border p-1 w-1/3 rounded" oninput="updatePreviewBox(); document.getElementById('tab3-anchor').value='custom'">
+                        <input type="number" id="tab3-size" placeholder="寬度 (cm)" value="7" step="0.1" class="border p-1 w-1/3 rounded" oninput="applyAnchor()">
                     </div>
                     <button onclick="generateFloatingPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 mt-4 w-full rounded shadow">套印並下載 PDF</button>
                 </div>
 
                 <div class="border rounded bg-gray-100 overflow-hidden relative shadow-inner" id="pdf-preview-container" style="height: 500px; display:none;">
                     <canvas id="pdf-preview-canvas" class="absolute top-0 left-0"></canvas>
-                    <div id="qr-preview-box" class="absolute border-2 border-red-500 cursor-move bg-red-200 bg-opacity-50 flex items-center justify-center text-xs font-bold text-red-700 z-10" style="width: 60px; height: 60px; left: 50px; top: 50px; user-select: none;">QR</div>
+                    <div id="qr-preview-box" class="absolute border-2 border-red-500 cursor-move bg-red-200 bg-opacity-50 flex flex-col items-center justify-center text-xs font-bold text-red-700 z-10" style="width: 70px; height: 28px; left: 10px; top: 10px; user-select: none;">姓名座號<br>QR</div>
                 </div>
             </div>
         </div>
@@ -233,16 +243,12 @@
                     <div id="tab5-task-checkboxes" class="border p-2 rounded w-full h-40 overflow-y-auto bg-gray-50 mb-2"></div>
                 </div>
                 <div>
-                    <label class="block mb-1 font-semibold">單張標籤大小 (像素 px)：</label>
+                    <label class="block mb-1 font-semibold">單張標籤尺寸 (公分)：</label>
                     <div class="flex gap-2 mb-2">
-                        <input type="number" id="tab5-w" value="400" class="border p-2 rounded w-1/2" placeholder="寬度">
-                        <input type="number" id="tab5-h" value="150" class="border p-2 rounded w-1/2" placeholder="高度">
+                        <input type="number" id="tab5-w" value="7" step="0.1" class="border p-2 rounded w-1/2" placeholder="寬度 (cm)">
+                        <input type="number" id="tab5-h" value="2.9" step="0.1" class="border p-2 rounded w-1/2" placeholder="高度 (cm)">
                     </div>
-                    <label class="block mb-1 font-semibold mt-2">排版設定 (網格)：</label>
-                    <div class="flex gap-2">
-                        <input type="number" id="tab5-cols" value="3" class="border p-2 rounded w-1/2" placeholder="欄數">
-                        <input type="number" id="tab5-rows" value="10" class="border p-2 rounded w-1/2" placeholder="列數">
-                    </div>
+                    <label class="block mb-1 text-sm text-gray-500">系統將根據 A4 尺寸自動排版。</label>
                 </div>
             </div>
             <div class="flex gap-2">
@@ -490,6 +496,26 @@
                                 <button onclick="removeTask('${t.id}')" class="text-red-500 hover:text-red-700 text-sm px-2">刪除</button>`;
                 list.appendChild(li);
             });
+        }
+
+
+        async function exportRawCodes() {
+            showLoading();
+            setTimeout(() => {
+                try {
+                    const wb = XLSX.utils.book_new();
+                    let data = [['座號', '姓名', '系統Token', '防偽密碼(Salt)']];
+                    db.students.forEach(s => {
+                        data.push([s.id, s.name, s.token, s.salt]);
+                    });
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+                    XLSX.utils.book_append_sheet(wb, ws, "防偽代碼清單");
+                    XLSX.writeFile(wb, "學生防偽代碼清單.xlsx");
+                } catch(e) {
+                    alert("匯出失敗: " + e.message);
+                }
+                hideLoading();
+            }, 500);
         }
 
         function resetData() {
@@ -825,16 +851,63 @@
             fileReader.readAsArrayBuffer(fileInput.files[0]);
         }
 
+        
+        function applyAnchor() {
+            const anchor = document.getElementById('tab3-anchor').value;
+            if (anchor === 'custom') return;
+            
+            // A4 pdf size is ~ 595.28 x 841.89 points
+            // 1 cm = 28.346 points
+            const cmToPt = 28.346;
+            const wCm = parseFloat(document.getElementById('tab3-size').value) || 7;
+            const hCm = wCm * 0.4;
+            
+            const wPt = wCm * cmToPt;
+            const hPt = hCm * cmToPt;
+            const marginCm = 1; 
+            const marginPt = marginCm * cmToPt;
+            const a4WPt = 595.28;
+            const a4HPt = 841.89;
+            
+            let xPt = marginPt;
+            let yPt = marginPt;
+            
+            if (anchor === 'tl') {
+                xPt = marginPt;
+                yPt = a4HPt - marginPt - hPt;
+            } else if (anchor === 'tr') {
+                xPt = a4WPt - marginPt - wPt;
+                yPt = a4HPt - marginPt - hPt;
+            } else if (anchor === 'bl') {
+                xPt = marginPt;
+                yPt = marginPt;
+            } else if (anchor === 'br') {
+                xPt = a4WPt - marginPt - wPt;
+                yPt = marginPt;
+            }
+            
+            document.getElementById('tab3-x').value = (xPt / cmToPt).toFixed(1);
+            document.getElementById('tab3-y').value = (yPt / cmToPt).toFixed(1);
+            updatePreviewBox();
+        }
+
         function updatePreviewBox() {
-            const x = parseFloat(document.getElementById('tab3-x').value) || 0;
-            const y = parseFloat(document.getElementById('tab3-y').value) || 0;
-            const size = parseFloat(document.getElementById('tab3-size').value) || 60;
+            const cmToPt = 28.346;
+            const xCm = parseFloat(document.getElementById('tab3-x').value) || 0;
+            const yCm = parseFloat(document.getElementById('tab3-y').value) || 0;
+            const wCm = parseFloat(document.getElementById('tab3-size').value) || 7;
+            const hCm = wCm * 0.4;
+            
+            const xPt = xCm * cmToPt;
+            const yPt = yCm * cmToPt;
+            const wPt = wCm * cmToPt;
+            const hPt = hCm * cmToPt;
             
             const box = document.getElementById('qr-preview-box');
-            box.style.width = (size * previewScale) + 'px';
-            box.style.height = (size * previewScale) + 'px';
-            box.style.left = (x * previewScale) + 'px';
-            box.style.top = ((pdfPreviewOriginalHeight - y - size) * previewScale) + 'px';
+            box.style.width = (wPt * previewScale) + 'px';
+            box.style.height = (hPt * previewScale) + 'px';
+            box.style.left = (xPt * previewScale) + 'px';
+            box.style.top = ((pdfPreviewOriginalHeight - yPt - hPt) * previewScale) + 'px';
         }
 
         function setupDraggableBox() {
@@ -862,12 +935,18 @@
                 box.style.left = (currentLeft + dx) + 'px';
                 box.style.top = (currentTop + dy) + 'px';
                 
-                const size = parseFloat(document.getElementById('tab3-size').value) || 60;
-                const newX = (currentLeft + dx) / previewScale;
-                const newY = pdfPreviewOriginalHeight - ((currentTop + dy) / previewScale) - size;
+                const cmToPt = 28.346;
+                const wCm = parseFloat(document.getElementById('tab3-size').value) || 7;
+                const hCm = wCm * 0.4;
+                const wPt = wCm * cmToPt;
+                const hPt = hCm * cmToPt;
                 
-                document.getElementById('tab3-x').value = Math.round(newX);
-                document.getElementById('tab3-y').value = Math.round(newY);
+                const newXPt = (currentLeft + dx) / previewScale;
+                const newYPt = pdfPreviewOriginalHeight - ((currentTop + dy) / previewScale) - hPt;
+                
+                document.getElementById('tab3-x').value = (newXPt / cmToPt).toFixed(1);
+                document.getElementById('tab3-y').value = (newYPt / cmToPt).toFixed(1);
+                document.getElementById('tab3-anchor').value = 'custom';
             };
             
             document.onmouseup = function() {
@@ -933,11 +1012,18 @@
                     let page = pdfDoc.addPage([595.28, 841.89]); // A4
                     const { width, height } = page.getSize();
                     
-                    const cols = parseInt(document.getElementById('tab2-cols').value) || 3;
-                    const rows = parseInt(document.getElementById('tab2-rows').value) || 10;
-                    const margin = 20;
-                    const labelW = (width - margin * 2) / cols;
-                    const labelH = (height - margin * 2) / rows;
+                    
+                    const cmToPt = 28.346;
+                    const wCm = parseFloat(document.getElementById('tab2-w').value) || 7;
+                    const hCm = parseFloat(document.getElementById('tab2-h').value) || 2.9;
+                    const labelW = wCm * cmToPt;
+                    const labelH = hCm * cmToPt;
+                    
+                    const cols = Math.max(1, Math.floor((width - 20) / labelW));
+                    const rows = Math.max(1, Math.floor((height - 20) / labelH));
+                    
+                    const marginLeft = (width - (cols * labelW)) / 2;
+                    const marginBottom = (height - (rows * labelH)) / 2;
 
                     let index = 0;
                     for (const taskId of taskIds) {
@@ -948,14 +1034,16 @@
                             }
                             const col = index % cols;
                             const row = Math.floor((index % (cols * rows)) / cols);
-                            const x = margin + col * labelW;
-                            const y = height - margin - (row + 1) * labelH;
+                            const x = marginLeft + col * labelW;
+                            const y = height - marginBottom - (row + 1) * labelH;
 
-                            const dataUrl = await createLabelImage(student, task, '', true, 400, 150);
+                            // We pass custom pixel width/height to createLabelImage so the resolution is sharp. 
+                            // 7cm x 2.9cm is about 2.4 aspect ratio. Let's use 600x250.
+                            const dataUrl = await createLabelImage(student, task, '', true, 600, 250);
                             const imgBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
                             const pdfImg = await pdfDoc.embedPng(imgBytes);
 
-                            page.drawImage(pdfImg, { x: x+5, y: y+5, width: labelW-10, height: labelH-10 });
+                            page.drawImage(pdfImg, { x: x+2, y: y+2, width: labelW-4, height: labelH-4 });
                             index++;
                         }
                     }
@@ -999,9 +1087,10 @@
             const pagesKeep = document.getElementById('tab3-pages-keep').value.trim();
             const pagesStampStr = document.getElementById('tab3-pages-stamp').value.trim();
 
-            const qrX = parseFloat(document.getElementById('tab3-x').value) || 50;
-            const qrY = parseFloat(document.getElementById('tab3-y').value) || 750;
-            const qrSize = parseFloat(document.getElementById('tab3-size').value) || 60;
+            const cmToPt = 28.346;
+            const qrX = (parseFloat(document.getElementById('tab3-x').value) || 1) * cmToPt;
+            const qrY = (parseFloat(document.getElementById('tab3-y').value) || 1) * cmToPt;
+            const qrSize = (parseFloat(document.getElementById('tab3-size').value) || 7) * cmToPt;
 
             showLoading();
             const fileReader = new FileReader();
@@ -1096,22 +1185,22 @@
                             new TableCell({ children: [new Paragraph(student.name)] })
                         ];
                         for (const task of selectedTasks) {
-                            const qrText = getQRText(student, task);
-                            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 80 });
-                            const qrBase64 = qrDataUrl.split(',')[1];
+                            const dataUrl = await createLabelImage(student, task, '', true, 400, 150);
+                            const base64Data = dataUrl.split(',')[1];
                             studentCells.push(new TableCell({
                                 children: [
                                     new Paragraph({
                                         children: [
                                             new ImageRun({
-                                                data: Uint8Array.from(atob(qrBase64), c => c.charCodeAt(0)),
-                                                transformation: { width: 80, height: 80 }
+                                                data: Uint8Array.from(atob(base64Data), c => c.charCodeAt(0)),
+                                                transformation: { width: 200, height: 75 }
                                             })
                                         ]
                                     })
                                 ]
                             }));
                         }
+
                         rows.push(new TableRow({ children: studentCells }));
                     }
 
@@ -1150,22 +1239,36 @@
             const taskIds = getCheckedTaskIds('tab5-task-checkboxes');
             if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
             
-            const w = parseInt(document.getElementById('tab5-w').value) || 400;
-            const h = parseInt(document.getElementById('tab5-h').value) || 150;
-            const cols = parseInt(document.getElementById('tab5-cols').value) || 3;
-            const rows = parseInt(document.getElementById('tab5-rows').value) || 10;
+            
+            const wCm = parseFloat(document.getElementById('tab5-w').value) || 7;
+            const hCm = parseFloat(document.getElementById('tab5-h').value) || 2.9;
             
             showLoading();
             setTimeout(async () => {
                 try {
                     const canvas = document.createElement('canvas');
-                    const margin = 40;
-                    canvas.width = (w * cols) + margin * 2;
-                    canvas.height = (h * rows) + margin * 2;
+                    
+                    // A4 size at 300 DPI is approx 2480 x 3508 pixels
+                    // 1 cm = 118.11 pixels at 300 DPI
+                    const cmToPx = 118.11;
+                    const a4W = Math.floor(21 * cmToPx);
+                    const a4H = Math.floor(29.7 * cmToPx);
+                    
+                    canvas.width = a4W;
+                    canvas.height = a4H;
                     const ctx = canvas.getContext('2d');
                     
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    const labelW = Math.floor(wCm * cmToPx);
+                    const labelH = Math.floor(hCm * cmToPx);
+                    
+                    const cols = Math.max(1, Math.floor((a4W - 40) / labelW));
+                    const rows = Math.max(1, Math.floor((a4H - 40) / labelH));
+                    
+                    const marginLeft = (a4W - (cols * labelW)) / 2;
+                    const marginTop = (a4H - (rows * labelH)) / 2;
                     
                     let index = 0;
                     for (const taskId of taskIds) {
@@ -1174,14 +1277,15 @@
                             if (index >= cols * rows) break; // 單頁預覽
                             const col = index % cols;
                             const row = Math.floor(index / cols);
-                            const x = margin + col * w;
-                            const y = margin + row * h;
+                            const x = marginLeft + col * labelW;
+                            const y = marginTop + row * labelH;
 
-                            const dataUrl = await createLabelImage(student, task, '', false, w, h);
+                            const dataUrl = await createLabelImage(student, task, '', false, labelW, labelH);
                             const img = new Image();
                             await new Promise(res => { img.onload = res; img.src = dataUrl; });
                             
-                            ctx.drawImage(img, x, y, w, h);
+                            ctx.drawImage(img, x, y, labelW, labelH);
+                            index++;
                         }
                     }
 
