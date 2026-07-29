@@ -670,6 +670,12 @@
                 return;
             }
             
+            const targetTask = document.getElementById('scan-target-task');
+            const targetNotice = document.getElementById('scan-target-notice');
+            if (targetTask && targetNotice && targetTask.value === task.id && targetNotice.value.trim() !== '') {
+                parsed.noticeName = targetNotice.value.trim();
+            }
+
             // 防偽驗證
             if (parsed.salt && parsed.salt !== student.salt) {
                 console.warn('Scan failed: invalid salt');
@@ -1268,10 +1274,10 @@
                         }
 
                         let stampIndices = [];
-                        if (pagesStampStr.toLowerCase() === 'all') {
+                        if (targetPage === 'all') {
                             stampIndices = pages.map((_, i) => i);
                         } else {
-                            stampIndices = pagesStampStr.split(',').map(p => parseInt(p)-1);
+                            stampIndices = [parseInt(targetPage) - 1];
                         }
 
                         // 產生長方形標籤 (姓名座號QR)
