@@ -1284,6 +1284,7 @@ function endScanSession() {
                 db.ranges.push({ taskId, noticeName, range: rangeValue });
             }
             saveData();
+            syncToGoogleSheets([]);
         }
 
         
@@ -1296,9 +1297,31 @@ function endScanSession() {
                 db.ranges.push({ taskId, noticeName, range: '', date: dateValue });
             }
             saveData();
+            syncToGoogleSheets([]);
         }
 
-        function getTaskDate(taskId, noticeName) {
+        
+        function removeSubColumn(taskId, noticeName) {
+            if(!confirm('確定要刪除這個作業欄位及其所有繳交紀錄嗎？')) return;
+            
+            // Remove related records
+            db.records = db.records.filter(r => !(r.taskId === taskId && r.noticeName === noticeName));
+            
+            // Remove from ranges
+            if (db.ranges) {
+                db.ranges = db.ranges.filter(r => !(r.taskId === taskId && r.noticeName === noticeName));
+            }
+            
+            // Remove from last session tasks
+            if (db.lastSessionTasks) {
+                db.lastSessionTasks = db.lastSessionTasks.filter(t => !(t.taskId === taskId && t.noticeName === noticeName));
+            }
+            
+            saveData();
+            renderStatistics();
+            syncToGoogleSheets([]);
+        }
+function getTaskDate(taskId, noticeName) {
             if (!db.ranges) return '';
             const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
             return existing ? (existing.date || '') : '';
@@ -1503,6 +1526,7 @@ function renderStatistics() {
             saveData();
             renderStatistics();
             closeStatusModal();
+            syncToGoogleSheets([]);
         }
 
         // ==========================================
