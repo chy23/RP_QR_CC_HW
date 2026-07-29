@@ -276,10 +276,10 @@
                 </div>
             </div>
             <div class="flex gap-2">
-                <button onclick="previewCanvasLabels()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded shadow">預覽圖片排版</button>
-                <button onclick="downloadCanvasLabels()" id="tab5-download-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow hidden">確認無誤並下載 JPEG</button>
+                <button onclick="previewBatchPDF()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded shadow">預覽標籤排版 (PDF)</button>
+                <button onclick="downloadBatchPDF()" id="tab5-download-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow hidden">確認無誤並下載 PDF</button>
             </div>
-            <div id="tab5-preview" class="mt-4 border rounded bg-gray-100 p-2 overflow-auto text-center hidden" style="max-height: 500px;"></div>
+            <div id="tab5-preview" class="mt-4 border rounded bg-gray-100 p-2 overflow-auto text-center hidden" style="height: 600px;"></div>
         </div>
 
         <!-- Tab 6: ZIP 打包 -->
@@ -1507,12 +1507,12 @@
             return Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => parseInt(cb.value));
         }
 
-        async function previewCanvasLabels() {
+                let currentBatchPdfBlobUrl = null;
+        async function previewBatchPDF() {
             const taskIds = getCheckedTaskIds('tab5-task-checkboxes');
             const studentIds = getCheckedStudentIds('tab5-student-checkboxes');
             if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
             if(studentIds.length === 0) { alert('請至少選擇一位學生'); return; }
-            
             
             const wCm = parseFloat(document.getElementById('tab5-w').value) || 3.5;
             const hCm = parseFloat(document.getElementById('tab5-h').value) || 2;
@@ -1520,80 +1520,82 @@
             showLoading();
             setTimeout(async () => {
                 try {
-                    const canvas = document.createElement('canvas');
+                    // PDF dimensions in points (1 cm = 28.346 pt)
+                    const cmToPt = 28.346;
+                    const a4W = 595.28;
+                    const a4H = 841.89;
                     
-                    // A4 size at 300 DPI is approx 2480 x 3508 pixels
-                    // 1 cm = 118.11 pixels at 300 DPI
-                    const cmToPx = 118.11;
-                    const a4W = Math.floor(21 * cmToPx);
-                    const a4H = Math.floor(29.7 * cmToPx);
+                    const labelW = wCm * cmToPt;
+                    const labelH = hCm * cmToPt;
                     
-                    canvas.width = a4W;
-                    canvas.height = a4H;
-                    const ctx = canvas.getContext('2d');
+                    // 窄邊界 = 0.5cm
+                    const minMarginPt = 0.5 * cmToPt;
+                    const cols = Math.max(1, Math.floor((a4W - minMarginPt * 2) / labelW));
+                    const rows = Math.max(1, Math.floor((a4H - minMarginPt * 2) / labelH));
                     
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    const marginLeft = minMarginPt;
+                    const marginTop = minMarginPt;
                     
-                    const labelW = Math.floor(wCm * cmToPx);
-                    const labelH = Math.floor(hCm * cmToPx);
-                    
-                    // 窄邊界 = 0.5cm (約 59 pixels)
-                    const minMarginPx = 59;
-                    const cols = Math.max(1, Math.floor((a4W - minMarginPx * 2) / labelW));
-                    const rows = Math.max(1, Math.floor((a4H - minMarginPx * 2) / labelH));
-                    
-                    // 靠左上角對齊
-                    const marginLeft = minMarginPx;
-                    const marginTop = minMarginPx;
+                    const pdfDoc = await PDFLib.PDFDocument.create();
+                    let page = pdfDoc.addPage([a4W, a4H]);
                     
                     let index = 0;
+                    
+                    // Pre-calculate all combinations to know total count
+                    const selectedStudents = db.students.filter(s => studentIds.includes(s.id));
+                    let totalItems = taskIds.length * selectedStudents.length;
+                    
                     for (const taskId of taskIds) {
                         const task = db.tasks.find(t => t.id === taskId);
-                        const selectedStudents = db.students.filter(s => studentIds.includes(s.id));
                         for (const student of selectedStudents) {
-                            if (index >= cols * rows) break; // 單頁預覽
-                            const col = index % cols;
-                            const row = Math.floor(index / cols);
-                            const x = marginLeft + col * labelW;
-                            const y = marginTop + row * labelH;
-
-                            const dataUrl = await createLabelImage(student, task, '', false, labelW, labelH);
-                            const img = new Image();
-                            await new Promise(res => { img.onload = res; img.src = dataUrl; });
+                            if (index > 0 && index % (cols * rows) === 0) {
+                                page = pdfDoc.addPage([a4W, a4H]);
+                            }
                             
-                            ctx.drawImage(img, x, y, labelW, labelH);
+                            const pageIndex = index % (cols * rows);
+                            const col = pageIndex % cols;
+                            const row = Math.floor(pageIndex / cols);
+                            
+                            const x = marginLeft + col * labelW;
+                            const y = a4H - (marginTop + row * labelH) - labelH; // PDF y is bottom-up
+                            
+                            // Get image data URL from canvas generator
+                            // Use high res for good print quality (e.g. 600x400)
+                            const pxW = Math.floor(wCm * 118.11);
+                            const pxH = Math.floor(hCm * 118.11);
+                            const dataUrl = await createLabelImage(student, task, '', false, pxW, pxH);
+                            
+                            const imgBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
+                            const pdfImg = await pdfDoc.embedPng(imgBytes);
+                            
+                            page.drawImage(pdfImg, { x: x, y: y, width: labelW, height: labelH });
                             index++;
                         }
                     }
 
+                    const pdfBytes = await pdfDoc.save();
+                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    currentBatchPdfBlobUrl = URL.createObjectURL(blob);
+                    
                     const preview = document.getElementById('tab5-preview');
-                    preview.innerHTML = '';
-                    const displayCanvas = document.createElement('canvas');
-                    const scale = Math.min(1, 800 / canvas.width);
-                    displayCanvas.width = canvas.width * scale;
-                    displayCanvas.height = canvas.height * scale;
-                    displayCanvas.getContext('2d').scale(scale, scale);
-                    displayCanvas.getContext('2d').drawImage(canvas, 0, 0);
-                    displayCanvas.style.border = '1px solid #aaa';
-                    preview.appendChild(displayCanvas);
+                    preview.innerHTML = `<iframe src="${currentBatchPdfBlobUrl}#toolbar=0" width="100%" height="100%"></iframe>`;
                     preview.classList.remove('hidden');
                     
-                    currentCanvasDataUrl = canvas.toDataURL('image/jpeg', 0.9);
                     document.getElementById('tab5-download-btn').classList.remove('hidden');
 
                 } catch (e) {
-                    alert('產生圖片失敗: ' + e.message);
+                    alert('產生 PDF 失敗: ' + e.message);
+                    console.error(e);
                 }
                 hideLoading();
             }, 500);
         }
 
-        function downloadCanvasLabels() {
-            if(currentCanvasDataUrl) {
+        function downloadBatchPDF() {
+            if(currentBatchPdfBlobUrl) {
                 const a = document.createElement('a');
-                a.href = currentCanvasDataUrl;
-                a.download = `標籤排版_批次.jpg`;
+                a.href = currentBatchPdfBlobUrl;
+                a.download = `標籤排版_批次.pdf`;
                 a.click();
             }
         }
