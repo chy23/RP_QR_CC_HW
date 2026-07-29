@@ -938,15 +938,34 @@
             document.getElementById('session-buffer-count').innerText = scanSession.records.length;
             const list = document.getElementById('session-buffer-list');
             list.innerHTML = '';
-            scanSession.records.forEach(r => {
+            
+            // 排序: 先依照作業種類 (taskId)，再依照學生 ID (座號小到大)
+            const sortedRecords = [...scanSession.records].sort((a, b) => {
+                if (a.taskId !== b.taskId) {
+                    return a.taskId.localeCompare(b.taskId);
+                }
+                return a.studentId - b.studentId;
+            });
+            
+            let currentTaskContext = null;
+            
+            sortedRecords.forEach(r => {
                 const s = db.students.find(st => st.id === r.studentId);
                 const t = db.tasks.find(tsk => tsk.id === r.taskId);
                 const sessionTask = scanSession.tasks.find(tsk => tsk.id === r.taskId);
                 const rangeText = sessionTask && sessionTask.range ? `(${sessionTask.range})` : '';
                 
-                list.innerHTML += `<li class="flex justify-between items-center bg-gray-50 p-1 rounded border">
-                    <span class="font-bold text-gray-700"><span class="text-xs text-blue-600">[${t ? t.name : '?'}${rangeText}]</span> ${s ? s.name : '未知'}</span>
-                    <span class="text-xs text-gray-500">${r.timeOnly}</span>
+                const taskLabel = `${t ? t.name : '?'}${rangeText}`;
+                
+                // 加入群組標題
+                if (currentTaskContext !== taskLabel) {
+                    list.innerHTML += `<li class="text-sm font-bold text-blue-700 mt-2 border-b border-blue-200">${taskLabel}</li>`;
+                    currentTaskContext = taskLabel;
+                }
+                
+                list.innerHTML += `<li class="flex justify-between items-center bg-white p-1 rounded border border-gray-100 shadow-sm ml-2">
+                    <span class="font-bold text-gray-700">${s ? s.name : '未知'}</span>
+                    <span class="text-xs text-gray-400">${r.timeOnly}</span>
                 </li>`;
             });
         }
