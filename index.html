@@ -37,6 +37,19 @@
         <span>處理中，請稍候...</span>
     </div>
 
+    <!-- 狀態設定 Modal -->
+    <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex-col items-center justify-center text-gray-800" style="display: none;">
+        <div class="bg-white p-6 rounded shadow-lg w-80 text-center">
+            <h3 class="text-lg font-bold mb-4">手動設定交件狀態</h3>
+            <div class="flex flex-col gap-3">
+                <button onclick="setManualStatus('ontime')" class="bg-green-500 hover:bg-green-600 text-white py-2 rounded shadow">標記為「準時已交」</button>
+                <button onclick="setManualStatus('late')" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded shadow">標記為「遲交」</button>
+                <button onclick="setManualStatus('missing')" class="bg-red-500 hover:bg-red-600 text-white py-2 rounded shadow">標記為「缺交」(刪除紀錄)</button>
+                <button onclick="closeStatusModal()" class="bg-gray-300 hover:bg-gray-400 py-2 rounded mt-2">取消</button>
+            </div>
+        </div>
+    </div>
+
     <div class="max-w-7xl mx-auto p-4">
         <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">文件生產力中心</h1>
         
@@ -881,7 +894,11 @@
                     if (record) {
                         // 判斷是否遲交
                         let isLate = false;
-                        if (deadline) {
+                        if (record.manualStatus === 'late') {
+                            isLate = true;
+                        } else if (record.manualStatus === 'ontime') {
+                            isLate = false;
+                        } else if (deadline) {
                             // timestamp format: "MM/DD HH:mm" or ISO
                             // To be safe, compare year if possible, but here we just check if it's late based on current year or raw timestamp if ISO
                             let scanDate;
@@ -908,19 +925,39 @@
             tbody.innerHTML = bodyHTML;
         }
 
+        let currentTargetRecord = null;
+        
         function toggleRecord(studentId, taskId, noticeName) {
+            currentTargetRecord = { studentId, taskId, noticeName };
+            document.getElementById('status-modal').style.display = 'flex';
+        }
+
+        function closeStatusModal() {
+            document.getElementById('status-modal').style.display = 'none';
+            currentTargetRecord = null;
+        }
+
+        function setManualStatus(statusType) {
+            if(!currentTargetRecord) return;
+            const { studentId, taskId, noticeName } = currentTargetRecord;
             const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
-            if (index !== -1) {
-                if(confirm("確定要取消此紀錄嗎？")) {
-                    db.records.splice(index, 1);
-                }
+            
+            const now = new Date();
+            const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+
+            if (statusType === 'missing') {
+                if (index !== -1) db.records.splice(index, 1);
             } else {
-                const now = new Date();
-                const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-                db.records.push({ studentId, taskId, noticeName, timestamp: timeString });
+                if (index !== -1) {
+                    db.records[index].manualStatus = statusType;
+                } else {
+                    db.records.push({ studentId, taskId, noticeName, timestamp: timeString, manualStatus: statusType });
+                }
             }
+            
             saveData();
             renderStatistics();
+            closeStatusModal();
         }
 
         // ==========================================
