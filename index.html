@@ -811,6 +811,23 @@
             return existing ? existing.range : '';
         }
 
+
+        function addSubColumn(taskId) {
+            const noticeName = prompt("為此項作業新增一欄，請輸入備註名稱 (如: 第二課, CH2)：");
+            if (noticeName && noticeName.trim()) {
+                if (!db.ranges) db.ranges = [];
+                const name = noticeName.trim();
+                const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === name);
+                if (!existing) {
+                    db.ranges.push({ taskId, noticeName: name, range: '' });
+                    saveData();
+                    renderStatistics();
+                } else {
+                    alert('這個名稱的欄位已經存在囉！');
+                }
+            }
+        }
+
         function setStatSubject(subject) {
             currentStatSubject = subject;
             renderStatistics();
@@ -854,6 +871,21 @@
                 uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
             });
 
+            // 補充 ranges 中手動新增的子欄位
+            if (db.ranges) {
+                db.ranges.forEach(r => {
+                    if (r.noticeName) {
+                        const t = tasksInSub.find(t => t.id === r.taskId);
+                        if (t) {
+                            const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
+                            if (!exists) {
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                            }
+                        }
+                    }
+                });
+            }
+
             // 補充 records 中有附帶 noticeName 的
             db.records.forEach(r => {
                 if(r.noticeName) {
@@ -874,6 +906,7 @@
                 headHTML += `<th class="p-2 border text-center max-w-[120px] relative group">
                                 <div class="font-bold mb-1 truncate pr-4" title="${k.label}">${k.label}</div>
                                 <button onclick="toggleRecord(null, '${k.taskId}', '${k.noticeName}')" class="absolute top-2 right-1 text-gray-400 hover:text-blue-500 text-xs hidden group-hover:block" title="整欄批次設定">⚙️</button>
+                                <button onclick="addSubColumn('${k.taskId}')" class="absolute top-2 right-6 text-green-500 hover:text-green-600 text-xs hidden group-hover:block" title="新增同作業的下一個欄位 (如: 第二課)">➕</button>
                                 <input type="text" placeholder="輸入範圍..." value="${rangeVal}" 
                                        onchange="updateTaskRange('${k.taskId}', '${k.noticeName}', this.value)" 
                                        class="border text-xs p-1 w-full rounded font-normal bg-gray-50 focus:bg-white text-center">
