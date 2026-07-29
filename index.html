@@ -894,12 +894,17 @@
 
                 if (uniqueTaskKeys.length === 0) return;
                 const aoa = [];
-                const headerRow = ['姓名'];
+                const rowTask = ['作業名稱'];
+                const rowDate = ['登記日期'];
+                const rowRange = ['姓名 \ 範圍'];
                 uniqueTaskKeys.forEach(k => {
-                    const rangeVal = getTaskRange(k.taskId, k.noticeName);
-                    headerRow.push(k.label + (rangeVal ? `(${rangeVal})` : ''));
+                    rowTask.push(k.label);
+                    rowDate.push(getTaskDate(k.taskId, k.noticeName) || new Date().toISOString().split('T')[0]);
+                    rowRange.push(getTaskRange(k.taskId, k.noticeName) || '');
                 });
-                aoa.push(headerRow);
+                aoa.push(rowTask);
+                aoa.push(rowDate);
+                aoa.push(rowRange);
                 db.students.forEach(s => {
                     const row = [s.name];
                     uniqueTaskKeys.forEach(k => {
@@ -1090,7 +1095,7 @@
                 if (task.range) {
                     const existingRange = db.ranges.find(r => r.taskId === task.id && r.noticeName === task.range);
                     if (!existingRange) {
-                        db.ranges.push({ taskId: task.id, noticeName: task.range, range: '' });
+                        db.ranges.push({ taskId: task.id, noticeName: task.range, range: '', date: scanSession.dateStr });
                     }
                 }
             });
@@ -1268,7 +1273,24 @@
             saveData();
         }
 
-        function getTaskRange(taskId, noticeName) {
+        
+        function updateTaskDate(taskId, noticeName, dateValue) {
+            if (!db.ranges) db.ranges = [];
+            const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
+            if (existing) {
+                existing.date = dateValue;
+            } else {
+                db.ranges.push({ taskId, noticeName, range: '', date: dateValue });
+            }
+            saveData();
+        }
+
+        function getTaskDate(taskId, noticeName) {
+            if (!db.ranges) return '';
+            const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
+            return existing ? (existing.date || '') : '';
+        }
+function getTaskRange(taskId, noticeName) {
             if (!db.ranges) return '';
             const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
             return existing ? existing.range : '';
@@ -2547,13 +2569,17 @@ function renderStatistics() {
                 if (finalTaskKeys.length === 0) return;
 
                 const aoa = [];
-                
-                const headerRow = ['姓名'];
+                const rowTask = ['作業名稱'];
+                const rowDate = ['登記日期'];
+                const rowRange = ['姓名 \ 範圍'];
                 finalTaskKeys.forEach(k => {
-                    const rangeVal = getTaskRange(k.taskId, k.noticeName);
-                    headerRow.push(k.label + (rangeVal ? `(${rangeVal})` : ''));
+                    rowTask.push(k.label);
+                    rowDate.push(getTaskDate(k.taskId, k.noticeName) || new Date().toISOString().split('T')[0]);
+                    rowRange.push(getTaskRange(k.taskId, k.noticeName) || '');
                 });
-                aoa.push(headerRow);
+                aoa.push(rowTask);
+                aoa.push(rowDate);
+                aoa.push(rowRange);
                 
                 db.students.forEach(s => {
                     const row = [s.name];
@@ -2629,16 +2655,12 @@ function renderStatistics() {
     var payload = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // 檢查是否為綁定測試
     if (payload.action === 'ping') {
-      return ContentService.createTextOutput(JSON.stringify({status: 'success'}))
-        .setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(ContentService.MimeType.JSON);
     }
     
     if (payload.action === 'upload_records' || payload.action === 'full_sync') {
       var records = payload.records || [];
-      
-      // 1. 寫入流水帳 (保留原始掃描紀錄)
       if (records.length > 0) {
         var logSheet = ss.getSheetByName("所有掃描紀錄");
         if (!logSheet) {
@@ -2651,46 +2673,35 @@ function renderStatistics() {
         });
       }
       
-      // 2. 寫入各科目的二維統計表 (與網頁完全同步)
       if (payload.action === 'full_sync' && payload.sheets) {
         payload.sheets.forEach(function(sheetObj) {
           var name = sheetObj.name;
-          var data = sheetObj.data; // 二維陣列
-          
+          var data = sheetObj.data;
           if (data && data.length > 0) {
             var targetSheet = ss.getSheetByName(name);
-            if (!targetSheet) {
-              targetSheet = ss.insertSheet(name);
-            }
-            // 清空整頁並貼上新資料
+            if (!targetSheet) { targetSheet = ss.insertSheet(name); }
             targetSheet.clear();
             targetSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
             
-            // 美化格式：凍結窗格
-            targetSheet.setFrozenRows(1);
+            // 設定凍結窗格 (前三列為表頭：作業名稱、登記日期、範圍)
+            targetSheet.setFrozenRows(3);
             targetSheet.setFrozenColumns(1);
             
-            // 表頭上色
-            targetSheet.getRange(1, 1, 1, data[0].length).setFontWeight("bold").setBackground("#f3f4f6");
+            // 美化表頭
+            targetSheet.getRange(1, 1, 3, data[0].length).setFontWeight("bold").setBackground("#f3f4f6");
             
-            // 設定條件式格式：讓「缺交」變成紅色
-            var rule = SpreadsheetApp.newConditionalFormatRule()
-              .whenTextEqualTo("缺交")
-              .setFontColor("#ef4444")
-              .build();
+            // 讓「缺交」變紅字
+            var rule = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("缺交").setFontColor("#ef4444").build();
             var rules = targetSheet.getConditionalFormatRules();
             rules.push(rule);
             targetSheet.setConditionalFormatRules(rules);
           }
         });
       }
-      
-      return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
-        .setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
     }
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.toString()})).setMimeType(ContentService.MimeType.JSON);
   }
 }</pre>
                 </div>
