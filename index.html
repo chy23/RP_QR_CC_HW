@@ -848,9 +848,10 @@
         }
 
         function syncToGoogleSheets(newRecordsArray) {
-            if(!gasUrl || newRecordsArray.length === 0) return;
+            if(!gasUrl) return;
             
-            const payload = newRecordsArray.map(r => {
+            // 1. Prepare delta records
+            const deltaPayload = (newRecordsArray || []).map(r => {
                 const student = db.students.find(s => s.id === r.studentId);
                 const task = db.tasks.find(t => t.id === r.taskId);
                 return {
@@ -863,12 +864,81 @@
                 };
             });
             
+            // 2. Prepare FULL 2D tables for exactly matching web view
+            const fullSyncData = [];
+            const subjects = getSubjects();
+            subjects.forEach(sub => {
+                const tasksInSub = db.tasks.filter(t => t.subject === sub);
+                let uniqueTaskKeys = []; 
+                tasksInSub.forEach(t => uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.name}` }));
+                if (db.ranges) {
+                    db.ranges.forEach(r => {
+                        if (r.noticeName) {
+                            const t = tasksInSub.find(t => t.id === r.taskId);
+                            if (t) {
+                                const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
+                                if (!exists) uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                            }
+                        }
+                    });
+                }
+                db.records.forEach(r => {
+                    if(r.noticeName) {
+                        const t = tasksInSub.find(t => t.id === r.taskId);
+                        if(t) {
+                            const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
+                            if(!exists) uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                        }
+                    }
+                });
+
+                if (uniqueTaskKeys.length === 0) return;
+                const aoa = [];
+                const headerRow = ['姓名'];
+                uniqueTaskKeys.forEach(k => {
+                    const rangeVal = getTaskRange(k.taskId, k.noticeName);
+                    headerRow.push(k.label + (rangeVal ? `(${rangeVal})` : ''));
+                });
+                aoa.push(headerRow);
+                db.students.forEach(s => {
+                    const row = [s.name];
+                    uniqueTaskKeys.forEach(k => {
+                        const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
+                        let cellValue = '缺交';
+                        if (record) {
+                            cellValue = record.timestamp;
+                            const taskDef = db.tasks.find(t => t.id === k.taskId);
+                            if (taskDef && taskDef.deadline) {
+                                let deadlineDate = new Date(taskDef.deadline);
+                                let isLate = false;
+                                if (record.manualStatus === 'late') isLate = true;
+                                else if (record.manualStatus === 'ontime') isLate = false;
+                                else {
+                                    let scanDate;
+                                    if (record.timestamp.includes('T') || record.timestamp.includes('-')) scanDate = new Date(record.timestamp);
+                                    else {
+                                        const currentYear = new Date().getFullYear();
+                                        scanDate = new Date(`${currentYear}/${record.timestamp}`);
+                                    }
+                                    if (scanDate > deadlineDate) isLate = true;
+                                }
+                                if (isLate) cellValue = `[遲交] ${record.timestamp}`;
+                            }
+                        }
+                        row.push(cellValue);
+                    });
+                    aoa.push(row);
+                });
+                fullSyncData.push({ name: sub, data: aoa });
+            });
+            
             fetch(gasUrl, {
                 method: 'POST',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
-                    action: 'upload_records',
-                    records: payload
+                    action: 'full_sync',
+                    records: deltaPayload,
+                    sheets: fullSyncData
                 })
             }).then(res => res.json()).then(data => {
                 console.log("GAS Sync Success:", data);
@@ -2556,75 +2626,64 @@ function renderStatistics() {
                     <button onclick="copyGasCode(this)" class="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs shadow transition-colors">複製程式碼</button>
                     <pre id="gas-code-block" class="whitespace-pre">function doPost(e) {
   try {
-    var data = JSON.parse(e.postData.contents);
+    var payload = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    if (data.action === 'ping') {
+    // 檢查是否為綁定測試
+    if (payload.action === 'ping') {
       return ContentService.createTextOutput(JSON.stringify({status: 'success'}))
         .setMimeType(ContentService.MimeType.JSON);
     }
     
-    if (data.action === 'upload_records') {
-      var records = data.records;
+    if (payload.action === 'upload_records' || payload.action === 'full_sync') {
+      var records = payload.records || [];
       
-      // 1. 建立或取得「流水帳紀錄」分頁
-      var logSheet = ss.getSheetByName("所有掃描紀錄");
-      if (!logSheet) {
-        logSheet = ss.insertSheet("所有掃描紀錄");
-        logSheet.appendRow(["打卡時間", "科目", "作業名稱", "範圍", "學生姓名", "狀態"]);
-        logSheet.setFrozenRows(1);
+      // 1. 寫入流水帳 (保留原始掃描紀錄)
+      if (records.length > 0) {
+        var logSheet = ss.getSheetByName("所有掃描紀錄");
+        if (!logSheet) {
+          logSheet = ss.insertSheet("所有掃描紀錄");
+          logSheet.appendRow(["打卡時間", "科目", "作業名稱", "範圍", "學生姓名", "狀態"]);
+          logSheet.setFrozenRows(1);
+        }
+        records.forEach(function(row) {
+          logSheet.appendRow([row.timestamp, row.subject, row.taskName, row.range, row.studentName, row.status]);
+        });
       }
       
-      records.forEach(function(row) {
-        // 寫入流水帳
-        logSheet.appendRow([row.timestamp, row.subject, row.taskName, row.range, row.studentName, row.status]);
-        
-        // 2. 建立或取得「科目專屬」的二維統計表
-        var subject = row.subject || "未分類";
-        var subjectSheet = ss.getSheetByName(subject);
-        if (!subjectSheet) {
-          subjectSheet = ss.insertSheet(subject);
-          subjectSheet.appendRow(["姓名"]); // A1 預設為姓名
-          subjectSheet.setFrozenRows(1);
-          subjectSheet.setFrozenColumns(1);
-        }
-        
-        var studentName = row.studentName;
-        var colHeader = row.taskName + (row.range ? "(" + row.range + ")" : "");
-        
-        var dataRange = subjectSheet.getDataRange();
-        var values = dataRange.getValues();
-        
-        // 找尋學生的列 (Row)
-        var studentRowIdx = -1;
-        for (var i = 1; i < values.length; i++) {
-          if (values[i][0] == studentName) {
-            studentRowIdx = i + 1;
-            break;
+      // 2. 寫入各科目的二維統計表 (與網頁完全同步)
+      if (payload.action === 'full_sync' && payload.sheets) {
+        payload.sheets.forEach(function(sheetObj) {
+          var name = sheetObj.name;
+          var data = sheetObj.data; // 二維陣列
+          
+          if (data && data.length > 0) {
+            var targetSheet = ss.getSheetByName(name);
+            if (!targetSheet) {
+              targetSheet = ss.insertSheet(name);
+            }
+            // 清空整頁並貼上新資料
+            targetSheet.clear();
+            targetSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+            
+            // 美化格式：凍結窗格
+            targetSheet.setFrozenRows(1);
+            targetSheet.setFrozenColumns(1);
+            
+            // 表頭上色
+            targetSheet.getRange(1, 1, 1, data[0].length).setFontWeight("bold").setBackground("#f3f4f6");
+            
+            // 設定條件式格式：讓「缺交」變成紅色
+            var rule = SpreadsheetApp.newConditionalFormatRule()
+              .whenTextEqualTo("缺交")
+              .setFontColor("#ef4444")
+              .build();
+            var rules = targetSheet.getConditionalFormatRules();
+            rules.push(rule);
+            targetSheet.setConditionalFormatRules(rules);
           }
-        }
-        if (studentRowIdx === -1) {
-          studentRowIdx = values.length + 1;
-          subjectSheet.getRange(studentRowIdx, 1).setValue(studentName);
-        }
-        
-        // 找尋作業的欄 (Column)
-        var colIdx = -1;
-        var headers = values[0];
-        for (var j = 1; j < headers.length; j++) {
-          if (headers[j] == colHeader) {
-            colIdx = j + 1;
-            break;
-          }
-        }
-        if (colIdx === -1) {
-          colIdx = headers.length + 1;
-          subjectSheet.getRange(1, colIdx).setValue(colHeader);
-        }
-        
-        // 在對應的交叉點寫入打卡時間
-        subjectSheet.getRange(studentRowIdx, colIdx).setValue(row.timestamp);
-      });
+        });
+      }
       
       return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
         .setMimeType(ContentService.MimeType.JSON);
