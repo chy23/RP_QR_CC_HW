@@ -123,7 +123,6 @@
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-xl font-semibold">繳交統計表</h3>
                         <div class="flex gap-2">
-                            <button onclick="clearRecords()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm">清空紀錄</button>
                             <button onclick="exportExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded text-sm shadow">匯出 Excel</button>
                         </div>
                     </div>
@@ -150,11 +149,25 @@
         <!-- Tab 2: 固定簿冊 (PDF) -->
         <div id="tab-2" class="tab-content bg-white p-6 rounded-b shadow">
             <h2 class="text-2xl font-bold mb-4 border-b pb-2">2. 固定簿冊標籤 (PDF)</h2>
-            <div class="mb-4">
-                <label class="block mb-1 font-semibold">選擇固定作業：</label>
-                <select id="tab2-task-select" class="border p-2 rounded w-64"></select>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block mb-1 font-semibold">選擇固定作業 (可多選)：</label>
+                    <div id="tab2-task-checkboxes" class="border p-2 rounded w-full h-40 overflow-y-auto bg-gray-50 mb-2"></div>
+                </div>
+                <div>
+                    <label class="block mb-1 font-semibold">標籤尺寸與排版 (預設為 3x10 A4 版型)：</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="number" id="tab2-cols" value="3" class="border p-2 rounded w-1/2" placeholder="欄數 (如: 3)">
+                        <input type="number" id="tab2-rows" value="10" class="border p-2 rounded w-1/2" placeholder="列數 (如: 10)">
+                    </div>
+                    <label class="block mb-1 text-sm text-gray-500">如果您的標籤紙不是標準 3x10，可以調整欄列數，系統會自動分配 A4 寬高。</label>
+                </div>
             </div>
-            <button onclick="generateFixedPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow">產生標籤 PDF</button>
+            <div class="flex gap-2">
+                <button onclick="previewFixedPDF()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded shadow">預覽標籤排版</button>
+                <button onclick="downloadFixedPDF()" id="tab2-download-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow hidden">確認無誤並下載 PDF</button>
+            </div>
+            <div id="tab2-preview" class="mt-4 border rounded bg-gray-100 p-2 overflow-auto text-center hidden" style="height: 400px;"></div>
         </div>
 
         <!-- Tab 3: 浮動卷單 (PDF) -->
@@ -172,6 +185,17 @@
 
                     <label class="block mb-1 font-semibold">上傳底板 PDF (自動預覽)：</label>
                     <input type="file" id="tab3-pdf-upload" accept=".pdf" class="border p-1 w-full rounded mb-2" onchange="renderPdfPreview()">
+                    
+                    <div class="flex gap-2 mb-2">
+                        <div class="w-1/2">
+                            <label class="block mb-1 text-sm font-semibold">保留頁數 (留空為全留)：</label>
+                            <input type="text" id="tab3-pages-keep" placeholder="如 1, 3-5" class="border p-1 w-full rounded">
+                        </div>
+                        <div class="w-1/2">
+                            <label class="block mb-1 text-sm font-semibold">條碼印在哪一頁：</label>
+                            <input type="text" id="tab3-pages-stamp" value="1" placeholder="如 1 或 all" class="border p-1 w-full rounded">
+                        </div>
+                    </div>
                     
                     <label class="block mb-1 font-semibold">條碼座標與大小 (拖曳右側預覽或手動輸入)：</label>
                     <div class="flex gap-2">
@@ -192,29 +216,40 @@
         <!-- Tab 4: Word 條碼表 -->
         <div id="tab-4" class="tab-content bg-white p-6 rounded-b shadow">
             <h2 class="text-2xl font-bold mb-4 border-b pb-2">4. Word 條碼表匯出</h2>
-            <p class="mb-4 text-gray-600">匯出全班包含姓名、座號與個人條碼的 Word 檔，方便列印貼於聯絡簿上。</p>
+            <p class="mb-2 text-gray-600">產生一張二維對照表，左側為學生，右側為各項作業的防偽條碼。</p>
+            <div class="mb-4">
+                <label class="block mb-1 font-semibold">選擇要產生的作業 (可多選)：</label>
+                <div id="tab4-task-checkboxes" class="border p-2 rounded w-full md:w-1/2 h-32 overflow-y-auto bg-gray-50"></div>
+            </div>
             <button onclick="generateWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow">下載 Word 檔</button>
         </div>
 
         <!-- Tab 5: 批次標籤 (Canvas) -->
         <div id="tab-5" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. 批次省紙標籤</h2>
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. 批次省紙標籤 (圖檔)</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label class="block mb-1 font-semibold">選擇作業：</label>
-                    <select id="tab5-task-select" class="border p-2 rounded w-full mb-2"></select>
-                    
-                    <label class="block mb-1 font-semibold mt-2">排版設定 (欄 x 列)：</label>
+                    <label class="block mb-1 font-semibold">選擇作業 (可多選，將依序串接排版)：</label>
+                    <div id="tab5-task-checkboxes" class="border p-2 rounded w-full h-40 overflow-y-auto bg-gray-50 mb-2"></div>
+                </div>
+                <div>
+                    <label class="block mb-1 font-semibold">單張標籤大小 (像素 px)：</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="number" id="tab5-w" value="400" class="border p-2 rounded w-1/2" placeholder="寬度">
+                        <input type="number" id="tab5-h" value="150" class="border p-2 rounded w-1/2" placeholder="高度">
+                    </div>
+                    <label class="block mb-1 font-semibold mt-2">排版設定 (網格)：</label>
                     <div class="flex gap-2">
                         <input type="number" id="tab5-cols" value="3" class="border p-2 rounded w-1/2" placeholder="欄數">
                         <input type="number" id="tab5-rows" value="10" class="border p-2 rounded w-1/2" placeholder="列數">
                     </div>
                 </div>
             </div>
-            <button onclick="generateCanvasLabels()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow">產生排版圖片</button>
-            <div id="tab5-preview" class="mt-4 border rounded bg-gray-100 p-2 overflow-auto" style="max-height: 500px; text-align:center;">
-                <!-- Canvas 預覽 -->
+            <div class="flex gap-2">
+                <button onclick="previewCanvasLabels()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded shadow">預覽圖片排版</button>
+                <button onclick="downloadCanvasLabels()" id="tab5-download-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow hidden">確認無誤並下載 JPEG</button>
             </div>
+            <div id="tab5-preview" class="mt-4 border rounded bg-gray-100 p-2 overflow-auto text-center hidden" style="max-height: 500px;"></div>
         </div>
 
         <!-- Tab 6: ZIP 打包 -->
@@ -230,8 +265,39 @@
         // ==========================================
         // 系統核心與資料層
         // ==========================================
-        let db = { students: [], tasks: [], records: [], ranges: [] };
+        let db = { students: [], tasks: [], records: [], ranges: [], subjects: [] };
         const STORAGE_KEY = 'doc_productivity_db';
+
+        function generateSalt() { return Math.random().toString(36).substring(2, 8); }
+
+        function getQRText(student, task, noticeName = '') {
+            if(!student.salt) { student.salt = generateSalt(); saveData(); }
+            const raw = `${student.token}|${task.id}|${noticeName}|${student.salt}`;
+            return `enc_${btoa(unescape(encodeURIComponent(raw)))}`;
+        }
+
+        function parseQRText(qrText) {
+            if(qrText.startsWith('enc_')) {
+                try {
+                    const raw = decodeURIComponent(escape(atob(qrText.substring(4))));
+                    const parts = raw.split('|');
+                    return { token: parts[0], taskId: parts[1], noticeName: parts[2], salt: parts[3] };
+                } catch(e) { return null; }
+            } else {
+                const parts = qrText.split('-');
+                if(parts.length < 2) return null;
+                const token = parts[0];
+                const rest = parts.slice(1).join('-');
+                let taskName = rest; let noticeName = '';
+                if(rest.includes('_')) {
+                    const splitIndex = rest.indexOf('_');
+                    taskName = rest.substring(0, splitIndex);
+                    noticeName = rest.substring(splitIndex + 1);
+                }
+                const task = db.tasks.find(t => t.name === taskName);
+                return { token, taskId: task ? task.id : null, noticeName, salt: null };
+            }
+        }
 
         const DEFAULT_TASKS = [
             // 固定簿冊
@@ -297,7 +363,7 @@
             if (!name) return;
             const newId = db.students.length > 0 ? Math.max(...db.students.map(s => s.id)) + 1 : 1;
             const token = `STU${String(newId).padStart(3, '0')}`;
-            db.students.push({ id: newId, name, token });
+            db.students.push({ id: newId, name, token, salt: generateSalt() });
             nameInput.value = '';
             saveData();
             renderStudents();
@@ -308,7 +374,7 @@
             for(let i=0; i<25; i++) {
                 const newId = startId + i;
                 const token = `STU${String(newId).padStart(3, '0')}`;
-                db.students.push({ id: newId, name: `座號${i+1}`, token });
+                db.students.push({ id: newId, name: `座號${i+1}`, token, salt: generateSalt() });
             }
             saveData();
             renderStudents();
@@ -354,7 +420,7 @@
                         if (name && String(name).trim() !== "") {
                             const newId = startId++;
                             const token = `STU${String(newId).padStart(3, '0')}`;
-                            db.students.push({ id: newId, name: String(name).trim(), token });
+                            db.students.push({ id: newId, name: String(name).trim(), token, salt: generateSalt() });
                             addedCount++;
                         }
                     }
@@ -428,7 +494,7 @@
 
         function resetData() {
             if(confirm("警告：這將清除所有學生、作業與掃描紀錄！確定嗎？")) {
-                db = { students: [], tasks: [...DEFAULT_TASKS], records: [], ranges: [] };
+                db = { students: [], tasks: [...DEFAULT_TASKS], records: [], ranges: [], subjects: [] };
                 saveData();
                 renderStudents();
                 renderTasks();
@@ -443,15 +509,33 @@
             const floatingTasks = db.tasks.filter(t => t.type === 'floating');
             const allTasks = db.tasks;
 
-            const populate = (selectId, tasks) => {
+            const renderCheckboxes = (containerId, tasks) => {
+                const el = document.getElementById(containerId);
+                if (!el) return;
+                el.innerHTML = tasks.map(t => `
+                    <label class="flex items-center space-x-2 py-1">
+                        <input type="checkbox" value="${t.id}" class="form-checkbox text-blue-600 h-4 w-4">
+                        <span class="text-sm">[${t.subject}] ${t.name}</span>
+                    </label>
+                `).join('');
+            };
+
+            const populateSelect = (selectId, tasks) => {
                 const el = document.getElementById(selectId);
                 if (!el) return;
                 el.innerHTML = tasks.map(t => `<option value="${t.id}">[${t.subject}] ${t.name}</option>`).join('');
             };
 
-            populate('tab2-task-select', fixedTasks);
-            populate('tab3-task-select', floatingTasks);
-            populate('tab5-task-select', allTasks); // Tab 5 支援所有
+            renderCheckboxes('tab2-task-checkboxes', fixedTasks);
+            populateSelect('tab3-task-select', floatingTasks);
+            renderCheckboxes('tab4-task-checkboxes', allTasks);
+            renderCheckboxes('tab5-task-checkboxes', allTasks);
+        }
+
+        function getCheckedTaskIds(containerId) {
+            const el = document.getElementById(containerId);
+            if(!el) return [];
+            return Array.from(el.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
         }
 
         function toggleNoticeInput() {
@@ -500,31 +584,25 @@
         }
 
         function processScan(qrText) {
-            // 解析: STU001-國習 或 STU001-通知單_戶外教學
-            const parts = qrText.split('-');
-            if (parts.length < 2) return;
+            const parsed = parseQRText(qrText);
+            if (!parsed) return;
             
-            const token = parts[0];
-            const rest = parts.slice(1).join('-');
-            
-            let taskName = rest;
-            let noticeName = '';
-            
-            if (rest.includes('_')) {
-                const splitIndex = rest.indexOf('_');
-                taskName = rest.substring(0, splitIndex);
-                noticeName = rest.substring(splitIndex + 1);
-            }
-
-            const student = db.students.find(s => s.token === token);
-            const task = db.tasks.find(t => t.name === taskName);
+            const student = db.students.find(s => s.token === parsed.token);
+            const task = db.tasks.find(t => t.id === parsed.taskId);
 
             if (!student || !task) {
                 console.warn('Scan failed: student or task not found', qrText);
                 return;
             }
+            
+            // 防偽驗證
+            if (parsed.salt && parsed.salt !== student.salt) {
+                console.warn('Scan failed: invalid salt');
+                alert('無效的防偽條碼！');
+                return;
+            }
 
-            const existing = db.records.find(r => r.studentId === student.id && r.taskId === task.id && r.noticeName === noticeName);
+            const existing = db.records.find(r => r.studentId === student.id && r.taskId === task.id && r.noticeName === parsed.noticeName);
             if (!existing) {
                 const now = new Date();
                 const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
@@ -540,11 +618,47 @@
             }
         }
 
-        function clearRecords() {
-            if(confirm("確定要清空所有掃描紀錄嗎？")) {
-                db.records = [];
+        function getSubjects() {
+            if(!db.subjects || db.subjects.length === 0) {
+                db.subjects = [...new Set(db.tasks.map(t => t.subject))];
+                if(db.subjects.length === 0) db.subjects = ['國語', '數學', '社會', '聯絡簿'];
+            }
+            return db.subjects;
+        }
+
+        function addSubject() {
+            const newSub = prompt("新增分頁名稱：");
+            if(newSub && newSub.trim()) {
+                const subjects = getSubjects();
+                if(!subjects.includes(newSub.trim())) {
+                    db.subjects.push(newSub.trim());
+                    saveData();
+                    renderStatistics();
+                }
+            }
+        }
+
+        function editSubject(oldSub) {
+            const newSub = prompt("重新命名分頁：", oldSub);
+            if(newSub && newSub.trim() !== oldSub) {
+                db.tasks.forEach(t => { if(t.subject === oldSub) t.subject = newSub.trim(); });
+                const idx = db.subjects.indexOf(oldSub);
+                if(idx !== -1) db.subjects[idx] = newSub.trim();
                 saveData();
                 renderStatistics();
+                renderTasks();
+            }
+        }
+
+        function deleteSubject(sub) {
+            if(confirm(`確定要刪除分頁「${sub}」嗎？\n這不會刪除作業，但該分頁下的作業將歸為「未分類」。`)) {
+                db.subjects = db.subjects.filter(s => s !== sub);
+                db.tasks.forEach(t => { if(t.subject === sub) t.subject = '未分類'; });
+                if(!db.subjects.includes('未分類')) db.subjects.push('未分類');
+                saveData();
+                currentStatSubject = db.subjects[0];
+                renderStatistics();
+                renderTasks();
             }
         }
 
@@ -578,7 +692,7 @@
             if(!thead || !tbody || !subtabs) return;
 
             // 1. 生成科目分頁按鈕
-            const subjects = [...new Set(db.tasks.map(t => t.subject))];
+            const subjects = getSubjects();
             if (!subjects.includes(currentStatSubject) && subjects.length > 0) {
                 currentStatSubject = subjects[0];
             }
@@ -586,8 +700,16 @@
             let subtabsHTML = '';
             subjects.forEach(sub => {
                 const activeClass = sub === currentStatSubject ? 'border-b-2 border-blue-500 text-blue-600 font-bold bg-blue-50' : 'text-gray-600 hover:bg-gray-100';
-                subtabsHTML += `<button onclick="setStatSubject('${sub}')" class="px-4 py-2 text-sm ${activeClass}">${sub}</button>`;
+                subtabsHTML += `
+                    <div class="flex items-center group">
+                        <button onclick="setStatSubject('${sub}')" class="px-3 py-2 text-sm ${activeClass}">${sub}</button>
+                        <div class="hidden group-hover:flex items-center px-1">
+                            <button onclick="editSubject('${sub}')" class="text-xs text-gray-400 hover:text-blue-500 px-1" title="編輯名稱">✎</button>
+                            <button onclick="deleteSubject('${sub}')" class="text-xs text-gray-400 hover:text-red-500 pr-2" title="刪除分頁">×</button>
+                        </div>
+                    </div>`;
             });
+            subtabsHTML += `<button onclick="addSubject()" class="px-3 py-2 text-sm text-blue-500 font-bold hover:bg-blue-50" title="新增分頁">+</button>`;
             subtabs.innerHTML = subtabsHTML;
 
             // 2. 過濾當前科目的 Tasks
@@ -753,86 +875,56 @@
             };
         }
 
-        async function createLabelImage(studentName, token, taskName, noticeName = '') {
+        async function createLabelImage(student, task, noticeName = '', isSimplified = false, customW = 400, customH = 150) {
             const canvas = document.createElement('canvas');
-            canvas.width = 400;
-            canvas.height = 150;
+            canvas.width = customW;
+            canvas.height = customH;
             const ctx = canvas.getContext('2d');
             
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
             ctx.strokeRect(0, 0, canvas.width, canvas.height);
             
-            // Draw text
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 26px sans-serif';
-            ctx.fillText(`${studentName}`, 150, 45);
-            ctx.font = '22px monospace';
-            ctx.fillText(`${token}`, 150, 80);
-            
-            ctx.font = '20px sans-serif';
-            ctx.fillText(taskName, 150, 115);
-            if (noticeName) {
-                ctx.fillStyle = '#b91c1c'; // Red
-                ctx.fillText(noticeName, 150, 140);
-            }
-
             // Draw QR
-            const qrText = noticeName ? `${token}-${taskName}_${noticeName}` : `${token}-${taskName}`;
-            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 140 });
+            const qrText = getQRText(student, task, noticeName);
+            const qrSize = customH - 10;
+            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: qrSize });
             
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = () => {
-                    ctx.drawImage(img, 5, 5, 140, 140);
+                    ctx.drawImage(img, 5, 5, qrSize, qrSize);
+                    
+                    // Draw text
+                    const textX = qrSize + 15;
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 26px sans-serif';
+                    ctx.fillText(`${student.name}`, textX, 45);
+                    ctx.font = '22px monospace';
+                    ctx.fillText(`座號: ${student.id}`, textX, 80);
+                    
+                    ctx.font = '20px sans-serif';
+                    if(isSimplified) {
+                        ctx.fillText(task.name, textX, 115);
+                    } else {
+                        ctx.fillText(`[${task.subject}] ${task.name}`, textX, 115);
+                        if (noticeName) {
+                            ctx.fillStyle = '#b91c1c'; // Red
+                            ctx.fillText(noticeName, textX, 140);
+                        }
+                    }
                     resolve(canvas.toDataURL('image/png'));
                 };
                 img.src = qrDataUrl;
             });
         }
 
-        async function exportExcel() {
-            showLoading();
-            setTimeout(() => {
-                try {
-                    const wb = XLSX.utils.book_new();
-                    const subjects = [...new Set(db.tasks.map(t => t.subject))];
-                    
-                    subjects.forEach(subject => {
-                        const tasksInSub = db.tasks.filter(t => t.subject === subject);
-                        if(tasksInSub.length === 0) return;
-                        
-                        let data = [];
-                        let header = ['座號/姓名'];
-                        tasksInSub.forEach(t => header.push(t.name));
-                        data.push(header);
-
-                        db.students.forEach(s => {
-                            let row = [s.name];
-                            tasksInSub.forEach(t => {
-                                const submitted = db.records.some(r => r.studentId === s.id && r.taskId === t.id);
-                                row.push(submitted ? 'O' : '');
-                            });
-                            data.push(row);
-                        });
-
-                        const ws = XLSX.utils.aoa_to_sheet(data);
-                        XLSX.utils.book_append_sheet(wb, ws, subject);
-                    });
-
-                    XLSX.writeFile(wb, "交作業統計表.xlsx");
-                } catch(e) {
-                    alert("匯出失敗: " + e.message);
-                }
-                hideLoading();
-            }, 500);
-        }
-
-        async function generateFixedPDF() {
-            const select = document.getElementById('tab2-task-select');
-            if(!select.value) { alert('請先選擇作業'); return; }
-            const task = db.tasks.find(t => t.id === select.value);
+        let currentFixedPdfBlobUrl = null;
+        async function previewFixedPDF() {
+            const taskIds = getCheckedTaskIds('tab2-task-checkboxes');
+            if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
             
             showLoading();
             setTimeout(async () => {
@@ -841,42 +933,55 @@
                     let page = pdfDoc.addPage([595.28, 841.89]); // A4
                     const { width, height } = page.getSize();
                     
-                    const cols = 3;
-                    const rows = 10;
+                    const cols = parseInt(document.getElementById('tab2-cols').value) || 3;
+                    const rows = parseInt(document.getElementById('tab2-rows').value) || 10;
                     const margin = 20;
                     const labelW = (width - margin * 2) / cols;
                     const labelH = (height - margin * 2) / rows;
 
                     let index = 0;
-                    for (const student of db.students) {
-                        if (index > 0 && index % (cols * rows) === 0) {
-                            page = pdfDoc.addPage([595.28, 841.89]);
+                    for (const taskId of taskIds) {
+                        const task = db.tasks.find(t => t.id === taskId);
+                        for (const student of db.students) {
+                            if (index > 0 && index % (cols * rows) === 0) {
+                                page = pdfDoc.addPage([595.28, 841.89]);
+                            }
+                            const col = index % cols;
+                            const row = Math.floor((index % (cols * rows)) / cols);
+                            const x = margin + col * labelW;
+                            const y = height - margin - (row + 1) * labelH;
+
+                            const dataUrl = await createLabelImage(student, task, '', true, 400, 150);
+                            const imgBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
+                            const pdfImg = await pdfDoc.embedPng(imgBytes);
+
+                            page.drawImage(pdfImg, { x: x+5, y: y+5, width: labelW-10, height: labelH-10 });
+                            index++;
                         }
-                        const col = index % cols;
-                        const row = Math.floor((index % (cols * rows)) / cols);
-                        const x = margin + col * labelW;
-                        const y = height - margin - (row + 1) * labelH;
-
-                        const dataUrl = await createLabelImage(student.name, student.token, task.name);
-                        const imgBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
-                        const pdfImg = await pdfDoc.embedPng(imgBytes);
-
-                        page.drawImage(pdfImg, { x: x+5, y: y+5, width: labelW-10, height: labelH-10 });
-                        index++;
                     }
 
                     const pdfBytes = await pdfDoc.save();
                     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `固定標籤_${task.name}.pdf`;
-                    a.click();
+                    currentFixedPdfBlobUrl = URL.createObjectURL(blob);
+                    
+                    const preview = document.getElementById('tab2-preview');
+                    preview.innerHTML = `<iframe src="${currentFixedPdfBlobUrl}#toolbar=0" width="100%" height="100%"></iframe>`;
+                    preview.classList.remove('hidden');
+                    document.getElementById('tab2-download-btn').classList.remove('hidden');
                 } catch (e) {
                     alert('產生 PDF 失敗: ' + e.message);
                 }
                 hideLoading();
             }, 500);
+        }
+
+        function downloadFixedPDF() {
+            if(currentFixedPdfBlobUrl) {
+                const a = document.createElement('a');
+                a.href = currentFixedPdfBlobUrl;
+                a.download = `固定標籤_批次.pdf`;
+                a.click();
+            }
         }
 
         async function generateFloatingPDF() {
@@ -890,6 +995,9 @@
 
             const fileInput = document.getElementById('tab3-pdf-upload');
             if(fileInput.files.length === 0) { alert('請先上傳底板 PDF'); return; }
+
+            const pagesKeep = document.getElementById('tab3-pages-keep').value.trim();
+            const pagesStampStr = document.getElementById('tab3-pages-stamp').value.trim();
 
             const qrX = parseFloat(document.getElementById('tab3-x').value) || 50;
             const qrY = parseFloat(document.getElementById('tab3-y').value) || 750;
@@ -905,18 +1013,46 @@
                     for (const student of db.students) {
                         const pdfDoc = await PDFLib.PDFDocument.load(originalPdfBytes);
                         const pages = pdfDoc.getPages();
-                        const page = pages[0]; // 只套印第一頁
+                        
+                        let keepIndices = [];
+                        if (pagesKeep) {
+                            const parts = pagesKeep.split(',');
+                            parts.forEach(p => {
+                                if(p.includes('-')) {
+                                    const [s, e] = p.split('-');
+                                    for(let i = parseInt(s)-1; i <= parseInt(e)-1; i++) keepIndices.push(i);
+                                } else {
+                                    keepIndices.push(parseInt(p)-1);
+                                }
+                            });
+                        } else {
+                            keepIndices = pages.map((_, i) => i);
+                        }
 
-                        const qrText = noticeName ? `${student.token}-${task.name}_${noticeName}` : `${student.token}-${task.name}`;
-                        const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 0, width: 200 });
-                        const qrBytes = await fetch(qrDataUrl).then(res => res.arrayBuffer());
+                        let stampIndices = [];
+                        if (pagesStampStr.toLowerCase() === 'all') {
+                            stampIndices = pages.map((_, i) => i);
+                        } else {
+                            stampIndices = pagesStampStr.split(',').map(p => parseInt(p)-1);
+                        }
+
+                        // 產生長方形標籤 (姓名座號QR)
+                        const dataUrl = await createLabelImage(student, task, noticeName, false, 250, 100);
+                        const qrBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
                         const qrImage = await pdfDoc.embedPng(qrBytes);
 
-                        page.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+                        // 比例 = 100/250 = 0.4
+                        const imgHeight = qrSize * 0.4;
+
+                        stampIndices.forEach(idx => {
+                            if(pages[idx]) {
+                                pages[idx].drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: imgHeight });
+                            }
+                        });
                         
-                        // Copy the page to the merged document
-                        const [copiedPage] = await mergedPdf.copyPages(pdfDoc, [0]);
-                        mergedPdf.addPage(copiedPage);
+                        const validKeepIndices = keepIndices.filter(i => i >= 0 && i < pages.length);
+                        const copiedPages = await mergedPdf.copyPages(pdfDoc, validKeepIndices);
+                        copiedPages.forEach(p => mergedPdf.addPage(p));
                     }
 
                     const pdfBytes = await mergedPdf.save();
@@ -936,6 +1072,10 @@
         }
 
         async function generateWord() {
+            const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
+            if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
+            const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id));
+
             showLoading();
             setTimeout(async () => {
                 try {
@@ -943,37 +1083,36 @@
                     
                     const rows = [];
                     // Header
-                    rows.push(new TableRow({
-                        children: [
-                            new TableCell({ children: [new Paragraph({text: "座號", bold: true})] }),
-                            new TableCell({ children: [new Paragraph({text: "姓名", bold: true})] }),
-                            new TableCell({ children: [new Paragraph({text: "個人條碼 (聯絡簿用)", bold: true})] }),
-                        ]
-                    }));
+                    let headerCells = [
+                        new TableCell({ children: [new Paragraph({text: "姓名", bold: true})] }),
+                    ];
+                    selectedTasks.forEach(task => {
+                        headerCells.push(new TableCell({ children: [new Paragraph({text: task.name, bold: true})] }));
+                    });
+                    rows.push(new TableRow({ children: headerCells }));
 
                     for (const student of db.students) {
-                        const qrText = `${student.token}`;
-                        const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 100 });
-                        const qrBase64 = qrDataUrl.split(',')[1];
-
-                        rows.push(new TableRow({
-                            children: [
-                                new TableCell({ children: [new Paragraph(student.id.toString())] }),
-                                new TableCell({ children: [new Paragraph(student.name)] }),
-                                new TableCell({
-                                    children: [
-                                        new Paragraph({
-                                            children: [
-                                                new ImageRun({
-                                                    data: Uint8Array.from(atob(qrBase64), c => c.charCodeAt(0)),
-                                                    transformation: { width: 100, height: 100 }
-                                                })
-                                            ]
-                                        })
-                                    ]
-                                }),
-                            ]
-                        }));
+                        let studentCells = [
+                            new TableCell({ children: [new Paragraph(student.name)] })
+                        ];
+                        for (const task of selectedTasks) {
+                            const qrText = getQRText(student, task);
+                            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 80 });
+                            const qrBase64 = qrDataUrl.split(',')[1];
+                            studentCells.push(new TableCell({
+                                children: [
+                                    new Paragraph({
+                                        children: [
+                                            new ImageRun({
+                                                data: Uint8Array.from(atob(qrBase64), c => c.charCodeAt(0)),
+                                                transformation: { width: 80, height: 80 }
+                                            })
+                                        ]
+                                    })
+                                ]
+                            }));
+                        }
+                        rows.push(new TableRow({ children: studentCells }));
                     }
 
                     const table = new Table({
@@ -986,7 +1125,7 @@
                             properties: {},
                             children: [
                                 new Paragraph({
-                                    children: [new TextRun({ text: "學生個人條碼表", bold: true, size: 32 })],
+                                    children: [new TextRun({ text: "作業條碼對照表", bold: true, size: 32 })],
                                 }),
                                 table,
                             ],
@@ -997,7 +1136,7 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = "學生個人條碼表.docx";
+                    a.download = "作業條碼對照表.docx";
                     a.click();
                 } catch(e) {
                     alert("匯出 Word 失敗: " + e.message);
@@ -1006,11 +1145,13 @@
             }, 500);
         }
 
-        async function generateCanvasLabels() {
-            const select = document.getElementById('tab5-task-select');
-            if(!select.value) { alert('請先選擇作業'); return; }
-            const task = db.tasks.find(t => t.id === select.value);
+        let currentCanvasDataUrl = null;
+        async function previewCanvasLabels() {
+            const taskIds = getCheckedTaskIds('tab5-task-checkboxes');
+            if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
             
+            const w = parseInt(document.getElementById('tab5-w').value) || 400;
+            const h = parseInt(document.getElementById('tab5-h').value) || 150;
             const cols = parseInt(document.getElementById('tab5-cols').value) || 3;
             const rows = parseInt(document.getElementById('tab5-rows').value) || 10;
             
@@ -1018,59 +1159,61 @@
             setTimeout(async () => {
                 try {
                     const canvas = document.createElement('canvas');
-                    // A4 at 300dpi is 2480 x 3508
-                    const DPI_SCALE = 2; // Reduce slightly for memory safety
-                    canvas.width = 1240 * DPI_SCALE;
-                    canvas.height = 1754 * DPI_SCALE;
+                    const margin = 40;
+                    canvas.width = (w * cols) + margin * 2;
+                    canvas.height = (h * rows) + margin * 2;
                     const ctx = canvas.getContext('2d');
                     
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     
-                    const margin = 40 * DPI_SCALE;
-                    const cellW = (canvas.width - margin * 2) / cols;
-                    const cellH = (canvas.height - margin * 2) / rows;
-                    
                     let index = 0;
-                    for (const student of db.students) {
-                        if (index >= cols * rows) break; // 單頁示範
-                        const col = index % cols;
-                        const row = Math.floor(index / cols);
-                        const x = margin + col * cellW;
-                        const y = margin + row * cellH;
+                    for (const taskId of taskIds) {
+                        const task = db.tasks.find(t => t.id === taskId);
+                        for (const student of db.students) {
+                            if (index >= cols * rows) break; // 單頁預覽
+                            const col = index % cols;
+                            const row = Math.floor(index / cols);
+                            const x = margin + col * w;
+                            const y = margin + row * h;
 
-                        const dataUrl = await createLabelImage(student.name, student.token, task.name);
-                        const img = new Image();
-                        await new Promise(res => { img.onload = res; img.src = dataUrl; });
-                        
-                        ctx.drawImage(img, x + 10, y + 10, cellW - 20, cellH - 20);
-                        // Draw grid
-                        ctx.strokeStyle = '#cccccc';
-                        ctx.lineWidth = 1;
-                        ctx.strokeRect(x, y, cellW, cellH);
-                        index++;
+                            const dataUrl = await createLabelImage(student, task, '', false, w, h);
+                            const img = new Image();
+                            await new Promise(res => { img.onload = res; img.src = dataUrl; });
+                            
+                            ctx.drawImage(img, x, y, w, h);
+                        }
                     }
 
                     const preview = document.getElementById('tab5-preview');
                     preview.innerHTML = '';
                     const displayCanvas = document.createElement('canvas');
-                    displayCanvas.width = canvas.width / 3;
-                    displayCanvas.height = canvas.height / 3;
-                    displayCanvas.getContext('2d').drawImage(canvas, 0, 0, displayCanvas.width, displayCanvas.height);
+                    const scale = Math.min(1, 800 / canvas.width);
+                    displayCanvas.width = canvas.width * scale;
+                    displayCanvas.height = canvas.height * scale;
+                    displayCanvas.getContext('2d').scale(scale, scale);
+                    displayCanvas.getContext('2d').drawImage(canvas, 0, 0);
                     displayCanvas.style.border = '1px solid #aaa';
                     preview.appendChild(displayCanvas);
-
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    const a = document.createElement('a');
-                    a.href = dataUrl;
-                    a.download = `標籤排版_${task.name}.jpg`;
-                    a.click();
+                    preview.classList.remove('hidden');
+                    
+                    currentCanvasDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    document.getElementById('tab5-download-btn').classList.remove('hidden');
 
                 } catch (e) {
                     alert('產生圖片失敗: ' + e.message);
                 }
                 hideLoading();
             }, 500);
+        }
+
+        function downloadCanvasLabels() {
+            if(currentCanvasDataUrl) {
+                const a = document.createElement('a');
+                a.href = currentCanvasDataUrl;
+                a.download = `標籤排版_批次.jpg`;
+                a.click();
+            }
         }
 
         async function generateZip() {
@@ -1081,7 +1224,7 @@
                     for (const student of db.students) {
                         const folder = zip.folder(student.name);
                         for (const task of db.tasks) {
-                            const qrText = `${student.token}-${task.name}`;
+                            const qrText = getQRText(student, task);
                             const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 300 });
                             const base64Data = qrDataUrl.split(',')[1];
                             folder.file(`${student.name}_${task.name}.png`, base64Data, {base64: true});
