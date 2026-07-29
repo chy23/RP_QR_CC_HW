@@ -1046,12 +1046,6 @@
                 console.warn('Scan failed: student or task not found', qrText);
                 return;
             }
-            
-            const targetTask = document.getElementById('scan-target-task');
-            const targetNotice = document.getElementById('scan-target-notice');
-            if (targetTask && targetNotice && targetTask.value === task.id && targetNotice.value.trim() !== '') {
-                parsed.noticeName = targetNotice.value.trim();
-            }
 
             // 防偽驗證
             if (parsed.salt && parsed.salt !== student.salt) {
@@ -1060,104 +1054,31 @@
                 return;
             }
 
-            const existing = db.records.find(r => r.studentId === student.id && r.taskId === task.id && r.noticeName === parsed.noticeName);
-            if (!existing) {
-                const now = new Date();
-                const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            if (scanSession.active) {
+                const sessionTask = scanSession.tasks.find(t => t.id === task.id);
+                if (!sessionTask) {
+                    alert(`錯誤：您現在掃描的是「${task.name}」，但此作業不在您勾選的掃描清單中！`);
+                    return;
+                }
                 
-                db.records.push({
+                const existingInSession = scanSession.records.find(r => r.studentId === student.id && r.taskId === task.id);
+                if (existingInSession) return;
+                
+                const now = new Date();
+                const timeString = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                
+                scanSession.records.unshift({
                     studentId: student.id,
                     taskId: task.id,
-                    noticeName: noticeName,
-                    timestamp: timeString
+                    timeOnly: timeString,
+                    fullTimestamp: `${now.getMonth()+1}/${now.getDate()} ${timeString}`
                 });
-                saveData();
-                renderStatistics();
-            }
-        }
-
-        function getSubjects() {
-            if(!db.subjects || db.subjects.length === 0) {
-                db.subjects = [...new Set(db.tasks.map(t => t.subject))];
-                if(db.subjects.length === 0) db.subjects = ['國語', '數學', '社會', '聯絡簿'];
-            }
-            return db.subjects;
-        }
-
-        function addSubject() {
-            const newSub = prompt("新增分頁名稱：");
-            if(newSub && newSub.trim()) {
-                const subjects = getSubjects();
-                if(!subjects.includes(newSub.trim())) {
-                    db.subjects.push(newSub.trim());
-                    saveData();
-                    renderStatistics();
-                }
-            }
-        }
-
-        function editSubject(oldSub) {
-            const newSub = prompt("重新命名分頁：", oldSub);
-            if(newSub && newSub.trim() !== oldSub) {
-                db.tasks.forEach(t => { if(t.subject === oldSub) t.subject = newSub.trim(); });
-                const idx = db.subjects.indexOf(oldSub);
-                if(idx !== -1) db.subjects[idx] = newSub.trim();
-                saveData();
-                renderStatistics();
-                renderTasks();
-            }
-        }
-
-        function deleteSubject(sub) {
-            if(confirm(`確定要刪除分頁「${sub}」嗎？\n這不會刪除作業，但該分頁下的作業將歸為「未分類」。`)) {
-                db.subjects = db.subjects.filter(s => s !== sub);
-                db.tasks.forEach(t => { if(t.subject === sub) t.subject = '未分類'; });
-                if(!db.subjects.includes('未分類')) db.subjects.push('未分類');
-                saveData();
-                currentStatSubject = db.subjects[0];
-                renderStatistics();
-                renderTasks();
-            }
-        }
-
-        function updateTaskRange(taskId, noticeName, rangeValue) {
-            // Find or create a range record for this specific task + noticeName combination
-            if (!db.ranges) db.ranges = [];
-            const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
-            if (existing) {
-                existing.range = rangeValue;
+                
+                playBeep();
+                renderSessionBuffer();
             } else {
-                db.ranges.push({ taskId, noticeName, range: rangeValue });
+                alert('請先選擇日期與作業，點擊「開始掃描」後再進行掃描！');
             }
-            saveData();
-        }
-
-        function getTaskRange(taskId, noticeName) {
-            if (!db.ranges) return '';
-            const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
-            return existing ? existing.range : '';
-        }
-
-
-        function addSubColumn(taskId) {
-            const noticeName = prompt("為此項作業新增一欄，請輸入備註名稱 (如: 第二課, CH2)：");
-            if (noticeName && noticeName.trim()) {
-                if (!db.ranges) db.ranges = [];
-                const name = noticeName.trim();
-                const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === name);
-                if (!existing) {
-                    db.ranges.push({ taskId, noticeName: name, range: '' });
-                    saveData();
-                    renderStatistics();
-                } else {
-                    alert('這個名稱的欄位已經存在囉！');
-                }
-            }
-        }
-
-        function setStatSubject(subject) {
-            currentStatSubject = subject;
-            renderStatistics();
         }
 
         function renderStatistics() {
