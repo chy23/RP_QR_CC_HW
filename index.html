@@ -667,13 +667,18 @@ function addStudent() {
 
                     // 尋找姓名欄位索引。如果有表頭包含「姓名」，就抓那欄；否則預設抓第一欄 (index 0)
                     let nameColIndex = 0;
+                    let seatColIndex = -1;
                     let startIndex = 0;
                     
                     const headerRow = json[0];
-                    const headerIndex = headerRow.findIndex(cell => typeof cell === 'string' && cell.includes('姓名'));
-                    if (headerIndex !== -1) {
-                        nameColIndex = headerIndex;
+                    const nameHeaderIndex = headerRow.findIndex(cell => typeof cell === 'string' && cell.includes('姓名'));
+                    if (nameHeaderIndex !== -1) {
+                        nameColIndex = nameHeaderIndex;
                         startIndex = 1; // 跳過表頭
+                    }
+                    const seatHeaderIndex = headerRow.findIndex(cell => typeof cell === 'string' && cell.includes('座號'));
+                    if (seatHeaderIndex !== -1) {
+                        seatColIndex = seatHeaderIndex;
                     }
 
                     let addedCount = 0;
@@ -681,14 +686,29 @@ function addStudent() {
 
                     for(let i = startIndex; i < json.length; i++) {
                         const row = json[i];
+                        if (!row || row.length === 0) continue;
                         const name = row[nameColIndex];
+                        
+                        let newId;
+                        if (seatColIndex !== -1 && row[seatColIndex] !== undefined) {
+                            newId = parseInt(row[seatColIndex]);
+                            if (isNaN(newId)) continue; // skip invalid or empty seat numbers
+                        } else {
+                            newId = startId++;
+                        }
+
                         if (name && String(name).trim() !== "") {
-                            const newId = startId++;
-                            const token = `STU${String(newId).padStart(3, '0')}`;
-                            db.students.push({ id: newId, name: String(name).trim(), token, salt: generateSalt() });
+                            const existingIdx = db.students.findIndex(s => s.id === newId);
+                            if (existingIdx !== -1) {
+                                db.students[existingIdx].name = String(name).trim();
+                            } else {
+                                const token = `STU${String(newId).padStart(3, '0')}`;
+                                db.students.push({ id: newId, name: String(name).trim(), token, salt: generateSalt() });
+                            }
                             addedCount++;
                         }
                     }
+                    db.students.sort((a, b) => a.id - b.id);
 
                     saveData();
                     renderStudents();
@@ -1029,6 +1049,11 @@ function addTask() {
                         let cellValue = '缺交';
                         if (record) {
                             cellValue = record.timestamp;
+                            if (['事假', '病假', '公假', '喪假', '曠課', '其他'].includes(record.manualStatus)) {
+                                cellValue = record.manualStatus;
+                            } else if (record.manualStatus === 'missing') {
+                                cellValue = '缺交';
+                            }
                             const taskDef = db.tasks.find(t => t.id === k.taskId);
                             if (taskDef && taskDef.deadline) {
                                 let deadlineDate = new Date(taskDef.deadline);
@@ -1051,7 +1076,8 @@ function addTask() {
                     });
                     aoa.push(row);
                 });
-                fullSyncData.push({ name: sub, data: aoa });
+                const sheetName = db.classInfo && db.classInfo.className ? `${sub}_${db.classInfo.className}` : sub;
+                fullSyncData.push({ name: sheetName, data: aoa });
             });
             
             fetch(gasUrl, {
@@ -1072,7 +1098,7 @@ function addTask() {
         function initScanSessionDropdown() {
             const container = document.getElementById('scan-session-tasks');
             if(!container) return;
-            document.getElementById('pdf-zoom-container').innerHTML = '';
+            container.innerHTML = '';
             db.tasks.forEach(t => {
                 const row = document.createElement('div');
                 row.className = "flex items-center justify-between text-sm hover:bg-gray-100 p-1 rounded w-full border-b last:border-0";
@@ -2742,6 +2768,11 @@ function renderStatistics() {
                         let cellValue = '缺交';
                         if (record) {
                             cellValue = record.timestamp;
+                            if (['事假', '病假', '公假', '喪假', '曠課', '其他'].includes(record.manualStatus)) {
+                                cellValue = record.manualStatus;
+                            } else if (record.manualStatus === 'missing') {
+                                cellValue = '缺交';
+                            }
                             const taskDef = db.tasks.find(t => t.id === k.taskId);
                             if (taskDef && taskDef.deadline) {
                                 let deadlineDate = new Date(taskDef.deadline);
