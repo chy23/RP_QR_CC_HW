@@ -2886,3 +2886,15 @@ function renderStatistics() {
     </div>
 </body>
 </html>
+        function updateContactBookRange() {
+            const dateVal = document.getElementById('scan-session-date').value;
+            if (!dateVal) return;
+            const contactTask = db.tasks.find(t => t.name === '聯絡簿' && t.type === 'fixed');
+            if (contactTask) {
+                const input = document.getElementById(`range-input-${contactTask.id}`);
+                if (input) {
+                    input.value = dateVal.replace(/-/g, '/');
+                }
+            }
+        }
+
