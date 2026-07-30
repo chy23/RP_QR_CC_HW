@@ -1095,7 +1095,20 @@ function addTask() {
             });
         }
 
-        function initScanSessionDropdown() {
+        
+        function updateContactBookRange() {
+            const dateVal = document.getElementById('scan-session-date').value;
+            if (!dateVal) return;
+            const contactTask = db.tasks.find(t => t.name === '聯絡簿' && t.type === 'fixed');
+            if (contactTask) {
+                const input = document.getElementById(`range-input-${contactTask.id}`);
+                const cb = document.querySelector(`.scan-task-checkbox[value="${contactTask.id}"]`);
+                if (input && cb && cb.checked) {
+                    input.value = dateVal.replace(/-/g, '/');
+                }
+            }
+        }
+function initScanSessionDropdown() {
             const container = document.getElementById('scan-session-tasks');
             if(!container) return;
             container.innerHTML = '';
@@ -1104,7 +1117,7 @@ function addTask() {
                 row.className = "flex items-center justify-between text-sm hover:bg-gray-100 p-1 rounded w-full border-b last:border-0";
                 row.innerHTML = `
                     <label class="flex items-center space-x-2 cursor-pointer w-1/2">
-                        <input type="checkbox" value="${t.id}" class="scan-task-checkbox" onchange="document.getElementById('range-input-${t.id}').style.display = this.checked ? 'block' : 'none'"> 
+                        <input type="checkbox" value="${t.id}" class="scan-task-checkbox" onchange="document.getElementById('range-input-${t.id}').style.display = this.checked ? 'block' : 'none'; updateContactBookRange();"> 
                         <span class="truncate" title="${t.name}">[${t.subject}] ${t.name}</span>
                     </label>
                     <input type="text" id="range-input-${t.id}" class="border p-1 rounded text-xs w-1/2 ml-2" style="display: none;" placeholder="範圍/備註 (選填)">
@@ -2917,15 +2930,3 @@ function renderStatistics() {
     </div>
 </body>
 </html>
-        function updateContactBookRange() {
-            const dateVal = document.getElementById('scan-session-date').value;
-            if (!dateVal) return;
-            const contactTask = db.tasks.find(t => t.name === '聯絡簿' && t.type === 'fixed');
-            if (contactTask) {
-                const input = document.getElementById(`range-input-${contactTask.id}`);
-                if (input) {
-                    input.value = dateVal.replace(/-/g, '/');
-                }
-            }
-        }
-
