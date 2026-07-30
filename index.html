@@ -855,6 +855,7 @@ function addTask() {
                 scanTargetTask.value = currentVal;
             }
             populateSelect('tab3-task-select', floatingTasks);
+            toggleNoticeInput();
             
             // Tab 4
             renderCheckboxes('tab4-task-checkboxes', allTasks, 'previewWord()', true);
