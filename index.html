@@ -993,7 +993,14 @@ function addTask() {
             subjects.forEach(sub => {
                 const tasksInSub = db.tasks.filter(t => t.subject === sub);
                 let uniqueTaskKeys = []; 
-                tasksInSub.forEach(t => uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.name}` }));
+                tasksInSub.forEach(t => {
+                    const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
+                    const hasSubRecords = db.records.some(r => r.taskId === t.id && r.noticeName);
+                    const hasSubRanges = (db.ranges || []).some(r => r.taskId === t.id && r.noticeName);
+                    if (hasBaseRecords || (!hasSubRecords && !hasSubRanges)) {
+                        uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
+                    }
+                });
                 if (db.ranges) {
                     db.ranges.forEach(r => {
                         if (r.noticeName) {
@@ -1001,9 +1008,8 @@ function addTask() {
                             if (t) {
                                 const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                                 if (!exists) {
-                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
+                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
                                 }
-
                             }
                         }
                     });
@@ -1014,9 +1020,8 @@ function addTask() {
                         if(t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if(!exists) {
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
                             }
-
                         }
                     }
                 });
@@ -1261,7 +1266,10 @@ function endScanSession() {
                 if (task.range) {
                     const existingRange = db.ranges.find(r => r.taskId === task.id && r.noticeName === task.range);
                     if (!existingRange) {
-                        db.ranges.push({ taskId: task.id, noticeName: task.range, range: '', date: scanSession.dateStr });
+                        db.ranges.push({ taskId: task.id, noticeName: task.range, range: task.range, date: scanSession.dateStr });
+                    } else {
+                        if (!existingRange.range) existingRange.range = task.range;
+                        if (!existingRange.date) existingRange.date = scanSession.dateStr;
                     }
                 }
             });
@@ -1480,9 +1488,10 @@ function getTaskDate(taskId, noticeName) {
             return existing ? (existing.date || '') : '';
         }
 function getTaskRange(taskId, noticeName) {
-            if (!db.ranges) return '';
+            if (!db.ranges) return noticeName || '';
             const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
-            return existing ? existing.range : '';
+            if (existing && existing.range) return existing.range;
+            return noticeName || '';
         }
 
 function getSubjects() {
@@ -1528,7 +1537,13 @@ function renderStatistics() {
             
             // 先加入定義在 db.tasks 中的 (只屬於當前科目)
             tasksInSub.forEach(t => {
-                uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
+                // 只加入 base column (noticeName='') 如果該 task 有不帶 noticeName 的紀錄，或者它是固定作業且沒有任何帶 noticeName 的紀錄
+                const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
+                const hasSubRecords = db.records.some(r => r.taskId === t.id && r.noticeName);
+                const hasSubRanges = (db.ranges || []).some(r => r.taskId === t.id && r.noticeName);
+                if (hasBaseRecords || (!hasSubRecords && !hasSubRanges)) {
+                    uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
+                }
             });
 
             // 補充 ranges 中手動新增的子欄位
@@ -1539,9 +1554,7 @@ function renderStatistics() {
                         if (t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if (!exists) {
-                                
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
-
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
                             }
                         }
                     }
@@ -1555,9 +1568,7 @@ function renderStatistics() {
                     if(t) {
                         const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                         if(!exists) {
-                            
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
-
+                            uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
                         }
                     }
                 }
@@ -2719,7 +2730,12 @@ function renderStatistics() {
                 let uniqueTaskKeys = []; 
                 
                 tasksInSub.forEach(t => {
-                    uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
+                    const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
+                    const hasSubRecords = db.records.some(r => r.taskId === t.id && r.noticeName);
+                    const hasSubRanges = (db.ranges || []).some(r => r.taskId === t.id && r.noticeName);
+                    if (hasBaseRecords || (!hasSubRecords && !hasSubRanges)) {
+                        uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
+                    }
                 });
 
                 if (db.ranges) {
@@ -2729,9 +2745,7 @@ function renderStatistics() {
                             if (t) {
                                 const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                                 if (!exists) {
-                                    
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
-
+                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
                                 }
                             }
                         }
@@ -2744,9 +2758,7 @@ function renderStatistics() {
                         if(t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if(!exists) {
-                                
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
-
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
                             }
                         }
                     }
