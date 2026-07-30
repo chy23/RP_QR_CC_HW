@@ -469,7 +469,8 @@
             { id: 't_float_3', subject: '國語', name: '作文', type: 'floating' },
             { id: 't_float_4', subject: '數學', name: '數卷', type: 'floating' },
             { id: 't_float_5', subject: '社會', name: '社卷', type: 'floating' },
-            { id: 't_float_6', subject: '聯絡簿', name: '通知單', type: 'floating' }
+            { id: 't_float_6', subject: '聯絡簿', name: '通知單', type: 'floating' },
+            { id: 't_fixed_9', subject: '聯絡簿', name: '聯絡簿', type: 'fixed' }
         ];
 
         
@@ -544,6 +545,9 @@
             // Migration: 確保現有使用者也會新增「考試本」
             if (!db.tasks.find(t => t.id === 't_fixed_8')) {
                 db.tasks.push({ id: 't_fixed_8', subject: '國語', name: '考試本', type: 'fixed' });
+            }
+            if (!db.tasks.find(t => t.id === 't_fixed_9')) {
+                db.tasks.push({ id: 't_fixed_9', subject: '聯絡簿', name: '聯絡簿', type: 'fixed' });
             }
             sortTasks();
             saveData();
