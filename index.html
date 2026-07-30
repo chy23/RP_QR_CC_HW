@@ -878,7 +878,7 @@ function addTask() {
             const select = document.getElementById('tab3-task-select');
             const task = db.tasks.find(t => t.id === select.value);
             const container = document.getElementById('notice-name-container');
-            if (task && task.name.includes('通知單')) {
+            if (task) {
                 container.style.display = 'block';
             } else {
                 container.style.display = 'none';
@@ -976,10 +976,7 @@ function addTask() {
                             if (t) {
                                 const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                                 if (!exists) {
-                                    let labelStr = t.type === 'floating' 
-                                        ? (r.noticeName ? r.noticeName : t.name)
-                                        : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
-                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
                                 }
 
                             }
@@ -992,10 +989,7 @@ function addTask() {
                         if(t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if(!exists) {
-                                let labelStr = t.type === 'floating' 
-                                    ? (r.noticeName ? r.noticeName : t.name)
-                                    : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
                             }
 
                         }
@@ -1502,10 +1496,7 @@ function renderStatistics() {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if (!exists) {
                                 
-                                let labelStr = t.type === 'floating' 
-                                    ? (r.noticeName ? r.noticeName : t.name)
-                                    : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
 
                             }
                         }
@@ -1521,10 +1512,7 @@ function renderStatistics() {
                         const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                         if(!exists) {
                             
-                                let labelStr = t.type === 'floating' 
-                                    ? (r.noticeName ? r.noticeName : t.name)
-                                    : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
 
                         }
                     }
@@ -2004,10 +1992,7 @@ function renderStatistics() {
             const select = document.getElementById('tab3-task-select');
             if(!select.value) { alert('請先選擇浮動作/通知單'); return; }
             const task = db.tasks.find(t => t.id === select.value);
-            let noticeName = '';
-            if(task.name.includes('通知單')) {
-                noticeName = document.getElementById('tab3-notice-name').value.trim();
-            }
+            let noticeName = document.getElementById('tab3-notice-name').value.trim();
 
             const fileInput = document.getElementById('tab3-pdf-upload');
             if(fileInput.files.length === 0) { alert('請先上傳底板 PDF'); return; }
@@ -2569,10 +2554,8 @@ function renderStatistics() {
             if(!select.value) { alert('請先選擇浮動作/通知單'); return; }
             const task = db.tasks.find(t => t.id === select.value);
             let noticeName = '';
-            if(task.name.includes('通知單')) {
-                const noticeInput = document.getElementById('tab3-notice-name');
-                if(noticeInput) noticeName = noticeInput.value.trim();
-            }
+            const noticeInput = document.getElementById('tab3-notice-name');
+            if(noticeInput) noticeName = noticeInput.value.trim();
 
             const fileInput = document.getElementById('tab3-pdf-upload');
             if(!fileInput || fileInput.files.length === 0) { alert('請先上傳底板 PDF'); return; }
@@ -2703,10 +2686,7 @@ function renderStatistics() {
                                 const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                                 if (!exists) {
                                     
-                                let labelStr = t.type === 'floating' 
-                                    ? (r.noticeName ? r.noticeName : t.name)
-                                    : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
 
                                 }
                             }
@@ -2721,10 +2701,7 @@ function renderStatistics() {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if(!exists) {
                                 
-                                let labelStr = t.type === 'floating' 
-                                    ? (r.noticeName ? r.noticeName : t.name)
-                                    : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
 
                             }
                         }
