@@ -975,7 +975,13 @@ function addTask() {
                             const t = tasksInSub.find(t => t.id === r.taskId);
                             if (t) {
                                 const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
-                                if (!exists) uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                                if (!exists) {
+                                    let labelStr = t.type === 'floating' 
+                                        ? (r.noticeName ? r.noticeName : t.name)
+                                        : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
+                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+                                }
+
                             }
                         }
                     });
@@ -985,7 +991,13 @@ function addTask() {
                         const t = tasksInSub.find(t => t.id === r.taskId);
                         if(t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
-                            if(!exists) uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                            if(!exists) {
+                                let labelStr = t.type === 'floating' 
+                                    ? (r.noticeName ? r.noticeName : t.name)
+                                    : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+                            }
+
                         }
                     }
                 });
@@ -1489,7 +1501,12 @@ function renderStatistics() {
                         if (t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if (!exists) {
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                                
+                                let labelStr = t.type === 'floating' 
+                                    ? (r.noticeName ? r.noticeName : t.name)
+                                    : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+
                             }
                         }
                     }
@@ -1503,7 +1520,12 @@ function renderStatistics() {
                     if(t) {
                         const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                         if(!exists) {
-                            uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                            
+                                let labelStr = t.type === 'floating' 
+                                    ? (r.noticeName ? r.noticeName : t.name)
+                                    : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+
                         }
                     }
                 }
@@ -2680,7 +2702,12 @@ function renderStatistics() {
                             if (t) {
                                 const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                                 if (!exists) {
-                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                                    
+                                let labelStr = t.type === 'floating' 
+                                    ? (r.noticeName ? r.noticeName : t.name)
+                                    : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+
                                 }
                             }
                         }
@@ -2693,7 +2720,12 @@ function renderStatistics() {
                         if(t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if(!exists) {
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.name}_${r.noticeName}` });
+                                
+                                let labelStr = t.type === 'floating' 
+                                    ? (r.noticeName ? r.noticeName : t.name)
+                                    : (r.noticeName ? `${t.name}(${r.noticeName})` : t.name);
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: labelStr });
+
                             }
                         }
                     }
