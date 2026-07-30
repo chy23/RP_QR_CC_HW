@@ -98,15 +98,15 @@
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">學校名稱</label>
-                        <input type="text" id="info-school" placeholder="例如: 快樂國小" class="border p-2 w-full rounded" onchange="saveClassInfo()">
+                        <input type="text" id="info-school" placeholder="例如: 快樂國小" class="border p-2 w-full rounded" oninput="saveClassInfo()">
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">學年</label>
-                        <input type="text" id="info-year" placeholder="例如: 112" class="border p-2 w-full rounded" onchange="saveClassInfo()">
+                        <input type="text" id="info-year" placeholder="例如: 112" class="border p-2 w-full rounded" oninput="saveClassInfo()">
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">學期</label>
-                        <select id="info-semester" class="border p-2 w-full rounded" onchange="saveClassInfo()">
+                        <select id="info-semester" class="border p-2 w-full rounded" oninput="saveClassInfo()">
                             <option value="">請選擇</option>
                             <option value="上學期">上學期</option>
                             <option value="下學期">下學期</option>
@@ -114,7 +114,7 @@
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">班級</label>
-                        <input type="text" id="info-class" placeholder="例如: 三年甲班" class="border p-2 w-full rounded" onchange="saveClassInfo()">
+                        <input type="text" id="info-class" placeholder="例如: 三年甲班" class="border p-2 w-full rounded" oninput="saveClassInfo()">
                     </div>
                     <div>
                         <button onclick="saveClassInfo()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">儲存</button>
