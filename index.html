@@ -1741,7 +1741,7 @@ function renderStatistics() {
                     const deadline = taskDef && taskDef.deadline ? new Date(taskDef.deadline + 'T23:59:59') : null;
                     const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
                     
-                    let mark = '<span class="text-red-500 font-bold text-xs bg-red-50 px-1 rounded block">缺交</span>';
+                    let mark = '<span class="text-yellow-600 font-bold text-xs bg-yellow-50 border border-yellow-200 px-1 rounded block">缺交</span>';
                     if (record) {
                         // 判斷是否遲交
                         let isLate = false;
@@ -1764,7 +1764,7 @@ function renderStatistics() {
                         }
                         
                         if (isLate) {
-                            mark = `<span class="text-yellow-700 font-bold text-xs bg-yellow-200 px-1 rounded block truncate" title="遲交: ${record.timestamp}">遲交:${record.timestamp}</span>`;
+                            mark = `<span class="text-red-700 font-bold text-xs bg-red-100 border border-red-200 px-1 rounded block truncate" title="遲交: ${record.timestamp}">遲交:${record.timestamp}</span>`;
                         } else {
                             mark = `<span class="text-green-700 font-bold text-xs bg-green-100 px-1 rounded block truncate" title="準時: ${record.timestamp}">${record.timestamp}</span>`;
                         }
@@ -1779,9 +1779,64 @@ function renderStatistics() {
         let currentTargetRecord = null;
         
         function toggleRecord(studentId, taskId, noticeName) {
-            currentTargetRecord = { studentId, taskId, noticeName };
-            document.getElementById('status-modal-title').innerText = studentId === null ? '整欄批次手動設定' : '手動設定交件狀態';
-            document.getElementById('status-modal').style.display = 'flex';
+            if (studentId === null) {
+                currentTargetRecord = { studentId, taskId, noticeName };
+                document.getElementById('status-modal-title').innerText = '整欄批次手動設定';
+                document.getElementById('status-modal').style.display = 'flex';
+                return;
+            }
+            
+            // 單個學生格子的點擊切換邏輯 (順序: 缺交 -> 準時 -> 遲交 -> 缺交)
+            const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
+            const now = new Date();
+            const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            
+            if (index === -1) {
+                // 缺交 -> 準時
+                db.records.push({
+                    studentId, taskId, noticeName,
+                    timestamp: timeString,
+                    manualStatus: 'ontime',
+                    fullTimestamp: now.toISOString()
+                });
+            } else {
+                const record = db.records[index];
+                const taskDef = db.tasks.find(t => t.id === taskId);
+                const deadline = taskDef && taskDef.deadline ? new Date(taskDef.deadline + 'T23:59:59') : null;
+                
+                let isLate = false;
+                if (record.manualStatus === 'late') isLate = true;
+                else if (record.manualStatus === 'ontime') isLate = false;
+                else if (deadline) {
+                    let scanDate;
+                    if (record.timestamp.includes('T') || record.timestamp.includes('-')) scanDate = new Date(record.timestamp);
+                    else {
+                        const currentYear = new Date().getFullYear();
+                        scanDate = new Date(`${currentYear}/${record.timestamp}`);
+                    }
+                    if (scanDate > deadline) isLate = true;
+                }
+
+                if (!isLate && record.manualStatus !== 'missing') {
+                    // 準時 -> 遲交
+                    record.manualStatus = 'late';
+                    record.timestamp = timeString;
+                    record.fullTimestamp = now.toISOString();
+                } else {
+                    // 遲交或假別 -> 缺交
+                    db.records.splice(index, 1);
+                }
+            }
+            
+            saveData();
+            renderStatistics();
+            // 找出新狀態同步
+            const newRec = db.records.find(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
+            if (newRec) {
+                syncToGoogleSheets([newRec]);
+            } else {
+                // 刪除紀錄不觸發同步新增，如果是完全同步會在下次一起同步
+            }
         }
 
         function closeStatusModal() {
