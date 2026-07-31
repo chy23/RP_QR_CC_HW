@@ -1440,6 +1440,7 @@ function endScanSession() {
 
             if (!student || !task) {
                 console.warn('Scan failed: student or task not found', qrText);
+                alert("❌ 條碼辨識失敗！\n這張條碼對應的學生或作業在目前的系統中找不到。\n\n💡 可能原因：\n您目前使用的是無痕模式或新裝置，裡面的學生代碼與您當初印出這張條碼時不同。\n\n🛠️ 解決方法：\n請回到您原本產生這張條碼的瀏覽器，點擊最下方【系統設定與資料備份】的「匯出系統資料」，然後在這個畫面的同一個地方「匯入系統資料」，即可完美恢復！");
                 return;
             }
 
