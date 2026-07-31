@@ -1362,7 +1362,16 @@ function endScanSession() {
 
             scanSession.records.forEach(r => {
                 const taskDef = scanSession.tasks.find(t => t.id === r.taskId);
-                const taskRange = taskDef ? taskDef.range : '';
+                // 優先使用 QR code 夾帶的 noticeName，否則才使用介面上輸入的範圍
+                const taskRange = (r.noticeName && r.noticeName !== '') ? r.noticeName : (taskDef ? taskDef.range : '');
+                
+                // 動態註冊這個範圍到 db.ranges，讓系統知道這是一個獨立的欄位
+                if (taskRange && taskRange !== '') {
+                    const existingRange = db.ranges.find(rg => rg.taskId === r.taskId && rg.noticeName === taskRange);
+                    if (!existingRange) {
+                        db.ranges.push({ taskId: r.taskId, noticeName: taskRange, range: taskRange, date: scanSession.dateStr });
+                    }
+                }
                 
                 const existing = db.records.findIndex(rec => rec.studentId === r.studentId && rec.taskId === r.taskId && rec.noticeName === taskRange);
                 if(existing !== -1) {
@@ -1376,6 +1385,9 @@ function endScanSession() {
                         timestamp: r.fullTimestamp
                     });
                 }
+                
+                // 將最終確定的 noticeName 寫回 r，這樣底下的 recordsToSync 也會拿到正確的值
+                r.finalNoticeName = taskRange;
             });
 
             saveData();
@@ -1383,12 +1395,10 @@ function endScanSession() {
             
             // Sync to Google Sheets
             const recordsToSync = scanSession.records.map(r => {
-                const taskDef = scanSession.tasks.find(t => t.id === r.taskId);
-                const taskRange = taskDef ? taskDef.range : '';
                 return {
                     studentId: r.studentId,
                     taskId: r.taskId,
-                    noticeName: taskRange,
+                    noticeName: r.finalNoticeName || '',
                     timestamp: r.fullTimestamp
                 };
             });
@@ -1456,6 +1466,7 @@ function endScanSession() {
                 scanSession.records.unshift({
                     studentId: student.id,
                     taskId: task.id,
+                    noticeName: parsed.noticeName || '', // Capture noticeName from QR
                     timeOnly: timeString,
                     fullTimestamp: `${now.getMonth()+1}/${now.getDate()} ${timeString}`
                 });
