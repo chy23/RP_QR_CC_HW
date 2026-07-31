@@ -116,15 +116,15 @@
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">學校名稱</label>
-                        <input type="text" id="info-school" placeholder="例如: 快樂國小" class="border p-2 w-full rounded" oninput="saveClassInfo()">
+                        <input type="text" id="info-school" placeholder="例如: 快樂國小" class="border p-2 w-full rounded" onchange="saveClassInfo(event)" onblur="saveClassInfo(event)">
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">學年</label>
-                        <input type="text" id="info-year" placeholder="例如: 112" class="border p-2 w-full rounded" oninput="saveClassInfo()">
+                        <input type="text" id="info-year" placeholder="例如: 112" class="border p-2 w-full rounded" onchange="saveClassInfo(event)" onblur="saveClassInfo(event)">
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">學期</label>
-                        <select id="info-semester" class="border p-2 w-full rounded" oninput="saveClassInfo()">
+                        <select id="info-semester" class="border p-2 w-full rounded" onchange="saveClassInfo(event)" onblur="saveClassInfo(event)">
                             <option value="">請選擇</option>
                             <option value="上學期">上學期</option>
                             <option value="下學期">下學期</option>
@@ -132,10 +132,10 @@
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">班級</label>
-                        <input type="text" id="info-class" placeholder="例如: 三年甲班" class="border p-2 w-full rounded" oninput="saveClassInfo()">
+                        <input type="text" id="info-class" placeholder="例如: 三年甲班" class="border p-2 w-full rounded" onchange="saveClassInfo(event)" onblur="saveClassInfo(event)">
                     </div>
                     <div>
-                        <button onclick="saveClassInfo()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">儲存</button>
+                        <button onclick="saveClassInfo(event)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">儲存</button>
                     </div>
                 </div>
             </div>
@@ -600,7 +600,7 @@
         // Tab 0: 資料建置
         // ==========================================
         
-        function saveClassInfo() {
+        function saveClassInfo(e) {
             db.classInfo = {
                 schoolName: document.getElementById('info-school').value.trim(),
                 academicYear: document.getElementById('info-year').value.trim(),
@@ -610,7 +610,8 @@
             saveData();
             updateHeaderClassInfo();
             // Show toast or alert if clicked button
-            if(event && event.type === 'click') alert('班級資訊已儲存！');
+            if(e && e.type === 'click') alert('班級資訊已儲存！');
+            else if(typeof event !== 'undefined' && event && event.type === 'click') alert('班級資訊已儲存！');
         }
 
         function updateHeaderClassInfo() {
@@ -2418,6 +2419,13 @@ function renderStatistics() {
 
         // Boot
         loadData();
+        
+        // Ensure we save data if user refreshes while focusing an input
+        window.addEventListener('beforeunload', () => {
+            if (document.activeElement && (document.activeElement.id === 'info-school' || document.activeElement.id === 'info-year' || document.activeElement.id === 'info-class')) {
+                saveClassInfo();
+            }
+        });
         // --- VISUAL PDF EDITOR ---
         let visualPdfScale = 1;
         let visualQrStates = []; // [{ pageIndex, x, y, size, keep, stamp }]
