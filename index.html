@@ -1129,7 +1129,7 @@ function addTask() {
                             if (t) {
                                 const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                                 if (!exists) {
-                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
+                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
                                 }
                             }
                         }
@@ -1141,7 +1141,7 @@ function addTask() {
                         if(t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if(!exists) {
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
                             }
                         }
                     }
@@ -1687,7 +1687,7 @@ function renderStatistics() {
                         if (t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if (!exists) {
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
                             }
                         }
                     }
@@ -2885,7 +2885,7 @@ function renderStatistics() {
                             if (t) {
                                 const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                                 if (!exists) {
-                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
+                                    uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
                                 }
                             }
                         }
@@ -2898,7 +2898,7 @@ function renderStatistics() {
                         if(t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if(!exists) {
-                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: r.noticeName });
+                                uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: t.name });
                             }
                         }
                     }
