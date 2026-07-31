@@ -150,14 +150,18 @@
                         <button onclick="addStudent()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">新增</button>
                     </div>
                     <div class="flex flex-col md:flex-row gap-2 mb-2">
-                        <button onclick="batchAddStudents()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/3">預設新增 25 人</button>
-                        <label class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/3 text-center cursor-pointer flex items-center justify-center">
+                        <button onclick="batchAddStudents()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4">預設新增 25 人</button>
+                        <label class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4 text-center cursor-pointer flex items-center justify-center">
                             匯入 Excel / CSV
                             <input type="file" id="import-students-file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="hidden" onchange="importStudents(event)">
                         </label>
-                        <button onclick="fetchStudentsFromGas()" class="bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/3 text-center cursor-pointer flex items-center justify-center gap-1 font-bold">
+                        <button onclick="fetchStudentsFromGas()" class="bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4 text-center cursor-pointer flex items-center justify-center gap-1 font-bold">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            從雲端試算表匯入
+                            從雲端匯入
+                        </button>
+                        <button onclick="pushStudentsToGas()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4 text-center cursor-pointer flex items-center justify-center gap-1 font-bold">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            備份至雲端
                         </button>
                     </div>
                     <ul id="student-list" class="mt-2 h-64 overflow-y-auto bg-white border rounded p-2"></ul>
@@ -679,6 +683,35 @@ function addStudent() {
         }
 
 
+
+        function pushStudentsToGas() {
+            if(!gasUrl) {
+                alert('請先到「1. 掃描與統計」分頁設定並儲存您的 Google Apps Script 網址！');
+                return;
+            }
+            if(!confirm("確定要將目前的「學生名單與防偽碼」備份到 Google 試算表嗎？\n這將覆蓋試算表上的「學生名單」分頁，以便其他裝置匯入。")) return;
+
+            showLoading();
+            fetch(gasUrl, {
+                method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'sync_students', students: db.students })
+            }).then(res => res.json())
+              .then(data => {
+                  hideLoading();
+                  if(data.status === 'success') {
+                      alert("成功將學生名單與防偽碼備份至 Google 試算表！\n現在您可以在手機或其他裝置上點擊「從雲端匯入」來同步防偽碼了。");
+                  } else {
+                      alert("備份失敗：" + (data.message || JSON.stringify(data)));
+                  }
+              })
+              .catch(err => {
+                  hideLoading();
+                  console.error(err);
+                  alert("網路連線錯誤，請確認您的 GAS 網址正確且已發布最新版本！");
+              });
+        }
+
         function fetchStudentsFromGas() {
             if(!gasUrl) {
                 alert('請先到「1. 掃描與統計」分頁設定並儲存您的 Google Apps Script 網址！');
@@ -703,12 +736,13 @@ function addStudent() {
                               const existingIdx = db.students.findIndex(ex => ex.id === idNum);
                               if (existingIdx >= 0) {
                                   db.students[existingIdx].name = s.name;
-                                  db.students[existingIdx].token = db.students[existingIdx].token || generateSalt();
+                                  // 如果雲端有提供防偽碼，優先使用雲端的防偽碼來達到跨裝置同步
+                                  db.students[existingIdx].token = (s.token && s.token.trim() !== '') ? s.token : (db.students[existingIdx].token || generateSalt());
                               } else {
                                   db.students.push({
                                       id: idNum,
                                       name: s.name,
-                                      token: generateSalt()
+                                      token: (s.token && s.token.trim() !== '') ? s.token : generateSalt()
                                   });
                               }
                               addedCount++;
