@@ -1478,8 +1478,8 @@ function endScanSession() {
                 return;
             }
 
-            // 防偽驗證
-            if (parsed.salt && parsed.salt !== student.salt) {
+            // 防偽驗證 (寬鬆模式：若本機沒有 salt 紀錄則跳過，確保跨裝置可用)
+            if (parsed.salt && student.salt && parsed.salt !== student.salt) {
                 console.warn('Scan failed: invalid salt');
                 alert('無效的防偽條碼！');
                 return;
