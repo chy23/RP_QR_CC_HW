@@ -644,9 +644,8 @@
                 logDebug("⚠️ BarcodeDetector API not supported on this device/browser.");
             }
             
-            if (!barcodeDetector && !zxingReader && typeof ZXing !== 'undefined') {
-                zxingReader = new ZXing.BrowserQRCodeReader();
-                logDebug("⚠️ Using ZXing fallback (Single Scan only)");
+            if (!barcodeDetector && typeof jsQR !== 'undefined') {
+                logDebug("⚠️ Using jsQR Grid Fallback (Emulated Multi-Scan)");
             }
             
             try {
@@ -696,12 +695,36 @@
                                 // logDebug("detect error: " + e.message);
                             }
                         } 
-                        // 2. Fallback to ZXing (Single)
-                        else if (zxingReader) {
-                            try {
-                                const result = await zxingReader.decodeFromCanvas(canvasEl);
-                                if (result && result.text) foundCodes = [result.text];
-                            } catch(e) { /* NotFoundException is normal */ }
+                        // 2. Fallback to jsQR (Emulated Multi-Scan via Grid Slicing)
+                        else if (typeof jsQR !== 'undefined') {
+                            const w = canvasEl.width;
+                            const h = canvasEl.height;
+                            const hw = Math.floor(w / 2);
+                            const hh = Math.floor(h / 2);
+                            
+                            // 定義掃描區域: 1.全圖, 2.左上, 3.右上, 4.左下, 5.右下, 6.中央 (增加中央命中率)
+                            const regions = [
+                                { x: 0, y: 0, width: w, height: h }, // Full
+                                { x: 0, y: 0, width: hw, height: hh }, // TL
+                                { x: hw, y: 0, width: hw, height: hh }, // TR
+                                { x: 0, y: hh, width: hw, height: hh }, // BL
+                                { x: hw, y: hh, width: hw, height: hh }, // BR
+                                { x: Math.floor(w/4), y: Math.floor(h/4), width: hw, height: hh } // Center
+                            ];
+                            
+                            for (const r of regions) {
+                                try {
+                                    const imageData = ctx.getImageData(r.x, r.y, r.width, r.height);
+                                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                                        inversionAttempts: "dontInvert"
+                                    });
+                                    if (code && code.data && !foundCodes.includes(code.data)) {
+                                        foundCodes.push(code.data);
+                                    }
+                                } catch (e) {
+                                    // Ignore imageData errors
+                                }
+                            }
                         }
                         
                         // Process unique codes in this frame
