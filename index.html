@@ -470,32 +470,24 @@
         function generateSalt() { return Math.random().toString(36).substring(2, 8); }
 
         function getQRText(student, task, noticeName = '') {
-            // 移除 salt 以大幅縮短 QR Code 長度，降低複雜度提升手機掃描速度
-            const raw = `${student.token}|${task.id}|${noticeName}|`;
+            // QR Code 只包含學生防偽碼，大幅縮短長度，加速掃描！
+            return student.token;
+        }|${task.id}|${noticeName}|`;
             return `enc_${btoa(unescape(encodeURIComponent(raw)))}`;
         }
 
         function parseQRText(qrText) {
-            if(qrText.startsWith('enc_')) {
+            if (qrText.startsWith('enc_')) {
                 try {
                     const raw = decodeURIComponent(escape(atob(qrText.substring(4))));
                     const parts = raw.split('|');
                     return { token: parts[0], taskId: parts[1], noticeName: parts[2], salt: parts[3] };
-                } catch(e) { return null; }
-            } else {
+                } catch(e) { return { token: qrText, taskId: null }; }
+            } else if (qrText.includes('-')) {
                 const parts = qrText.split('-');
-                if(parts.length < 2) return null;
-                const token = parts[0];
-                const rest = parts.slice(1).join('-');
-                let taskName = rest; let noticeName = '';
-                if(rest.includes('_')) {
-                    const splitIndex = rest.indexOf('_');
-                    taskName = rest.substring(0, splitIndex);
-                    noticeName = rest.substring(splitIndex + 1);
-                }
-                const task = db.tasks.find(t => t.name === taskName);
-                return { token, taskId: task ? task.id : null, noticeName, salt: null };
+                return { token: parts[0], taskId: null, noticeName: '' };
             }
+            return { token: qrText, taskId: null, noticeName: '' };
         }
 
         const DEFAULT_TASKS = [
@@ -1387,6 +1379,7 @@ function initScanSessionDropdown() {
             document.getElementById('active-session-info').innerHTML = info;
             
             renderSessionBuffer();
+            renderStatistics();
             setTimeout(() => document.getElementById('scanner-input').focus(), 100);
         }
 
@@ -1566,44 +1559,44 @@ function endScanSession() {
             if (!parsed) return;
             
             const student = db.students.find(s => s.token === parsed.token);
-            const task = db.tasks.find(t => t.id === parsed.taskId);
 
-            if (!student || !task) {
-                console.warn('Scan failed: student or task not found', qrText);
-                alert("❌ 條碼辨識失敗！\n這張條碼對應的學生或作業在目前的系統中找不到。\n\n💡 可能原因：\n您目前使用的是無痕模式或新裝置，裡面的學生代碼與您當初印出這張條碼時不同。\n\n🛠️ 解決方法：\n請回到您原本產生這張條碼的瀏覽器，點擊最下方【系統設定與資料備份】的「匯出系統資料」，然後在這個畫面的同一個地方「匯入系統資料」，即可完美恢復！");
-                return;
-            }
-
-            // 防偽驗證 (寬鬆模式：若本機沒有 salt 紀錄則跳過，確保跨裝置可用)
-            if (parsed.salt && student.salt && parsed.salt !== student.salt) {
-                console.warn('Scan failed: invalid salt');
-                alert('無效的防偽條碼！');
+            if (!student) {
+                console.warn('Scan failed: student not found', qrText);
+                alert("❌ 條碼辨識失敗！\n\n這張條碼對應的學生在目前的系統中找不到。");
                 return;
             }
 
             if (scanSession.active) {
-                const sessionTask = scanSession.tasks.find(t => t.id === task.id);
-                if (!sessionTask) {
-                    alert(`錯誤：您現在掃描的是「${task.name}」，但此作業不在您勾選的掃描清單中！`);
-                    return;
-                }
-                
-                const existingInSession = scanSession.records.find(r => r.studentId === student.id && r.taskId === task.id);
-                if (existingInSession) return;
-                
+                let recordedCount = 0;
                 const now = new Date();
                 const timeString = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
                 
-                scanSession.records.unshift({
-                    studentId: student.id,
-                    taskId: task.id,
-                    noticeName: parsed.noticeName || '', // Capture noticeName from QR
-                    timeOnly: timeString,
-                    fullTimestamp: `${now.getMonth()+1}/${now.getDate()} ${timeString}`
+                // 如果是舊版有帶 taskId 的條碼，只登記該作業。如果是新版純學生條碼，則「全部登記」！
+                const tasksToMark = parsed.taskId ? scanSession.tasks.filter(t => t.id === parsed.taskId) : scanSession.tasks;
+
+                if (tasksToMark.length === 0) {
+                    alert(`錯誤：您掃描的作業不在目前勾選的清單中！`);
+                    return;
+                }
+                
+                tasksToMark.forEach(task => {
+                    const existingInSession = scanSession.records.find(r => r.studentId === student.id && r.taskId === task.id);
+                    if (!existingInSession) {
+                        scanSession.records.unshift({
+                            studentId: student.id,
+                            taskId: task.id,
+                            noticeName: parsed.noticeName || '', 
+                            timeOnly: timeString,
+                            fullTimestamp: `${now.getMonth()+1}/${now.getDate()} ${timeString}`
+                        });
+                        recordedCount++;
+                    }
                 });
                 
-                playBeep();
-                renderSessionBuffer();
+                if (recordedCount > 0) {
+                    playBeep();
+                    renderSessionBuffer();
+                }
             } else {
                 alert('請先選擇日期與作業，點擊「開始掃描」後再進行掃描！');
             }
