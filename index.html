@@ -849,6 +849,108 @@ function addStudent() {
               });
         }
 
+
+        async function syncFromGoogleSheets(silent = false) {
+            if(!gasUrl) return;
+            
+            if(!silent) {
+                showLoading();
+                document.getElementById('loading-text').innerText = '正在從雲端拉取最新資料...';
+            }
+            
+            try {
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'pull_sync' })
+                });
+                const data = await response.json();
+                
+                if(data.status === 'success' && data.sheetsData) {
+                    parseCloudDataToRecords(data.sheetsData);
+                    if(!silent) alert('雲端資料拉取成功！');
+                } else {
+                    if(!silent) alert('拉取失敗：' + (data.message || '未知錯誤'));
+                }
+            } catch (err) {
+                console.error(err);
+                if(!silent) alert('網路連線錯誤，請確認您的 GAS 網址正確且已發布最新版本 (包含 pull_sync 邏輯)！');
+            } finally {
+                if(!silent) hideLoading();
+            }
+        }
+
+        function parseCloudDataToRecords(sheetsData) {
+            // 解析前不完全清空，而是基於現有的 tasks / students 更新
+            // 但如果雲端有最新的手動狀態，我們要覆寫本機的 manualStatus。
+            // 比較暴力但安全的做法是：清空現有記錄，完全重新建立
+            db.records = [];
+            
+            sheetsData.forEach(sheetObj => {
+                const subject = sheetObj.name;
+                const data = sheetObj.data;
+                // data[0] 是表頭 "作業名稱" (row 1)
+                // data[1] 是表頭 "應繳交日期" (row 2)
+                // data[2] 是表頭 "姓名 \ 範圍" (row 3)
+                // data[3] 以後是學生資料
+                
+                if(data.length < 4) return;
+                
+                const taskRow = data[0];
+                const dateRow = data[1];
+                const rangeRow = data[2];
+                
+                // 找出這個科目的所有作業。如果雲端的作業在本機找不到，理論上應該建立它。
+                // 但為了簡單起見，我們只配對本機已存在的 task。
+                const tasksInSub = db.tasks.filter(t => t.subject === subject);
+                
+                // 處理每一個學生
+                for (let r = 3; r < data.length; r++) {
+                    const studentName = data[r][0];
+                    const student = db.students.find(s => s.name === studentName);
+                    if (!student) continue; // 如果該學生不存在於本機名單，跳過
+                    
+                    for (let c = 1; c < data[r].length; c++) {
+                        const cellValue = data[r][c] ? data[r][c].toString().trim() : '';
+                        const taskName = taskRow[c] ? taskRow[c].toString().trim() : '';
+                        const noticeName = rangeRow[c] ? rangeRow[c].toString().trim() : '';
+                        
+                        if (!taskName) continue;
+                        
+                        // 在本機尋找對應的 taskId
+                        let task = tasksInSub.find(t => t.name === taskName);
+                        if (!task) {
+                            // 如果沒找到，或許可以嘗試建立（這邊先忽略，要求老師先自雲端匯入設定）
+                            continue;
+                        }
+                        
+                        // 忽略缺交與空白
+                        if (!cellValue || cellValue === '缺交') continue;
+                        
+                        let record = {
+                            studentId: student.id,
+                            taskId: task.id,
+                            noticeName: noticeName,
+                            timestamp: ''
+                        };
+                        
+                        const leaves = ["事假", "病假", "公假", "喪假", "曠課", "其他"];
+                        if (leaves.includes(cellValue)) {
+                            record.manualStatus = cellValue;
+                            record.timestamp = '1970-01-01T00:00:00'; // Dummy timestamp for leaves
+                        } else {
+                            record.timestamp = cellValue;
+                        }
+                        
+                        db.records.push(record);
+                    }
+                }
+            });
+            
+            saveData();
+            renderStatistics();
+        }
+
         function importStudents(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1391,7 +1493,11 @@ function initScanSessionDropdown() {
             }
         }
 
-        function startScanSession() {
+        async function startScanSession() {
+            if (gasUrl) {
+                // 開始掃描前，先強制更新本地紀錄，避免覆蓋別人在試算表上的手動修改
+                await syncFromGoogleSheets(true);
+            }
             const dateVal = document.getElementById('scan-session-date').value;
             const checkboxes = document.querySelectorAll('.scan-task-checkbox:checked');
             
