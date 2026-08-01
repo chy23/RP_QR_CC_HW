@@ -592,6 +592,7 @@
             renderTasks();
             initAllSelects();
             renderStatistics();
+            renderSheetIframe();
         }
 
         function saveData() {
@@ -712,30 +713,36 @@ function addStudent() {
 
             showLoading();
             
-            const configPayload = {
-                classInfo: db.classInfo,
-                tasks: db.tasks,
-                sheetUrl: sheetUrl
-            };
-            
-            fetch(gasUrl, {
-                method: 'POST',
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: 'sync_students', students: db.students, config: configPayload })
-            }).then(res => res.json())
-              .then(data => {
-                  hideLoading();
-                  if(data.status === 'success') {
-                      alert("成功將全系統設定檔與學生名單備份至 Google 試算表！\n現在您可以在手機上點擊「從雲端匯入」瞬間完成所有設定。");
-                  } else {
-                      alert("備份失敗：" + (data.message || JSON.stringify(data)));
-                  }
-              })
-              .catch(err => {
-                  hideLoading();
-                  console.error(err);
-                  alert("網路連線錯誤，請確認您的 GAS 網址正確且已發布最新版本！");
-              });
+            try {
+                const configPayload = {
+                    classInfo: db.classInfo,
+                    tasks: db.tasks,
+                    sheetUrl: sheetUrl
+                };
+                
+                fetch(gasUrl, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'sync_students', students: db.students, config: configPayload })
+                }).then(res => res.json())
+                  .then(data => {
+                      hideLoading();
+                      if(data.status === 'success') {
+                          alert("成功將全系統設定檔與學生名單備份至 Google 試算表！\n現在您可以在手機上點擊「從雲端匯入」瞬間完成所有設定。");
+                      } else {
+                          alert("備份失敗：" + (data.message || JSON.stringify(data)));
+                      }
+                  })
+                  .catch(err => {
+                      hideLoading();
+                      console.error(err);
+                      alert("網路連線錯誤，請確認您的 GAS 網址正確且已發布最新版本！\n" + err);
+                  });
+            } catch (err) {
+                hideLoading();
+                console.error("Synchronous error during fetch setup:", err);
+                alert("發生未預期的系統錯誤 (例如資料格式異常)：\n" + err.message);
+            }
         }
 
         function fetchStudentsFromGas() {
