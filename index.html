@@ -907,7 +907,11 @@ function addStudent() {
             db.ranges = []; // 清空並從雲端表頭重建，避免遺失舊的子欄位
             
             sheetsData.forEach(sheetObj => {
-                const subject = sheetObj.name;
+                let subject = sheetObj.name;
+                // 若班級名稱有設定，需將分頁名稱結尾的 _班級 移除，還原回原本的科目名稱
+                if (db.classInfo && db.classInfo.className && subject.endsWith('_' + db.classInfo.className)) {
+                    subject = subject.slice(0, -(db.classInfo.className.length + 1));
+                }
                 const data = sheetObj.data;
                 
                 if(data.length < 4) return;
