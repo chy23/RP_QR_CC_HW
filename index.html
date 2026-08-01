@@ -1313,10 +1313,14 @@ function addTask() {
                 fps: 15, 
                 videoConstraints: {
                     facingMode: "environment",
-                    width: { min: 1280, ideal: 1920 },
-                    height: { min: 720, ideal: 1080 }
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    advanced: [{ focusMode: "continuous" }]
                 },
-                formatsToSupport: (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [Html5QrcodeSupportedFormats.QR_CODE] : undefined
+                formatsToSupport: (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [Html5QrcodeSupportedFormats.QR_CODE] : undefined,
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                }
             }, false);
             html5QrcodeScanner.render((qrText) => {
                 processScan(qrText);
