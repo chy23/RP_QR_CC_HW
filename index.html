@@ -1118,6 +1118,25 @@ function addTask() {
         // Tab 1: 掃描與統計 (Session-based)
         // ==========================================
         let currentStatSubject = '國語';
+
+        function initScanner() {
+            if(html5QrcodeScanner) return;
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+            html5QrcodeScanner.render((qrText) => {
+                processScan(qrText);
+            }, (error) => {
+                // Ignore errors
+            });
+            document.getElementById('scan-status').innerText = '掃描器啟動中...';
+        }
+
+        function stopScanner() {
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+                html5QrcodeScanner = null;
+                document.getElementById('scan-status').innerText = '掃描器已暫停';
+            }
+        }
         let scanSession = { active: false, dateStr: '', tasks: [], records: [] };
 
 
