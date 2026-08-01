@@ -472,8 +472,6 @@
         function getQRText(student, task, noticeName = '') {
             // QR Code 只包含學生防偽碼，大幅縮短長度，加速掃描！
             return student.token;
-        }|${task.id}|${noticeName}|`;
-            return `enc_${btoa(unescape(encodeURIComponent(raw)))}`;
         }
 
         function parseQRText(qrText) {
@@ -1116,6 +1114,7 @@ function addTask() {
         
         // --- Google Sheets Sync Logic ---
         let gasUrl = localStorage.getItem('rp_qr_gas_url') || '';
+        let sheetUrl = localStorage.getItem('rp_qr_sheet_url') || '';
         
         // Wait for DOM
         setTimeout(() => {
