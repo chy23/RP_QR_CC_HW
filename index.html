@@ -612,9 +612,11 @@
             renderSheetIframe();
         }
 
-        function saveData() {
+        function saveData(skipUI = false) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-            initAllSelects();
+            if (!skipUI) {
+                initAllSelects();
+            }
             renderStatistics();
         }
 
@@ -867,7 +869,7 @@ function addStudent() {
                 const data = await response.json();
                 
                 if(data.status === 'success' && data.sheetsData) {
-                    parseCloudDataToRecords(data.sheetsData);
+                    parseCloudDataToRecords(data.sheetsData, silent);
                     if(!silent) alert('雲端資料拉取成功！');
                 } else {
                     if(!silent) alert('拉取失敗：' + (data.message || '未知錯誤'));
@@ -880,7 +882,7 @@ function addStudent() {
             }
         }
 
-        function parseCloudDataToRecords(sheetsData) {
+        function parseCloudDataToRecords(sheetsData, silent = false) {
             // 解析前不完全清空，而是基於現有的 tasks / students 更新
             // 但如果雲端有最新的手動狀態，我們要覆寫本機的 manualStatus。
             // 比較暴力但安全的做法是：清空現有記錄，完全重新建立
@@ -947,7 +949,7 @@ function addStudent() {
                 }
             });
             
-            saveData();
+            saveData(silent);
             renderStatistics();
         }
 
@@ -1477,15 +1479,7 @@ function addTask() {
                 input.style.display = 'block';
                 updateContactBookRange();
                 
-                // 只有固定作業（且非聯絡簿）才跳出提示，避免漏填範圍
-                if (taskType === 'fixed' && taskName !== '聯絡簿') {
-                    setTimeout(() => {
-                        const range = prompt(`請輸入「${taskName}」的範圍/備註：\n(例如：第一課、L1-L3 等，若無可直接按確定)`, input.value);
-                        if (range !== null) {
-                            input.value = range.trim();
-                        }
-                    }, 50);
-                }
+
             } else {
                 input.style.display = 'none';
                 updateContactBookRange();
@@ -1527,8 +1521,21 @@ function addTask() {
             const selectedTasks = Array.from(checkboxes).map(cb => {
                 const taskDef = db.tasks.find(t => t.id === cb.value);
                 const rangeVal = document.getElementById(`range-input-${taskDef.id}`).value.trim();
-                return { id: taskDef.id, name: taskDef.name, range: rangeVal };
+                return { id: taskDef.id, name: taskDef.name, range: rangeVal, type: taskDef.type };
             });
+
+            // 全部選取完畢後，一次性檢查是否有漏填的固定簿本範圍
+            for (let i = 0; i < selectedTasks.length; i++) {
+                const t = selectedTasks[i];
+                if (t.type === 'fixed' && t.name !== '聯絡簿' && !t.range) {
+                    const range = prompt(`請輸入「${t.name}」的範圍/備註：
+(若無可直接按確定)`);
+                    if (range && range.trim()) {
+                        t.range = range.trim();
+                        document.getElementById(`range-input-${t.id}`).value = t.range;
+                    }
+                }
+            }
 
             if (gasUrl) {
                 // 開始掃描前，先強制更新本地紀錄，避免覆蓋別人在試算表上的手動修改
