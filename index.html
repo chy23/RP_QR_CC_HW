@@ -101,10 +101,10 @@
             <button class="tab-btn active px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(0)">0. 建置</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(1)">1. 掃描與統計</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(2)">2. 固定簿冊(PDF)</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(3)">3. 浮動卷單(PDF)</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(4)">4. Word條碼</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(5)">5. 批次標籤</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(6)">6. ZIP打包</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(4)">3. 浮動卷單(PDF)</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(5)">4. Word條碼</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(6)">5. 批次標籤</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(7)">6. ZIP打包</button>
         </div>
 
         <!-- Tab 0: 前端資料建置 -->
@@ -295,7 +295,15 @@
             </div>
         </div>
 
-        <!-- Tab 2: 固定簿冊 (PDF) -->
+        <!-- Tab 3: 雲端總表 -->
+        <div id="tab-4" class="tab-content bg-white p-6 rounded-b shadow hidden">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">4. 雲端總表 (Google 試算表)</h2>
+            <div id="sheet-iframe-container" class="w-full h-[600px] border rounded bg-gray-50 flex items-center justify-center text-gray-500">
+                請先在「0. 資料建置」中設定 Google 試算表共用網址。
+            </div>
+        </div>
+
+        <!-- Tab 4: 固定簿冊 (PDF) -->
         <div id="tab-2" class="tab-content bg-white p-6 rounded-b shadow">
             <h2 class="text-2xl font-bold mb-4 border-b pb-2">2. 固定簿冊標籤 (PDF)</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -320,8 +328,8 @@
         </div>
 
         <!-- Tab 3: 浮動卷單 (PDF) -->
-        <div id="tab-3" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">3. 浮動卷單套印 (PDF) 視覺化編輯</h2>
+        <div id="tab-4" class="tab-content bg-white p-6 rounded-b shadow">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">4. 浮動卷單套印 (PDF) 視覺化編輯</h2>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-4">
                 <div class="lg:col-span-1">
                     <label class="block mb-2 text-lg font-bold text-gray-800">選擇浮動作/通知單：</label>
@@ -375,8 +383,8 @@
         </div>
 
         <!-- Tab 4: Word 條碼表 -->
-        <div id="tab-4" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">4. Word 條碼表匯出</h2>
+        <div id="tab-5" class="tab-content bg-white p-6 rounded-b shadow">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. Word 條碼表匯出</h2>
             <p class="mb-2 text-gray-600">產生一張二維對照表，左側為學生，右側為各項作業的防偽條碼。</p>
             <div class="mb-4 flex flex-col md:flex-row gap-4">
                 <div class="w-full md:w-1/2">
@@ -402,8 +410,8 @@
         </div>
 
         <!-- Tab 5: 批次標籤 (Canvas) -->
-        <div id="tab-5" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. 批次省紙標籤 (圖檔)</h2>
+        <div id="tab-6" class="tab-content bg-white p-6 rounded-b shadow">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">6. 批次省紙標籤 (圖檔)</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                     <label class="block mb-2 text-lg font-bold text-gray-800">1. 選擇學生 (可多選)：</label>
@@ -434,8 +442,8 @@
         </div>
 
         <!-- Tab 6: ZIP 打包 -->
-        <div id="tab-6" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">6. 學生個人條碼圖檔打包 (ZIP)</h2>
+        <div id="tab-7" class="tab-content bg-white p-6 rounded-b shadow">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">7. 學生個人條碼圖檔打包 (ZIP)</h2>
             <p class="mb-4 text-gray-600">產生全班每位學生對應所有作業的 QR Code PNG 圖檔，並依學生姓名建立資料夾打包為 ZIP 下載。</p>
             <button onclick="generateZip()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow">打包下載 ZIP</button>
         </div>
@@ -452,8 +460,8 @@
         function generateSalt() { return Math.random().toString(36).substring(2, 8); }
 
         function getQRText(student, task, noticeName = '') {
-            if(!student.salt) { student.salt = generateSalt(); saveData(); }
-            const raw = `${student.token}|${task.id}|${noticeName}|${student.salt}`;
+            // 移除 salt 以大幅縮短 QR Code 長度，降低複雜度提升手機掃描速度
+            const raw = `${student.token}|${task.id}|${noticeName}|`;
             return `enc_${btoa(unescape(encodeURIComponent(raw)))}`;
         }
 
@@ -689,6 +697,16 @@ function addStudent() {
                 alert('請先到「1. 掃描與統計」分頁設定並儲存您的 Google Apps Script 網址！');
                 return;
             }
+            let currentClass = document.getElementById('class-name').value.trim();
+            if (!currentClass) {
+                currentClass = prompt("⚠️ 您尚未設定「班級名稱」，這將導致掃描紀錄無法分類。\n請先輸入班級名稱 (例如: 三年甲班) :");
+                if (currentClass) {
+                    document.getElementById('class-name').value = currentClass;
+                    saveClassInfo();
+                } else {
+                    return; // 放棄備份
+                }
+            }
             if(!confirm("確定要將目前的「學生名單與防偽碼」備份到 Google 試算表嗎？\n這將覆蓋試算表上的「學生名單」分頁，以便其他裝置匯入。")) return;
 
             showLoading();
@@ -717,6 +735,17 @@ function addStudent() {
                 alert('請先到「1. 掃描與統計」分頁設定並儲存您的 Google Apps Script 網址！');
                 return;
             }
+            
+            // 檢查班級名稱，若無則要求輸入 (確保行動載具能正確紀錄班級)
+            let currentClass = document.getElementById('class-name').value.trim();
+            if (!currentClass && (!db.classInfo || !db.classInfo.className)) {
+                currentClass = prompt("⚠️ 您的裝置尚未設定「班級名稱」，這將導致掃描紀錄無法顯示班級。\n請輸入班級名稱 (例如: 三年甲班) :");
+                if (currentClass) {
+                    document.getElementById('class-name').value = currentClass;
+                    saveClassInfo();
+                }
+            }
+
             if(!confirm("確定要從 Google 試算表匯入學生名單嗎？（這將覆蓋現有相同的座號）\n請確保試算表中有一個名為「學生名單」的分頁，並包含「座號」與「姓名」欄位。")) return;
 
             showLoading();
@@ -1059,7 +1088,32 @@ function addTask() {
         setTimeout(() => {
             const el = document.getElementById('gas-url');
             if(el) el.value = gasUrl;
+            const elSheet = document.getElementById('sheet-url');
+            if(elSheet) elSheet.value = sheetUrl;
         }, 500);
+
+        
+        function saveSheetUrl() {
+            let url = document.getElementById('sheet-url').value.trim();
+            if (url && url.includes('/edit')) {
+                url = url.split('/edit')[0] + '/htmlembed?widget=true&headers=false';
+            }
+            localStorage.setItem('rp_qr_sheet_url', url);
+            sheetUrl = url;
+            document.getElementById('sheet-status').innerHTML = '<span class="text-green-600">✅ 網址已儲存！</span>';
+            setTimeout(() => { document.getElementById('sheet-status').innerHTML = ''; }, 3000);
+            renderSheetIframe();
+        }
+        
+        function renderSheetIframe() {
+            const container = document.getElementById('sheet-iframe-container');
+            if (!container) return;
+            if (sheetUrl) {
+                container.innerHTML = `<iframe src="${sheetUrl}" class="w-full h-full border-0"></iframe>`;
+            } else {
+                container.innerHTML = `請先在「0. 資料建置」中設定 Google 試算表共用網址。`;
+            }
+        }
 
         function saveGasUrl() {
             const url = document.getElementById('gas-url').value.trim();
@@ -1722,8 +1776,8 @@ function renderStatistics() {
                 const rangeVal = getTaskRange(k.taskId, k.noticeName);
                 headHTML += `<th class="p-2 border text-center max-w-[120px] relative group">
                                 <div class="font-bold mb-1 truncate pr-4" title="${k.label}">${k.label}</div>
-                                <button onclick="toggleRecord(null, '${k.taskId}', '${k.noticeName}')" class="absolute top-2 right-1 text-gray-400 hover:text-blue-500 text-xs hidden group-hover:block" title="整欄批次設定">⚙️</button>
-                                <button onclick="addSubColumn('${k.taskId}')" class="absolute top-2 right-6 text-green-500 hover:text-green-600 text-xs hidden group-hover:block" title="新增同作業的下一個欄位 (如: 第二課)">➕</button>
+                                <button onclick="toggleRecord(null, '${k.taskId}', '${k.noticeName}')" class="absolute top-1 right-1 text-gray-500 hover:text-blue-600 text-base" title="整欄批次設定">⚙️</button>
+                                <button onclick="addSubColumn('${k.taskId}')" class="absolute top-1 right-8 text-green-600 hover:text-green-700 text-base font-bold" title="新增同作業的下一個欄位 (如: 第二課)">➕</button>
                                 <input type="text" placeholder="輸入範圍..." value="${rangeVal}" 
                                        onchange="updateTaskRange('${k.taskId}', '${k.noticeName}', this.value)" 
                                        class="border text-xs p-1 w-full rounded font-normal bg-gray-50 focus:bg-white text-center">
@@ -2077,7 +2131,7 @@ function renderStatistics() {
             const margin = customH * 0.05;
             const qrSize = customH - (margin * 2);
             
-            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: qrSize });
+            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: qrSize, errorCorrectionLevel: 'L' });
             
             return new Promise((resolve) => {
                 const img = new Image();
@@ -2144,7 +2198,7 @@ function renderStatistics() {
             const qrStartY = customW * 0.2;
             const qrSize = customW - (margin * 2);
             
-            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: qrSize });
+            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: qrSize, errorCorrectionLevel: 'L' });
             
             return new Promise((resolve) => {
                 const img = new Image();
@@ -2568,7 +2622,7 @@ function renderStatistics() {
                         const folder = zip.folder(student.name);
                         for (const task of db.tasks) {
                             const qrText = getQRText(student, task);
-                            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 300 });
+                            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 300, errorCorrectionLevel: 'L' });
                             const base64Data = qrDataUrl.split(',')[1];
                             folder.file(`${student.name}_${task.name}.png`, base64Data, {base64: true});
                         }
