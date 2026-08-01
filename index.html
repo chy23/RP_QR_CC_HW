@@ -1470,7 +1470,29 @@ function addTask() {
                 }
             }
         }
-function initScanSessionDropdown() {
+
+        function handleTaskCheckboxChange(cb, taskId, taskName, taskType) {
+            const input = document.getElementById(`range-input-${taskId}`);
+            if (cb.checked) {
+                input.style.display = 'block';
+                updateContactBookRange();
+                
+                // 只有固定作業（且非聯絡簿）才跳出提示，避免漏填範圍
+                if (taskType === 'fixed' && taskName !== '聯絡簿') {
+                    setTimeout(() => {
+                        const range = prompt(`請輸入「${taskName}」的範圍/備註：\n(例如：第一課、L1-L3 等，若無可直接按確定)`, input.value);
+                        if (range !== null) {
+                            input.value = range.trim();
+                        }
+                    }, 50);
+                }
+            } else {
+                input.style.display = 'none';
+                updateContactBookRange();
+            }
+        }
+
+        function initScanSessionDropdown() {
             const container = document.getElementById('scan-session-tasks');
             if(!container) return;
             container.innerHTML = '';
@@ -1479,7 +1501,7 @@ function initScanSessionDropdown() {
                 row.className = "flex flex-col md:flex-row md:items-center justify-between hover:bg-blue-50 p-2 rounded w-full border-b last:border-0 transition-colors gap-2";
                 row.innerHTML = `
                     <label class="flex items-center space-x-3 cursor-pointer w-full md:w-1/2">
-                        <input type="checkbox" value="${t.id}" class="scan-task-checkbox h-5 w-5 cursor-pointer rounded text-blue-600" onchange="document.getElementById('range-input-${t.id}').style.display = this.checked ? 'block' : 'none'; updateContactBookRange();"> 
+                        <input type="checkbox" value="${t.id}" class="scan-task-checkbox h-5 w-5 cursor-pointer rounded text-blue-600" onchange="handleTaskCheckboxChange(this, '${t.id}', '${t.name}', '${t.type}')"> 
                         <span class="truncate text-base font-semibold text-gray-700 select-none" title="${t.name}">[${t.subject}] ${t.name}</span>
                     </label>
                     <input type="text" id="range-input-${t.id}" class="border p-2 rounded text-sm w-full md:w-1/2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="display: none;" placeholder="範圍/備註 (選填)">
