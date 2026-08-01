@@ -1582,10 +1582,22 @@ function addTask() {
         }
 
         async function continueStartScanSession(selectedTasks) {
-            if (gasUrl) {
-                showLoading();
-                document.getElementById('loading-text').innerText = '防呆：正從雲端拉取最新資料...';
-                await syncFromGoogleSheets(true);
+            try {
+                if (gasUrl) {
+                    showLoading();
+                    const loadingTextEl = document.getElementById('loading-text');
+                    if (loadingTextEl) {
+                        loadingTextEl.innerText = '防呆：正從雲端拉取最新資料...';
+                    }
+                    // 加入 10 秒 Timeout 防呆，避免 fetch 永遠 hang 住
+                    const syncPromise = syncFromGoogleSheets(true);
+                    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 10000));
+                    await Promise.race([syncPromise, timeoutPromise]);
+                }
+            } catch (err) {
+                console.error("continueStartScanSession Error: ", err);
+                alert("拉取資料發生例外錯誤，但仍將繼續啟動掃描。");
+            } finally {
                 hideLoading();
             }
             
