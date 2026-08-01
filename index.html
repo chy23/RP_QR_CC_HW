@@ -697,11 +697,12 @@ function addStudent() {
                 alert('請先到「1. 掃描與統計」分頁設定並儲存您的 Google Apps Script 網址！');
                 return;
             }
-            let currentClass = document.getElementById('class-name').value.trim();
+            let elClass = document.getElementById('info-class');
+            let currentClass = elClass ? elClass.value.trim() : '';
             if (!currentClass) {
                 currentClass = prompt("⚠️ 您尚未設定「班級名稱」，這將導致掃描紀錄無法分類。\n請先輸入班級名稱 (例如: 三年甲班) :");
                 if (currentClass) {
-                    document.getElementById('class-name').value = currentClass;
+                    if(elClass) elClass.value = currentClass;
                     saveClassInfo();
                 } else {
                     return; // 放棄備份
@@ -737,11 +738,12 @@ function addStudent() {
             }
             
             // 檢查班級名稱，若無則要求輸入 (確保行動載具能正確紀錄班級)
-            let currentClass = document.getElementById('class-name').value.trim();
+            let elClass = document.getElementById('info-class');
+            let currentClass = elClass ? elClass.value.trim() : '';
             if (!currentClass && (!db.classInfo || !db.classInfo.className)) {
                 currentClass = prompt("⚠️ 您的裝置尚未設定「班級名稱」，這將導致掃描紀錄無法顯示班級。\n請輸入班級名稱 (例如: 三年甲班) :");
                 if (currentClass) {
-                    document.getElementById('class-name').value = currentClass;
+                    if(elClass) elClass.value = currentClass;
                     saveClassInfo();
                 }
             }
