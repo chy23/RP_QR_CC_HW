@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.12)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.13)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -106,7 +106,7 @@
     <div class="max-w-7xl mx-auto p-4">
         <h1 class="text-3xl font-bold text-center mb-6 text-blue-700 flex justify-center items-center gap-3 flex-wrap">
             <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-            QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.12</span>
+            QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.13</span>
             <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
         </h1>
         
@@ -1094,7 +1094,7 @@ function addStudent() {
                             timestamp: ''
                         };
                         
-                        const leaves = ["事假", "病假", "公假", "喪假", "曠課", "其他"];
+                        const leaves = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他"];
                         if (cellValue.startsWith('[遲交]')) {
                             record.manualStatus = 'late';
                             record.timestamp = cellValue.replace('[遲交]', '').trim();
@@ -1592,7 +1592,7 @@ function addTask() {
                         let cellValue = '缺交';
                         if (record) {
                             cellValue = record.timestamp;
-                            if (['事假', '病假', '公假', '喪假', '曠課', '其他'].includes(record.manualStatus)) {
+                            if (['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他'].includes(record.manualStatus)) {
                                 cellValue = record.manualStatus;
                             } else if (record.manualStatus === 'missing') {
                                 cellValue = '缺交';
@@ -3718,7 +3718,7 @@ function renderStatistics() {
                         let cellValue = '缺交';
                         if (record) {
                             cellValue = record.timestamp;
-                            if (['事假', '病假', '公假', '喪假', '曠課', '其他'].includes(record.manualStatus)) {
+                            if (['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他'].includes(record.manualStatus)) {
                                 cellValue = record.manualStatus;
                             } else if (record.manualStatus === 'missing') {
                                 cellValue = '缺交';
