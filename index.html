@@ -904,14 +904,11 @@ function addStudent() {
             // 但如果雲端有最新的手動狀態，我們要覆寫本機的 manualStatus。
             // 比較暴力但安全的做法是：清空現有記錄，完全重新建立
             db.records = [];
+            db.ranges = []; // 清空並從雲端表頭重建，避免遺失舊的子欄位
             
             sheetsData.forEach(sheetObj => {
                 const subject = sheetObj.name;
                 const data = sheetObj.data;
-                // data[0] 是表頭 "作業名稱" (row 1)
-                // data[1] 是表頭 "應繳交日期" (row 2)
-                // data[2] 是表頭 "姓名 \ 範圍" (row 3)
-                // data[3] 以後是學生資料
                 
                 if(data.length < 4) return;
                 
@@ -919,9 +916,24 @@ function addStudent() {
                 const dateRow = data[1];
                 const rangeRow = data[2];
                 
-                // 找出這個科目的所有作業。如果雲端的作業在本機找不到，理論上應該建立它。
-                // 但為了簡單起見，我們只配對本機已存在的 task。
                 const tasksInSub = db.tasks.filter(t => t.subject === subject);
+                
+                // 先重建 db.ranges
+                for (let c = 1; c < taskRow.length; c++) {
+                    const taskName = taskRow[c] ? taskRow[c].toString().trim() : '';
+                    const noticeName = rangeRow[c] ? rangeRow[c].toString().trim() : '';
+                    const dateStr = dateRow[c] ? dateRow[c].toString().trim() : '';
+                    
+                    if (!taskName || !noticeName) continue;
+                    
+                    let task = tasksInSub.find(t => t.name === taskName);
+                    if (task) {
+                        const existingRange = db.ranges.find(rg => rg.taskId === task.id && rg.noticeName === noticeName);
+                        if (!existingRange) {
+                            db.ranges.push({ taskId: task.id, noticeName: noticeName, range: noticeName, date: dateStr });
+                        }
+                    }
+                }
                 
                 // 處理每一個學生
                 for (let r = 3; r < data.length; r++) {
