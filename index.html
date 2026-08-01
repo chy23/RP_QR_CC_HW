@@ -776,7 +776,7 @@ function addStudent() {
 
         function pushStudentsToGas() {
             if(!gasUrl) {
-                alert('請先到「1. 掃描與統計」分頁設定並儲存您的 Google Apps Script 網址！');
+                alert('請先到「0. 資料建置」分頁設定並儲存您的 Google Apps Script 網址！');
                 return;
             }
             let elClass = document.getElementById('info-class');
@@ -827,8 +827,12 @@ function addStudent() {
         }
 
         function fetchStudentsFromGas() {
+            const gasInput = document.getElementById('gas-url');
+            if (!gasUrl && gasInput && gasInput.value.trim()) {
+                saveGasUrl();
+            }
             if(!gasUrl) {
-                alert('請先到「1. 掃描與統計」分頁設定並儲存您的 Google Apps Script 網址！');
+                alert('請先到「0. 資料建置」分頁設定並儲存您的 Google Apps Script 網址！');
                 return;
             }
             
@@ -1393,6 +1397,10 @@ function addTask() {
         }
 
         function testGasUrl() {
+            const gasInput = document.getElementById('gas-url');
+            if (!gasUrl && gasInput && gasInput.value.trim()) {
+                saveGasUrl();
+            }
             if(!gasUrl) {
                 alert('請先填寫並儲存網址！'); return;
             }
@@ -1414,6 +1422,8 @@ function addTask() {
         }
 
         function syncToGoogleSheets(newRecordsArray) {
+            const gasInput = document.getElementById('gas-url');
+            if (!gasUrl && gasInput && gasInput.value.trim()) saveGasUrl();
             if(!gasUrl) return;
             
             // 1. Prepare delta records
