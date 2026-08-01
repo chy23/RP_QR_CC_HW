@@ -280,6 +280,7 @@
                             <!-- Overlay for drawing boxes -->
                             <canvas id="overlay-canvas" class="absolute top-0 left-0 w-full h-full pointer-events-none" style="display:none;"></canvas>
                             <button onclick="toggleCameraScanner()" class="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm">關閉鏡頭</button>
+                            <div id="scanner-debug" class="text-xs text-left text-gray-500 mt-2 bg-white p-1 rounded overflow-auto h-20">Debug Info...</div>
                         </div>
                         
                         <!-- 暫存清單 -->
@@ -627,16 +628,25 @@
             const overlayEl = document.getElementById('overlay-canvas');
             const ctx = canvasEl.getContext('2d', { willReadFrequently: true });
             
+            const debugEl = document.getElementById('scanner-debug');
+            const logDebug = (msg) => {
+                if(debugEl) debugEl.innerHTML = msg + "<br>" + debugEl.innerHTML;
+                console.log(msg);
+            };
+            
             // Initializer hardware detectors
             if (!barcodeDetector && 'BarcodeDetector' in window) {
                 try {
                     barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
-                    console.log("Using native BarcodeDetector for multi-scan!");
-                } catch(e) { console.warn(e); }
+                    logDebug("✅ Native BarcodeDetector API enabled");
+                } catch(e) { logDebug("❌ BarcodeDetector error: " + e.message); }
+            } else if (!barcodeDetector) {
+                logDebug("⚠️ BarcodeDetector API not supported on this device/browser.");
             }
+            
             if (!barcodeDetector && !zxingReader && typeof ZXing !== 'undefined') {
                 zxingReader = new ZXing.BrowserQRCodeReader();
-                console.log("Using ZXing fallback for scanning");
+                logDebug("⚠️ Using ZXing fallback (Single Scan only)");
             }
             
             try {
@@ -682,7 +692,9 @@
                             try {
                                 const barcodes = await barcodeDetector.detect(canvasEl);
                                 foundCodes = barcodes.map(b => b.rawValue);
-                            } catch(e) {}
+                            } catch(e) {
+                                // logDebug("detect error: " + e.message);
+                            }
                         } 
                         // 2. Fallback to ZXing (Single)
                         else if (zxingReader) {
