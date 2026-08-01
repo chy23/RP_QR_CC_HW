@@ -77,7 +77,21 @@
         </div>
     </div>
 
-    <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex-col items-center justify-center text-gray-800" style="display: none;">
+    
+    <div id="range-prompt-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex-col items-center justify-center text-gray-800" style="display: none;">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 md:w-1/2 p-6 flex flex-col max-h-[90vh]">
+            <h2 class="text-xl font-bold mb-2">請設定作業範圍</h2>
+            <p class="text-sm text-gray-600 mb-4 border-b pb-2">以下固定作業尚未填寫範圍/備註，為避免事後對不上資料，請統一設定：</p>
+            <div id="range-prompt-list" class="flex-grow overflow-auto mb-4 border rounded p-4 bg-gray-50 space-y-4">
+                <!-- dynamic inputs -->
+            </div>
+            <div class="flex justify-end gap-2 mt-auto">
+                <button onclick="document.getElementById('range-prompt-modal').style.display = 'none'" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded shadow font-bold text-sm">取消</button>
+                <button onclick="confirmRangePrompts()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow font-bold text-sm">確認並開始掃描</button>
+            </div>
+        </div>
+    </div>
+<div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex-col items-center justify-center text-gray-800" style="display: none;">
         <div class="bg-white p-6 rounded shadow-lg w-80 text-center">
             <h3 id="status-modal-title" class="text-lg font-bold mb-4">手動設定交件狀態</h3>
             <div class="flex flex-col gap-3">
@@ -1527,26 +1541,55 @@ function addTask() {
                 return { id: taskDef.id, name: taskDef.name, range: rangeVal, type: taskDef.type };
             });
 
-            // 全部選取完畢後，一次性檢查是否有漏填的固定簿本範圍
-            for (let i = 0; i < selectedTasks.length; i++) {
-                const t = selectedTasks[i];
-                if (t.type === 'fixed' && t.name !== '聯絡簿' && !t.range) {
-                    const range = prompt(`請輸入「${t.name}」的範圍/備註：
-(若無可直接按確定)`);
-                    if (range && range.trim()) {
-                        t.range = range.trim();
-                        document.getElementById(`range-input-${t.id}`).value = t.range;
-                    }
-                }
+            // 檢查漏填的固定作業
+            const missingTasks = selectedTasks.filter(t => t.type === 'fixed' && t.name !== '聯絡簿' && !t.range);
+            
+            if (missingTasks.length > 0) {
+                const container = document.getElementById('range-prompt-list');
+                container.innerHTML = '';
+                missingTasks.forEach(t => {
+                    container.innerHTML += `
+                        <div class="flex flex-col gap-1">
+                            <label class="font-bold text-sm text-gray-700">${t.name}</label>
+                            <input type="text" id="modal-range-${t.id}" class="border p-2 rounded shadow-sm focus:ring-2 focus:ring-blue-500" placeholder="例如：第一課 (若無可留白)">
+                        </div>
+                    `;
+                });
+                document.getElementById('range-prompt-modal').style.display = 'flex';
+                window._pendingSelectedTasks = selectedTasks;
+                return; // 暫停，等待使用者在 Modal 中確認
             }
 
+            continueStartScanSession(selectedTasks);
+        }
+
+        async function confirmRangePrompts() {
+            const tasks = window._pendingSelectedTasks;
+            if (!tasks) return;
+            
+            tasks.forEach(t => {
+                const input = document.getElementById(`modal-range-${t.id}`);
+                if (input) {
+                    const val = input.value.trim();
+                    t.range = val;
+                    const realInput = document.getElementById(`range-input-${t.id}`);
+                    if (realInput) realInput.value = val;
+                }
+            });
+            
+            document.getElementById('range-prompt-modal').style.display = 'none';
+            continueStartScanSession(tasks);
+        }
+
+        async function continueStartScanSession(selectedTasks) {
             if (gasUrl) {
-                // 開始掃描前，先強制更新本地紀錄，避免覆蓋別人在試算表上的手動修改
-                // 注意：這會觸發 saveData() -> initAllSelects()，導致 checkbox 被重置
-                // 所以必須放在我們讀取完 selectedTasks 之後執行！
+                showLoading();
+                document.getElementById('loading-text').innerText = '防呆：正從雲端拉取最新資料...';
                 await syncFromGoogleSheets(true);
+                hideLoading();
             }
             
+            const dateVal = document.getElementById('scan-session-date').value;
             const existingRecords = (scanSession && scanSession.active) 
                 ? scanSession.records.filter(r => selectedTasks.some(t => t.id === r.taskId)) 
                 : [];
