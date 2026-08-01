@@ -907,11 +907,7 @@ function addStudent() {
             db.ranges = []; // 清空並從雲端表頭重建，避免遺失舊的子欄位
             
             sheetsData.forEach(sheetObj => {
-                let subject = sheetObj.name;
-                // 若班級名稱有設定，需將分頁名稱結尾的 _班級 移除，還原回原本的科目名稱
-                if (db.classInfo && db.classInfo.className && subject.endsWith('_' + db.classInfo.className)) {
-                    subject = subject.slice(0, -(db.classInfo.className.length + 1));
-                }
+                const subject = sheetObj.name; // 回歸單純：一個 GAS URL 就是一個獨立班級
                 const data = sheetObj.data;
                 
                 if(data.length < 4) return;
@@ -1473,7 +1469,7 @@ function addTask() {
                     });
                     aoa.push(row);
                 });
-                const sheetName = db.classInfo && db.classInfo.className ? `${sub}_${db.classInfo.className}` : sub;
+                const sheetName = sub; // 直接使用科目名稱，不再附加上班級後綴
                 fullSyncData.push({ name: sheetName, data: aoa });
             });
             
