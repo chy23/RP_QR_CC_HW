@@ -100,11 +100,12 @@
         <div class="flex flex-wrap border-b mb-6 bg-white rounded-t-lg px-2 pt-2">
             <button class="tab-btn active px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(0)">0. 建置</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(1)">1. 掃描與統計</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(2)">2. 固定簿冊(PDF)</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(4)">3. 浮動卷單(PDF)</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(5)">4. Word條碼</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(6)">5. 批次標籤</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(7)">6. ZIP打包</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-blue-600 font-bold" onclick="switchTab(2)">2. 雲端總表</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(3)">3. 固定簿冊(PDF)</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(4)">4. 浮動卷單(PDF)</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(5)">5. Word條碼</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(6)">6. 批次標籤</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(7)">7. ZIP打包</button>
         </div>
 
         <!-- Tab 0: 前端資料建置 -->
@@ -295,17 +296,19 @@
             </div>
         </div>
 
-        <!-- Tab 3: 雲端總表 -->
-        <div id="tab-4" class="tab-content bg-white p-6 rounded-b shadow hidden">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">4. 雲端總表 (Google 試算表)</h2>
+
+
+        <!-- Tab 2: 雲端總表 -->
+        <div id="tab-2" class="tab-content bg-white p-6 rounded-b shadow">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2 text-blue-700">2. 雲端總表 (Google 試算表)</h2>
             <div id="sheet-iframe-container" class="w-full h-[600px] border rounded bg-gray-50 flex items-center justify-center text-gray-500">
                 請先在「0. 資料建置」中設定 Google 試算表共用網址。
             </div>
         </div>
 
-        <!-- Tab 4: 固定簿冊 (PDF) -->
-        <div id="tab-2" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">2. 固定簿冊標籤 (PDF)</h2>
+        <!-- Tab 3: 固定簿冊 (PDF) -->
+        <div id="tab-3" class="tab-content bg-white p-6 rounded-b shadow">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">3. 固定簿冊標籤 (PDF)</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block mb-2 text-lg font-bold text-gray-800">選擇固定作業 (可多選)：</label>
@@ -441,7 +444,7 @@
             <div id="tab5-preview" class="mt-4 border rounded bg-gray-100 p-2 overflow-auto text-center hidden" style="height: 600px;"></div>
         </div>
 
-        <!-- Tab 6: ZIP 打包 -->
+        <!-- Tab 7: ZIP 打包 -->
         <div id="tab-7" class="tab-content bg-white p-6 rounded-b shadow">
             <h2 class="text-2xl font-bold mb-4 border-b pb-2">7. 學生個人條碼圖檔打包 (ZIP)</h2>
             <p class="mb-4 text-gray-600">產生全班每位學生對應所有作業的 QR Code PNG 圖檔，並依學生姓名建立資料夾打包為 ZIP 下載。</p>
@@ -1776,10 +1779,12 @@ function renderStatistics() {
             let headHTML = '<tr><th class="p-2 border align-bottom min-w-[80px]">姓名</th>';
             finalTaskKeys.forEach(k => {
                 const rangeVal = getTaskRange(k.taskId, k.noticeName);
-                headHTML += `<th class="p-2 border text-center max-w-[120px] relative group">
-                                <div class="font-bold mb-1 truncate pr-4" title="${k.label}">${k.label}</div>
-                                <button onclick="toggleRecord(null, '${k.taskId}', '${k.noticeName}')" class="absolute top-1 right-1 text-gray-500 hover:text-blue-600 text-base" title="整欄批次設定">⚙️</button>
-                                <button onclick="addSubColumn('${k.taskId}')" class="absolute top-1 right-8 text-green-600 hover:text-green-700 text-base font-bold" title="新增同作業的下一個欄位 (如: 第二課)">➕</button>
+                headHTML += `<th class="p-2 border text-center max-w-[120px] align-top">
+                                <div class="flex items-center justify-center gap-1 mb-1">
+                                    <span class="font-bold truncate" title="${k.label}">${k.label}</span>
+                                    <button onclick="toggleRecord(null, '${k.taskId}', '${k.noticeName}')" class="text-gray-500 hover:text-blue-600 text-base" title="整欄批次設定">⚙️</button>
+                                    <button onclick="addSubColumn('${k.taskId}')" class="text-green-600 hover:text-green-700 text-base font-bold" title="新增同作業的下一個欄位 (如: 第二課)">➕</button>
+                                </div>
                                 <input type="text" placeholder="輸入範圍..." value="${rangeVal}" 
                                        onchange="updateTaskRange('${k.taskId}', '${k.noticeName}', this.value)" 
                                        class="border text-xs p-1 w-full rounded font-normal bg-gray-50 focus:bg-white text-center">
