@@ -521,7 +521,9 @@
         // 系統核心與資料層
         // ==========================================
         let db = { students: [], tasks: [], records: [], ranges: [], subjects: [] };
-        const STORAGE_KEY = 'doc_productivity_db';
+        const IS_BETA = window.location.pathname.includes('/beta/');
+        const STORAGE_PREFIX = IS_BETA ? 'BETA_' : '';
+        const STORAGE_KEY = STORAGE_PREFIX + 'doc_productivity_db';
 
         function generateSalt() { return Math.random().toString(36).substring(2, 8); }
 
@@ -865,7 +867,7 @@ function addStudent() {
                           }
                           if (data.config.sheetUrl) {
                               sheetUrl = data.config.sheetUrl;
-                              localStorage.setItem('rp_qr_sheet_url', sheetUrl);
+                              localStorage.setItem(STORAGE_PREFIX + 'rp_qr_sheet_url', sheetUrl);
                               const elSheet = document.getElementById('sheet-url');
                               if(elSheet) elSheet.value = sheetUrl;
                               renderSheetIframe();
@@ -1348,8 +1350,8 @@ function addTask() {
         }
         
         // --- Google Sheets Sync Logic ---
-        let gasUrl = localStorage.getItem('rp_qr_gas_url') || '';
-        let sheetUrl = localStorage.getItem('rp_qr_sheet_url') || '';
+        let gasUrl = localStorage.getItem(STORAGE_PREFIX + 'rp_qr_gas_url') || '';
+        let sheetUrl = localStorage.getItem(STORAGE_PREFIX + 'rp_qr_sheet_url') || '';
         
         // Wait for DOM
         setTimeout(() => {
@@ -1365,7 +1367,7 @@ function addTask() {
             if (url && url.includes('/edit')) {
                 url = url.split('/edit')[0] + '/htmlembed?widget=true&headers=false';
             }
-            localStorage.setItem('rp_qr_sheet_url', url);
+            localStorage.setItem(STORAGE_PREFIX + 'rp_qr_sheet_url', url);
             sheetUrl = url;
             document.getElementById('sheet-status').innerHTML = '<span class="text-green-600">✅ 網址已儲存！</span>';
             setTimeout(() => { document.getElementById('sheet-status').innerHTML = ''; }, 3000);
@@ -1384,7 +1386,7 @@ function addTask() {
 
         function saveGasUrl() {
             const url = document.getElementById('gas-url').value.trim();
-            localStorage.setItem('rp_qr_gas_url', url);
+            localStorage.setItem(STORAGE_PREFIX + 'rp_qr_gas_url', url);
             gasUrl = url;
             document.getElementById('gas-status').innerHTML = '<span class="text-green-600">✅ 網址已儲存！</span>';
             setTimeout(() => { document.getElementById('gas-status').innerHTML = ''; }, 3000);
