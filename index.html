@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (正式版 Ver. 1.0)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.1)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -106,7 +106,7 @@
     <div class="max-w-7xl mx-auto p-4">
         <h1 class="text-3xl font-bold text-center mb-6 text-blue-700 flex justify-center items-center gap-3 flex-wrap">
             <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-            QRcode自動清點作業系統 <span class="text-lg text-blue-800 font-bold tracking-wide">正式版 Ver. 1.0</span>
+            QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.1</span>
             <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
         </h1>
         
@@ -521,7 +521,9 @@
         // 系統核心與資料層
         // ==========================================
         let db = { students: [], tasks: [], records: [], ranges: [], subjects: [] };
-        const STORAGE_KEY = 'doc_productivity_db';
+        const IS_BETA = window.location.pathname.includes('/beta/');
+        const STORAGE_PREFIX = IS_BETA ? 'BETA_' : '';
+        const STORAGE_KEY = STORAGE_PREFIX + 'doc_productivity_db';
 
         function generateSalt() { return Math.random().toString(36).substring(2, 8); }
 
@@ -865,7 +867,7 @@ function addStudent() {
                           }
                           if (data.config.sheetUrl) {
                               sheetUrl = data.config.sheetUrl;
-                              localStorage.setItem('rp_qr_sheet_url', sheetUrl);
+                              localStorage.setItem(STORAGE_PREFIX + 'rp_qr_sheet_url', sheetUrl);
                               const elSheet = document.getElementById('sheet-url');
                               if(elSheet) elSheet.value = sheetUrl;
                               renderSheetIframe();
@@ -1300,10 +1302,16 @@ function addTask() {
 
         function initScanner() {
             if(html5QrcodeScanner) return;
-            // 提升掃描速度：提高更新率(fps)、限定只辨識 QR Code (過濾掉條碼等其他格式可大幅減少手機運算負擔)
+            // 提升掃描速度與範圍：
+            // 1. 移除 qrbox，讓整個相機畫面都能進行掃描，不需要刻意瞄準中心框框。
+            // 2. 請求較高解析度 (720p以上)，讓鏡頭拉高也能清晰辨識，免去一直抬高抬低手機的動作。
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-                fps: 30, 
-                qrbox: {width: 250, height: 250},
+                fps: 15, 
+                videoConstraints: {
+                    facingMode: "environment",
+                    width: { min: 1280, ideal: 1920 },
+                    height: { min: 720, ideal: 1080 }
+                },
                 formatsToSupport: (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [Html5QrcodeSupportedFormats.QR_CODE] : undefined
             }, false);
             html5QrcodeScanner.render((qrText) => {
@@ -1342,8 +1350,8 @@ function addTask() {
         }
         
         // --- Google Sheets Sync Logic ---
-        let gasUrl = localStorage.getItem('rp_qr_gas_url') || '';
-        let sheetUrl = localStorage.getItem('rp_qr_sheet_url') || '';
+        let gasUrl = localStorage.getItem(STORAGE_PREFIX + 'rp_qr_gas_url') || '';
+        let sheetUrl = localStorage.getItem(STORAGE_PREFIX + 'rp_qr_sheet_url') || '';
         
         // Wait for DOM
         setTimeout(() => {
@@ -1359,7 +1367,7 @@ function addTask() {
             if (url && url.includes('/edit')) {
                 url = url.split('/edit')[0] + '/htmlembed?widget=true&headers=false';
             }
-            localStorage.setItem('rp_qr_sheet_url', url);
+            localStorage.setItem(STORAGE_PREFIX + 'rp_qr_sheet_url', url);
             sheetUrl = url;
             document.getElementById('sheet-status').innerHTML = '<span class="text-green-600">✅ 網址已儲存！</span>';
             setTimeout(() => { document.getElementById('sheet-status').innerHTML = ''; }, 3000);
@@ -1378,7 +1386,7 @@ function addTask() {
 
         function saveGasUrl() {
             const url = document.getElementById('gas-url').value.trim();
-            localStorage.setItem('rp_qr_gas_url', url);
+            localStorage.setItem(STORAGE_PREFIX + 'rp_qr_gas_url', url);
             gasUrl = url;
             document.getElementById('gas-status').innerHTML = '<span class="text-green-600">✅ 網址已儲存！</span>';
             setTimeout(() => { document.getElementById('gas-status').innerHTML = ''; }, 3000);
