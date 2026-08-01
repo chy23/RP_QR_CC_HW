@@ -1300,10 +1300,16 @@ function addTask() {
 
         function initScanner() {
             if(html5QrcodeScanner) return;
-            // 提升掃描速度：提高更新率(fps)、限定只辨識 QR Code (過濾掉條碼等其他格式可大幅減少手機運算負擔)
+            // 提升掃描速度與範圍：
+            // 1. 移除 qrbox，讓整個相機畫面都能進行掃描，不需要刻意瞄準中心框框。
+            // 2. 請求較高解析度 (720p以上)，讓鏡頭拉高也能清晰辨識，免去一直抬高抬低手機的動作。
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-                fps: 30, 
-                qrbox: {width: 250, height: 250},
+                fps: 15, 
+                videoConstraints: {
+                    facingMode: "environment",
+                    width: { min: 1280, ideal: 1920 },
+                    height: { min: 720, ideal: 1080 }
+                },
                 formatsToSupport: (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [Html5QrcodeSupportedFormats.QR_CODE] : undefined
             }, false);
             html5QrcodeScanner.render((qrText) => {
