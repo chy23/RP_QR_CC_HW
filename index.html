@@ -718,18 +718,25 @@ function addStudent() {
                     return; // 放棄備份
                 }
             }
-            if(!confirm("確定要將目前的「學生名單與防偽碼」備份到 Google 試算表嗎？\n這將覆蓋試算表上的「學生名單」分頁，以便其他裝置匯入。")) return;
+            if(!confirm("確定要將目前的「全系統設定檔與學生名單」備份到 Google 試算表嗎？\n這將覆蓋雲端的舊設定，以便其他裝置匯入。")) return;
 
             showLoading();
+            
+            const configPayload = {
+                classInfo: db.classInfo,
+                tasks: db.tasks,
+                sheetUrl: sheetUrl
+            };
+            
             fetch(gasUrl, {
                 method: 'POST',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: 'sync_students', students: db.students })
+                body: JSON.stringify({ action: 'sync_students', students: db.students, config: configPayload })
             }).then(res => res.json())
               .then(data => {
                   hideLoading();
                   if(data.status === 'success') {
-                      alert("成功將學生名單與防偽碼備份至 Google 試算表！\n現在您可以在手機或其他裝置上點擊「從雲端匯入」來同步防偽碼了。");
+                      alert("成功將全系統設定檔與學生名單備份至 Google 試算表！\n現在您可以在手機上點擊「從雲端匯入」瞬間完成所有設定。");
                   } else {
                       alert("備份失敗：" + (data.message || JSON.stringify(data)));
                   }
@@ -747,18 +754,9 @@ function addStudent() {
                 return;
             }
             
-            // 檢查班級名稱，若無則要求輸入 (確保行動載具能正確紀錄班級)
-            let elClass = document.getElementById('info-class');
-            let currentClass = elClass ? elClass.value.trim() : '';
-            if (!currentClass && (!db.classInfo || !db.classInfo.className)) {
-                currentClass = prompt("⚠️ 您的裝置尚未設定「班級名稱」，這將導致掃描紀錄無法顯示班級。\n請輸入班級名稱 (例如: 三年甲班) :");
-                if (currentClass) {
-                    if(elClass) elClass.value = currentClass;
-                    saveClassInfo();
-                }
-            }
+            
 
-            if(!confirm("確定要從 Google 試算表匯入學生名單嗎？（這將覆蓋現有相同的座號）\n請確保試算表中有一個名為「學生名單」的分頁，並包含「座號」與「姓名」欄位。")) return;
+            if(!confirm("確定要從雲端還原「全系統設定與學生名單」嗎？\n這將會覆蓋您裝置上目前的班級資訊、作業設定與學生名單。")) return;
 
             showLoading();
             fetch(gasUrl, {
@@ -769,6 +767,37 @@ function addStudent() {
               .then(data => {
                   hideLoading();
                   if(data.status === 'success') {
+                      let msg = '';
+                      // 處理 config 復原
+                      if (data.config) {
+                          if (data.config.classInfo) {
+                              db.classInfo = data.config.classInfo;
+                              updateHeaderClassInfo();
+                              const elSchool = document.getElementById('info-school');
+                              const elYear = document.getElementById('info-year');
+                              const elSemester = document.getElementById('info-semester');
+                              const elClass = document.getElementById('info-class');
+                              if(elSchool) elSchool.value = db.classInfo.schoolName || '';
+                              if(elYear) elYear.value = db.classInfo.academicYear || '';
+                              if(elSemester) elSemester.value = db.classInfo.semester || '上';
+                              if(elClass) elClass.value = db.classInfo.className || '';
+                          }
+                          if (data.config.tasks) {
+                              db.tasks = data.config.tasks;
+                              renderTasks();
+                              renderStatistics();
+                          }
+                          if (data.config.sheetUrl) {
+                              sheetUrl = data.config.sheetUrl;
+                              localStorage.setItem('rp_qr_sheet_url', sheetUrl);
+                              const elSheet = document.getElementById('sheet-url');
+                              if(elSheet) elSheet.value = sheetUrl;
+                              renderSheetIframe();
+                          }
+                          msg += '✅ 系統設定檔還原成功！\n';
+                          saveData();
+                      }
+
                       if (data.students && data.students.length > 0) {
                           let addedCount = 0;
                           data.students.forEach(s => {
@@ -777,7 +806,6 @@ function addStudent() {
                               const existingIdx = db.students.findIndex(ex => ex.id === idNum);
                               if (existingIdx >= 0) {
                                   db.students[existingIdx].name = s.name;
-                                  // 如果雲端有提供防偽碼，優先使用雲端的防偽碼來達到跨裝置同步
                                   db.students[existingIdx].token = (s.token && s.token.trim() !== '') ? s.token : (db.students[existingIdx].token || generateSalt());
                               } else {
                                   db.students.push({
@@ -791,10 +819,11 @@ function addStudent() {
                           db.students.sort((a, b) => a.id - b.id);
                           saveData();
                           renderStudents();
-                          alert(`成功從 Google 試算表匯入/更新了 ${addedCount} 位學生！`);
+                          msg += `✅ 成功匯入/更新 ${addedCount} 位學生！`;
                       } else {
-                          alert("連線成功，但「學生名單」分頁似乎沒有有效資料。請確保第一列為標題，且包含「座號」與「姓名」。");
+                          msg += '⚠️ 連線成功，但雲端「學生名單」沒有有效資料。';
                       }
+                      alert(msg);
                   } else {
                       alert("匯入失敗：" + (data.message || JSON.stringify(data)));
                   }
