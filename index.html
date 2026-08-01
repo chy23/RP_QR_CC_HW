@@ -966,7 +966,10 @@ function addStudent() {
                         };
                         
                         const leaves = ["事假", "病假", "公假", "喪假", "曠課", "其他"];
-                        if (leaves.includes(cellValue)) {
+                        if (cellValue.startsWith('[遲交]')) {
+                            record.manualStatus = 'late';
+                            record.timestamp = cellValue.replace('[遲交]', '').trim();
+                        } else if (leaves.includes(cellValue)) {
                             record.manualStatus = cellValue;
                             record.timestamp = '1970-01-01T00:00:00'; // Dummy timestamp for leaves
                         } else {
