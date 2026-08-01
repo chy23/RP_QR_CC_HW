@@ -1450,22 +1450,22 @@ function addTask() {
                                 cellValue = '缺交';
                             }
                             const taskDef = db.tasks.find(t => t.id === k.taskId);
-                            if (taskDef && taskDef.deadline) {
-                                let deadlineDate = new Date(taskDef.deadline);
-                                let isLate = false;
-                                if (record.manualStatus === 'late') isLate = true;
-                                else if (record.manualStatus === 'ontime') isLate = false;
+                            const deadlineDate = (taskDef && taskDef.deadline) ? new Date(taskDef.deadline + 'T23:59:59') : null;
+                            
+                            let isLate = false;
+                            if (record.manualStatus === 'late') isLate = true;
+                            else if (record.manualStatus === 'ontime') isLate = false;
+                            else if (deadlineDate) {
+                                let scanDate;
+                                if (record.timestamp.includes('T') || record.timestamp.includes('-')) scanDate = new Date(record.timestamp);
                                 else {
-                                    let scanDate;
-                                    if (record.timestamp.includes('T') || record.timestamp.includes('-')) scanDate = new Date(record.timestamp);
-                                    else {
-                                        const currentYear = new Date().getFullYear();
-                                        scanDate = new Date(`${currentYear}/${record.timestamp}`);
-                                    }
-                                    if (scanDate > deadlineDate) isLate = true;
+                                    const currentYear = new Date().getFullYear();
+                                    scanDate = new Date(`${currentYear}/${record.timestamp}`);
                                 }
-                                if (isLate) cellValue = `[遲交] ${record.timestamp}`;
+                                if (scanDate > deadlineDate) isLate = true;
                             }
+                            
+                            if (isLate) cellValue = `[遲交] ${record.timestamp}`;
                         }
                         row.push(cellValue);
                     });
@@ -2185,13 +2185,9 @@ function renderStatistics() {
             
             saveData();
             renderStatistics();
-            // 找出新狀態同步
+            // 找出新狀態同步 (即使是刪除也要觸發完整同步，才能將雲端試算表上的格子清空)
             const newRec = db.records.find(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
-            if (newRec) {
-                syncToGoogleSheets([newRec]);
-            } else {
-                // 刪除紀錄不觸發同步新增，如果是完全同步會在下次一起同步
-            }
+            syncToGoogleSheets(newRec ? [newRec] : []);
         }
 
         function closeStatusModal() {
