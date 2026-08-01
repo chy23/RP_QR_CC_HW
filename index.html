@@ -197,6 +197,13 @@
             </div>
             <div class="mt-4 border p-4 rounded bg-blue-50">
                 <h3 class="text-lg font-semibold mb-2 text-blue-800">☁️ 自動同步 Google 試算表設定</h3>
+                <p class="text-sm text-gray-700 mb-2 font-bold mt-4">【2. 雲端總表專用】Google 試算表共用網址：</p>
+                <div class="flex gap-2 mb-2">
+                    <input type="text" id="sheet-url" class="border p-2 flex-grow rounded" placeholder="https://docs.google.com/spreadsheets/d/.../edit?usp=sharing">
+                    <button onclick="saveSheetUrl()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow">儲存試算表網址</button>
+                    <span id="sheet-status" class="ml-2 py-2"></span>
+                </div>
+
                 <p class="text-sm text-gray-700 mb-2">請將 Google Apps Script 的「網頁應用程式網址」貼在此處。設定後，每次掃描確認登記時，系統會在背景自動上傳資料至您的試算表。</p>
                 <div class="flex gap-2 mb-2">
                     <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/..." class="border p-2 flex-grow rounded">
