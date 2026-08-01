@@ -1,0 +1,66 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-site
+
+      - name: Checkout beta branch
+        uses: actions/checkout@v4
+        with:
+          ref: beta
+          path: beta-site
+        continue-on-error: true
+
+      - name: Prepare deployment directory
+        run: |
+          mkdir -p public
+          # Copy main site to root
+          if [ -d "main-site" ]; then
+            cp -r main-site/* public/
+          fi
+          
+          # If beta branch exists, copy it to /beta/
+          if [ -d "beta-site" ]; then
+            mkdir -p public/beta
+            cp -r beta-site/* public/beta/
+          fi
+          
+          # Clean up any potential git internal folders copied
+          rm -rf public/.git || true
+          rm -rf public/beta/.git || true
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './public'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
