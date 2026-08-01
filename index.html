@@ -662,15 +662,18 @@
                 videoEl.setAttribute('muted', '');
                 await videoEl.play();
                 
-                videoEl.onplaying = () => {
-                    canvasEl.width = videoEl.videoWidth;
-                    canvasEl.height = videoEl.videoHeight;
-                    overlayEl.width = videoEl.videoWidth;
-                    overlayEl.height = videoEl.videoHeight;
+                customScanInterval = setInterval(async () => {
+                    if (videoEl.readyState !== videoEl.HAVE_ENOUGH_DATA) return;
                     
-                    customScanInterval = setInterval(async () => {
-                        if (videoEl.readyState !== videoEl.HAVE_ENOUGH_DATA) return;
-                        ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+                    if (canvasEl.width !== videoEl.videoWidth || canvasEl.height !== videoEl.videoHeight) {
+                        canvasEl.width = videoEl.videoWidth;
+                        canvasEl.height = videoEl.videoHeight;
+                        overlayEl.width = videoEl.videoWidth;
+                        overlayEl.height = videoEl.videoHeight;
+                    }
+                    if (canvasEl.width === 0 || canvasEl.height === 0) return;
+                    
+                    ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
                         
                         let foundCodes = [];
                         
@@ -711,7 +714,6 @@
                         }
                         
                     }, 200); // 5 FPS to balance performance
-                };
             } catch (err) {
                 alert("無法啟動相機，請允許權限：" + err);
                 container.classList.add('hidden');
