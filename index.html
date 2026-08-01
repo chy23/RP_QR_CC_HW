@@ -1494,10 +1494,6 @@ function initScanSessionDropdown() {
         }
 
         async function startScanSession() {
-            if (gasUrl) {
-                // 開始掃描前，先強制更新本地紀錄，避免覆蓋別人在試算表上的手動修改
-                await syncFromGoogleSheets(true);
-            }
             const dateVal = document.getElementById('scan-session-date').value;
             const checkboxes = document.querySelectorAll('.scan-task-checkbox:checked');
             
@@ -1511,6 +1507,13 @@ function initScanSessionDropdown() {
                 const rangeVal = document.getElementById(`range-input-${taskDef.id}`).value.trim();
                 return { id: taskDef.id, name: taskDef.name, range: rangeVal };
             });
+
+            if (gasUrl) {
+                // 開始掃描前，先強制更新本地紀錄，避免覆蓋別人在試算表上的手動修改
+                // 注意：這會觸發 saveData() -> initAllSelects()，導致 checkbox 被重置
+                // 所以必須放在我們讀取完 selectedTasks 之後執行！
+                await syncFromGoogleSheets(true);
+            }
             
             const existingRecords = (scanSession && scanSession.active) 
                 ? scanSession.records.filter(r => selectedTasks.some(t => t.id === r.taskId)) 
