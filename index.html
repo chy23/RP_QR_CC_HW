@@ -1265,14 +1265,16 @@ function addTask() {
             }, (error) => {
                 // Ignore errors
             });
-            document.getElementById('scan-status').innerText = '掃描器啟動中...';
+            const statusEl = document.getElementById('scan-status');
+            if (statusEl) statusEl.innerText = '掃描器啟動中...';
         }
 
         function stopScanner() {
             if(html5QrcodeScanner) {
                 html5QrcodeScanner.clear();
                 html5QrcodeScanner = null;
-                document.getElementById('scan-status').innerText = '掃描器已暫停';
+                const statusEl = document.getElementById('scan-status');
+                if (statusEl) statusEl.innerText = '掃描器已暫停';
             }
         }
         let scanSession = { active: false, dateStr: '', tasks: [], records: [] };
