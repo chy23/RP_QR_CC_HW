@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.11)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.12)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
     <!-- qrcode (base64 generator) -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
     <!-- pdf-lib -->
@@ -106,7 +106,7 @@
     <div class="max-w-7xl mx-auto p-4">
         <h1 class="text-3xl font-bold text-center mb-6 text-blue-700 flex justify-center items-center gap-3 flex-wrap">
             <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-            QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.11</span>
+            QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.12</span>
             <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
         </h1>
         
@@ -605,38 +605,118 @@
             } catch(e) {}
         }
 
-        let html5QrCode = null;
+        // --- Unified Custom Scanner Logic ---
+        let customVideoStream = null;
+        let customScanInterval = null;
+        let barcodeDetector = null;
+        let zxingReader = null;
+        const scanCooldowns = new Map(); // Store cooldowns per code
+        
+        async function startCustomScanner() {
+            const container = document.getElementById('camera-container');
+            container.classList.remove('hidden');
+            
+            const videoEl = document.getElementById('native-video');
+            const canvasEl = document.getElementById('native-canvas');
+            const overlayEl = document.getElementById('overlay-canvas');
+            const ctx = canvasEl.getContext('2d', { willReadFrequently: true });
+            
+            // Initializer hardware detectors
+            if (!barcodeDetector && 'BarcodeDetector' in window) {
+                try {
+                    barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+                    console.log("Using native BarcodeDetector for multi-scan!");
+                } catch(e) { console.warn(e); }
+            }
+            if (!barcodeDetector && !zxingReader && typeof ZXing !== 'undefined') {
+                zxingReader = new ZXing.BrowserQRCodeReader();
+                console.log("Using ZXing fallback for scanning");
+            }
+            
+            try {
+                customVideoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: "continuous" }] }
+                });
+                videoEl.srcObject = customVideoStream;
+                videoEl.play();
+                
+                videoEl.onplaying = () => {
+                    canvasEl.width = videoEl.videoWidth;
+                    canvasEl.height = videoEl.videoHeight;
+                    overlayEl.width = videoEl.videoWidth;
+                    overlayEl.height = videoEl.videoHeight;
+                    
+                    customScanInterval = setInterval(async () => {
+                        if (videoEl.readyState !== videoEl.HAVE_ENOUGH_DATA) return;
+                        ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+                        
+                        let foundCodes = [];
+                        
+                        // 1. Try Native BarcodeDetector (Supports Multiple)
+                        if (barcodeDetector) {
+                            try {
+                                const barcodes = await barcodeDetector.detect(canvasEl);
+                                foundCodes = barcodes.map(b => b.rawValue);
+                            } catch(e) {}
+                        } 
+                        // 2. Fallback to ZXing (Single)
+                        else if (zxingReader) {
+                            try {
+                                const result = await zxingReader.decodeFromCanvas(canvasEl);
+                                if (result && result.text) foundCodes = [result.text];
+                            } catch(e) { /* NotFoundException is normal */ }
+                        }
+                        
+                        // Process unique codes in this frame
+                        const now = Date.now();
+                        let newScan = false;
+                        
+                        for (const code of foundCodes) {
+                            if (!code) continue;
+                            const lastTime = scanCooldowns.get(code) || 0;
+                            if (now - lastTime > 3000) { // 3 seconds cooldown per code
+                                scanCooldowns.set(code, now);
+                                processScan(code);
+                                newScan = true;
+                            }
+                        }
+                        
+                        if (newScan) playBeep();
+                        
+                        // Clear old cooldowns
+                        for (const [code, time] of scanCooldowns.entries()) {
+                            if (now - time > 5000) scanCooldowns.delete(code);
+                        }
+                        
+                    }, 200); // 5 FPS to balance performance
+                };
+            } catch (err) {
+                alert("無法啟動相機，請允許權限：" + err);
+                container.classList.add('hidden');
+            }
+        }
+        
+        function stopCustomScanner() {
+            const container = document.getElementById('camera-container');
+            container.classList.add('hidden');
+            if (customScanInterval) {
+                clearInterval(customScanInterval);
+                customScanInterval = null;
+            }
+            if (customVideoStream) {
+                customVideoStream.getTracks().forEach(t => t.stop());
+                customVideoStream = null;
+            }
+            const videoEl = document.getElementById('native-video');
+            if(videoEl) videoEl.srcObject = null;
+        }
+
         function toggleCameraScanner() {
             const container = document.getElementById('camera-container');
             if (container.classList.contains('hidden')) {
-                container.classList.remove('hidden');
-                if (!html5QrCode) {
-                    html5QrCode = new Html5Qrcode("reader");
-                }
-                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-                html5QrCode.start(
-                    { facingMode: "environment" },
-                    config,
-                    (decodedText, decodedResult) => {
-                        const now = Date.now();
-                        if (decodedText === lastScanCode && (now - lastScanTime) < 2000) return;
-                        lastScanCode = decodedText;
-                        lastScanTime = now;
-                        playBeep();
-                        processScan(decodedText);
-                    },
-                    (errorMessage) => { /* ignore */ }
-                ).catch((err) => {
-                    alert("無法啟動相機，請確定已允許權限並使用 HTTPS 連線。錯誤: " + err);
-                    container.classList.add('hidden');
-                });
+                startCustomScanner();
             } else {
-                container.classList.add('hidden');
-                if (html5QrCode) {
-                    html5QrCode.stop().then(() => {
-                        html5QrCode.clear();
-                    }).catch(err => console.error("Failed to stop scanner", err));
-                }
+                stopCustomScanner();
             }
         }
 
