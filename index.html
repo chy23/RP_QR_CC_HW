@@ -285,11 +285,11 @@
                     </div>
                     
                     <!-- Subject Sub-tabs -->
-                    <div class="flex flex-wrap border-b mb-2" id="stat-subtabs">
-                        <!-- 動態生成科目分頁 -->
+                    <div id="stat-empty-msg" class="text-gray-500 py-8 text-center bg-white border rounded flex-grow">
+                        尚無當次掃描任務。請在左側勾選作業並點擊「開始掃描」以顯示繳交統計表。
                     </div>
 
-                    <div class="flex-grow overflow-auto bg-white border rounded">
+                    <div id="stat-table-container" class="flex-grow overflow-auto bg-white border rounded hidden">
                         <table class="w-full text-sm text-left">
                             <thead class="bg-gray-100 sticky top-0" id="stat-thead">
                                 <!-- 動態生成 -->
@@ -1704,38 +1704,13 @@ function getSubjects() {
 function renderStatistics() {
             const thead = document.getElementById('stat-thead');
             const tbody = document.getElementById('stat-tbody');
-            const subtabs = document.getElementById('stat-subtabs');
-            if(!thead || !tbody || !subtabs) return;
-
-            // 1. 生成科目分頁按鈕
-            const subjects = getSubjects();
-            if (!subjects.includes(currentStatSubject) && subjects.length > 0) {
-                currentStatSubject = subjects[0];
-            }
-
-            let subtabsHTML = '';
-            subjects.forEach(sub => {
-                const activeClass = sub === currentStatSubject ? 'border-b-2 border-blue-500 text-blue-600 font-bold bg-blue-50' : 'text-gray-600 hover:bg-gray-100';
-                subtabsHTML += `
-                    <div class="flex items-center group">
-                        <button onclick="setStatSubject('${sub}')" class="px-3 py-2 text-sm ${activeClass}">${sub}</button>
-                        <div class="hidden group-hover:flex items-center px-1">
-                            <button onclick="editSubject('${sub}')" class="text-xs text-gray-400 hover:text-blue-500 px-1" title="編輯名稱">✎</button>
-                            <button onclick="deleteSubject('${sub}')" class="text-xs text-gray-400 hover:text-red-500 pr-2" title="刪除分頁">×</button>
-                        </div>
-                    </div>`;
-            });
-            subtabsHTML += `<button onclick="addSubject()" class="px-3 py-2 text-sm text-blue-500 font-bold hover:bg-blue-50" title="新增分頁">+</button>`;
-            subtabs.innerHTML = subtabsHTML;
-
-            // 2. 過濾當前科目的 Tasks
-            const tasksInSub = db.tasks.filter(t => t.subject === currentStatSubject);
+            if(!thead || !tbody) return;
 
             // 取得目前有效的 tasks (可能帶有 noticeName)
             const uniqueTaskKeys = []; 
             
-            // 先加入定義在 db.tasks 中的 (只屬於當前科目)
-            tasksInSub.forEach(t => {
+            // 先加入所有 db.tasks
+            db.tasks.forEach(t => {
                 // 只加入 base column (noticeName='') 如果該 task 有不帶 noticeName 的紀錄，或者它是固定作業且沒有任何帶 noticeName 的紀錄
                 const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
                 const hasSubRecords = db.records.some(r => r.taskId === t.id && r.noticeName);
@@ -1749,7 +1724,7 @@ function renderStatistics() {
             if (db.ranges) {
                 db.ranges.forEach(r => {
                     if (r.noticeName) {
-                        const t = tasksInSub.find(t => t.id === r.taskId);
+                        const t = db.tasks.find(t => t.id === r.taskId);
                         if (t) {
                             const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                             if (!exists) {
@@ -1763,7 +1738,7 @@ function renderStatistics() {
             // 補充 records 中有附帶 noticeName 的
             db.records.forEach(r => {
                 if(r.noticeName) {
-                    const t = tasksInSub.find(t => t.id === r.taskId);
+                    const t = db.tasks.find(t => t.id === r.taskId);
                     if(t) {
                         const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
                         if(!exists) {
@@ -1773,13 +1748,21 @@ function renderStatistics() {
                 }
             });
 
-            // 過濾：如果勾選了「僅顯示剛才掃描的作業」
-            const filterLast = document.getElementById('stat-filter-last') && document.getElementById('stat-filter-last').checked;
-            let finalTaskKeys = uniqueTaskKeys;
-            if (filterLast && db.lastSessionTasks) {
-                finalTaskKeys = uniqueTaskKeys.filter(k => {
-                    return db.lastSessionTasks.some(lt => lt.taskId === k.taskId && lt.noticeName === k.noticeName);
-                });
+            // 嚴格過濾：只顯示當次 scanSession 正在掃描的作業
+            let finalTaskKeys = uniqueTaskKeys.filter(k => {
+                if (!scanSession.active && scanSession.tasks.length === 0) return false;
+                return scanSession.tasks.some(st => st.id === k.taskId);
+            });
+            
+            const emptyMsg = document.getElementById('stat-empty-msg');
+            const tableContainer = document.getElementById('stat-table-container');
+            if (finalTaskKeys.length === 0) {
+                if (emptyMsg) emptyMsg.style.display = 'block';
+                if (tableContainer) tableContainer.style.display = 'none';
+                return;
+            } else {
+                if (emptyMsg) emptyMsg.style.display = 'none';
+                if (tableContainer) tableContainer.style.display = 'block';
             }
 
             // 生成 Header (包含手動輸入範圍)
