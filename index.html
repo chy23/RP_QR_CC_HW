@@ -1481,9 +1481,18 @@ function endScanSession() {
             resultsContainer.innerHTML = '';
             
             scanSession.tasks.forEach(task => {
-                const submittedIds = scanSession.records.filter(r => r.taskId === task.id).map(r => r.studentId);
-                const missingStudents = db.students.filter(s => !submittedIds.includes(s.id));
-                const submittedStudents = db.students.filter(s => submittedIds.includes(s.id));
+                // 這次新掃描的學生
+                const currentSubmittedIds = scanSession.records.filter(r => r.taskId === task.id).map(r => r.studentId);
+                
+                // 以前已經繳交過的學生 (避免老師以為沒掃到就會被覆蓋為缺交)
+                const taskRange = task.range || '';
+                const previouslySubmittedIds = db.records.filter(r => r.taskId === task.id && r.noticeName === taskRange).map(r => r.studentId);
+                
+                // 總共已繳交的學生
+                const allSubmittedIds = [...new Set([...previouslySubmittedIds, ...currentSubmittedIds])];
+                
+                const missingStudents = db.students.filter(s => !allSubmittedIds.includes(s.id));
+                const submittedStudents = db.students.filter(s => allSubmittedIds.includes(s.id));
                 
                 const taskSection = document.createElement('div');
                 taskSection.className = 'border border-gray-200 bg-white p-3 rounded shadow-sm';
