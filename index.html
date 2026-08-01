@@ -1121,7 +1121,12 @@ function addTask() {
 
         function initScanner() {
             if(html5QrcodeScanner) return;
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+            // 提升掃描速度：提高更新率(fps)、限定只辨識 QR Code (過濾掉條碼等其他格式可大幅減少手機運算負擔)
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+                fps: 30, 
+                qrbox: {width: 250, height: 250},
+                formatsToSupport: (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [Html5QrcodeSupportedFormats.QR_CODE] : undefined
+            }, false);
             html5QrcodeScanner.render((qrText) => {
                 processScan(qrText);
             }, (error) => {
