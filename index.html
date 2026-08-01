@@ -489,10 +489,13 @@
             </div>
             
             <div class="bg-gray-50 p-4 rounded border mb-4">
-                <label class="block text-gray-700 font-bold mb-2">請選擇要批改的作業：</label>
-                <select id="grading-task-select" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500" onchange="renderGradingList()">
-                    <option value="">-- 請先載入並選擇作業 --</option>
-                </select>
+                <div id="grading-subject-tabs" class="flex flex-wrap gap-2 border-b border-gray-300">
+                    <!-- 科目按鈕 -->
+                </div>
+                <div id="grading-task-buttons" class="flex flex-wrap gap-2 pt-4">
+                    <!-- 作業按鈕 -->
+                    <span class="text-gray-500">請先選擇上方科目</span>
+                </div>
             </div>
             
             <div class="border rounded bg-white overflow-hidden shadow-sm">
@@ -2288,15 +2291,17 @@ function renderStatistics() {
             document.getElementById('grading-student-list').innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">已重新載入最新資料，請選擇作業。</td></tr>';
         }
 
+                let activeGradingSubject = null;
+        let activeGradingTaskValue = null; // "taskId:::noticeName"
+        let gradingTaskGroups = {};
+
         function renderGradingTab() {
-            const select = document.getElementById('grading-task-select');
-            if(!select) return;
-            
             // 找出所有 uniqueTaskKeys (已登記或有紀錄的作業)
             const subjects = new Set(db.tasks.map(t => t.subject));
-            let uniqueTaskKeys = [];
+            gradingTaskGroups = {};
             
             Array.from(subjects).forEach(sub => {
+                let uniqueTaskKeys = [];
                 const tasksInSub = db.tasks.filter(t => t.subject === sub);
                 tasksInSub.forEach(t => {
                     const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
@@ -2330,41 +2335,103 @@ function renderStatistics() {
                         }
                     }
                 });
+                
+                // 過濾並排序
+                uniqueTaskKeys = uniqueTaskKeys.filter(k => {
+                    const hasRange = (db.ranges || []).some(r => r.taskId === k.taskId && r.noticeName === k.noticeName && (r.range || r.date));
+                    const hasRecords = (db.records || []).some(r => r.taskId === k.taskId && r.noticeName === k.noticeName);
+                    return hasRange || hasRecords;
+                });
+                
+                if (uniqueTaskKeys.length > 0) {
+                    gradingTaskGroups[sub] = uniqueTaskKeys;
+                }
             });
             
-            // 過濾並排序
-            uniqueTaskKeys = uniqueTaskKeys.filter(k => {
-                const hasRange = (db.ranges || []).some(r => r.taskId === k.taskId && r.noticeName === k.noticeName && (r.range || r.date));
-                const hasRecords = (db.records || []).some(r => r.taskId === k.taskId && r.noticeName === k.noticeName);
-                return hasRange || hasRecords;
-            });
-            
-            let htmlOptions = '<option value="">-- 請選擇作業 --</option>';
-            uniqueTaskKeys.forEach(k => {
-                const val = `${k.taskId}:::${k.noticeName}`;
-                htmlOptions += `<option value="${val}">${k.label}</option>`;
-            });
-            
-            const prevVal = select.value;
-            select.innerHTML = htmlOptions;
-            if(prevVal && uniqueTaskKeys.some(k => `${k.taskId}:::${k.noticeName}` === prevVal)) {
-                select.value = prevVal;
-                renderGradingList();
-            } else {
-                select.value = "";
-                document.getElementById('grading-student-list').innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">請選擇上方作業以進行批改</td></tr>';
+            const validSubjects = Object.keys(gradingTaskGroups);
+            if (!validSubjects.includes(activeGradingSubject)) {
+                activeGradingSubject = validSubjects.length > 0 ? validSubjects[0] : null;
             }
+            
+            renderGradingSubjects();
+        }
+
+        function renderGradingSubjects() {
+            const container = document.getElementById('grading-subject-tabs');
+            if (!container) return;
+            
+            const subjects = Object.keys(gradingTaskGroups);
+            if (subjects.length === 0) {
+                container.innerHTML = '<span class="text-gray-500 mb-2">目前沒有可批改的作業。</span>';
+                document.getElementById('grading-task-buttons').innerHTML = '';
+                document.getElementById('grading-student-list').innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">沒有可批改的作業</td></tr>';
+                return;
+            }
+
+            let html = '';
+            subjects.forEach(sub => {
+                const isActive = (sub === activeGradingSubject);
+                const baseCls = "px-6 py-2 rounded-t-lg font-bold border-t border-l border-r cursor-pointer transition-colors";
+                const activeCls = isActive ? "bg-white text-blue-700 border-gray-300 border-b-0 -mb-[1px] shadow-sm relative z-10" : "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200 border-b";
+                html += `<div class="${baseCls} ${activeCls}" onclick="selectGradingSubject('${sub}')">${sub}</div>`;
+            });
+            container.innerHTML = html;
+
+            renderGradingTasks();
+        }
+
+        function selectGradingSubject(sub) {
+            activeGradingSubject = sub;
+            renderGradingSubjects();
+        }
+
+        function renderGradingTasks() {
+            const container = document.getElementById('grading-task-buttons');
+            if (!activeGradingSubject || !gradingTaskGroups[activeGradingSubject]) {
+                container.innerHTML = '<span class="text-gray-500">請先選擇上方科目</span>';
+                renderGradingList();
+                return;
+            }
+
+            const tasks = gradingTaskGroups[activeGradingSubject];
+            
+            if (activeGradingTaskValue && !tasks.some(k => `${k.taskId}:::${k.noticeName}` === activeGradingTaskValue)) {
+                activeGradingTaskValue = null;
+            }
+            if (!activeGradingTaskValue && tasks.length > 0) {
+                activeGradingTaskValue = `${tasks[0].taskId}:::${tasks[0].noticeName}`;
+            }
+
+            let html = '';
+            tasks.forEach(k => {
+                const val = `${k.taskId}:::${k.noticeName}`;
+                const isActive = (val === activeGradingTaskValue);
+                const taskDef = db.tasks.find(t=>t.id===k.taskId);
+                const displayLabel = k.noticeName ? `${taskDef?.name} (${k.noticeName})` : taskDef?.name;
+                
+                const baseCls = "px-4 py-2 rounded-lg font-semibold cursor-pointer shadow-sm transition-colors border";
+                const activeCls = isActive ? "bg-blue-600 text-white border-blue-700" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100";
+                
+                html += `<button class="${baseCls} ${activeCls}" onclick="selectGradingTask('${val}')">${displayLabel}</button>`;
+            });
+            container.innerHTML = html;
+            
+            renderGradingList();
+        }
+
+        function selectGradingTask(val) {
+            activeGradingTaskValue = val;
+            renderGradingTasks();
         }
 
         function renderGradingList() {
-            const select = document.getElementById('grading-task-select');
             const tbody = document.getElementById('grading-student-list');
-            if(!select.value) {
+            if(!activeGradingTaskValue) {
                 tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">請選擇上方作業以進行批改</td></tr>';
                 return;
             }
             
-            const [taskId, noticeName] = select.value.split(':::');
+            const [taskId, noticeName] = activeGradingTaskValue.split(':::');
             
             const taskDef = db.tasks.find(t => t.id === taskId);
             const deadline = taskDef && taskDef.deadline ? new Date(taskDef.deadline + 'T23:59:59') : null;
@@ -2374,7 +2441,7 @@ function renderStatistics() {
             db.students.forEach(s => {
                 const record = db.records.find(r => r.studentId === s.id && r.taskId === taskId && r.noticeName === noticeName);
                 
-                let statusHTML = '<span class="text-yellow-600 font-bold bg-yellow-50 px-2 py-1 rounded">缺交</span>';
+                let statusHTML = '<span class="text-yellow-600 font-bold bg-yellow-50 px-2 py-1 rounded border border-yellow-200 shadow-sm">缺交</span>';
                 let currentStatusType = 'missing';
                 
                 if (record) {
@@ -2392,22 +2459,22 @@ function renderStatistics() {
                     }
                     
                     if (isLate) {
-                        statusHTML = `<span class="text-red-700 font-bold bg-red-100 px-2 py-1 rounded">遲交 (${record.timestamp})</span>`;
+                        statusHTML = `<span class="text-red-700 font-bold bg-red-100 px-2 py-1 rounded border border-red-200 shadow-sm">遲交 (${record.timestamp})</span>`;
                         currentStatusType = 'late';
                     } else {
-                        statusHTML = `<span class="text-green-700 font-bold bg-green-100 px-2 py-1 rounded">準時 (${record.timestamp})</span>`;
+                        statusHTML = `<span class="text-green-700 font-bold bg-green-100 px-2 py-1 rounded border border-green-200 shadow-sm">準時 (${record.timestamp})</span>`;
                         currentStatusType = 'ontime';
                     }
                 }
                 
                 bodyHTML += `
                 <tr class="hover:bg-gray-50">
-                    <td class="p-3 border-b font-semibold">${s.name}</td>
+                    <td class="p-3 border-b font-semibold text-lg">${s.name}</td>
                     <td class="p-3 border-b">${statusHTML}</td>
-                    <td class="p-3 border-b flex gap-2">
-                        <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'missing')" class="px-3 py-1 rounded text-sm font-bold shadow-sm transition-colors ${currentStatusType === 'missing' ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white'}" ${currentStatusType === 'missing' ? 'disabled' : ''}>退回(缺交)</button>
-                        <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'late')" class="px-3 py-1 rounded text-sm font-bold shadow-sm transition-colors ${currentStatusType === 'late' ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}" ${currentStatusType === 'late' ? 'disabled' : ''}>改為遲交</button>
-                        <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'ontime')" class="px-3 py-1 rounded text-sm font-bold shadow-sm transition-colors ${currentStatusType === 'ontime' ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 text-white'}" ${currentStatusType === 'ontime' ? 'disabled' : ''}>標為準時</button>
+                    <td class="p-3 border-b flex gap-2 flex-wrap">
+                        <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'missing')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'missing' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-red-500 hover:bg-red-600 text-white'}" ${currentStatusType === 'missing' ? 'disabled' : ''}>退回 (缺交)</button>
+                        <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'late')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'late' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}" ${currentStatusType === 'late' ? 'disabled' : ''}>改為遲交</button>
+                        <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'ontime')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'ontime' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-green-500 hover:bg-green-600 text-white'}" ${currentStatusType === 'ontime' ? 'disabled' : ''}>標為準時</button>
                     </td>
                 </tr>`;
             });
