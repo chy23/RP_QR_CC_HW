@@ -1302,7 +1302,7 @@
             }
 
             const token = `STU${String(newId).padStart(3, '0')}`;
-            db.students.push({ id: newId, name, token, salt: generateSalt() });
+            db.students.push({ id: newId, name, token, salt: generateSalt(), createdAt: Date.now() });
             db.students.sort((a, b) => a.id - b.id);
             
             nameInput.value = '';
@@ -1321,7 +1321,7 @@
             for(let i=0; i<25; i++) {
                 const newId = startId + i;
                 const token = `STU${String(newId).padStart(3, '0')}`;
-                db.students.push({ id: newId, name: `座號${i+1}`, token, salt: generateSalt() });
+                db.students.push({ id: newId, name: `座號${i+1}`, token, salt: generateSalt(), createdAt: Date.now() });
             }
             saveData();
             renderStudents();
@@ -1661,7 +1661,7 @@
                                 db.students[existingIdx].name = String(name).trim();
                             } else {
                                 const token = `STU${String(newId).padStart(3, '0')}`;
-                                db.students.push({ id: newId, name: String(name).trim(), token, salt: generateSalt() });
+                                db.students.push({ id: newId, name: String(name).trim(), token, salt: generateSalt(), createdAt: Date.now() });
                             }
                             addedCount++;
                         }
@@ -2271,7 +2271,10 @@ function addTask() {
                     }
 
                     statsFuncs.push((studentId) => {
-                        let totalAssigned = targetKeys.length;
+                        const student = db.students.find(s => s.id === studentId);
+                        const studentCreatedAt = student ? (student.createdAt || 0) : 0;
+                        
+                        let totalAssigned = 0;
                         let onTime = 0;
                         let late = 0;
                         let missing = 0;
@@ -2283,6 +2286,31 @@ function addTask() {
                         let exemptLeaves = 0;
 
                         targetKeys.forEach(k => {
+                            // Find the time this session was recorded
+                            const sessionRecords = db.records.filter(r => r.taskId === k.taskId && r.noticeName === k.noticeName);
+                            let sessionTime = 0;
+                            if (sessionRecords.length > 0) {
+                                let minTime = Infinity;
+                                for(const r of sessionRecords) {
+                                    let t = 0;
+                                    if (r.fullTimestamp) {
+                                        t = new Date(r.fullTimestamp).getTime();
+                                    } else {
+                                        let scanDate = (r.timestamp.includes('T') || r.timestamp.includes('-')) ? new Date(r.timestamp) : new Date();
+                                        t = scanDate.getTime();
+                                    }
+                                    if (t && !isNaN(t) && t < minTime) minTime = t;
+                                }
+                                sessionTime = minTime === Infinity ? 0 : minTime;
+                            }
+                            
+                            // 轉學生防呆：如果這項作業的登記時間「早於」這個學生被加進系統的時間，該生不計入這項作業的應交名單
+                            if (sessionTime > 0 && studentCreatedAt > 0 && sessionTime < studentCreatedAt) {
+                                return; // Skip this task for this student
+                            }
+                            
+                            totalAssigned++;
+
                             const r = db.records.find(rec => rec.studentId === studentId && rec.taskId === k.taskId && rec.noticeName === k.noticeName);
                             if (r) {
                                 if (leavesToExempt.includes(r.manualStatus)) {
