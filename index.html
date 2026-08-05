@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.19)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.21)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -17,6 +17,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <!-- SheetJS (xlsx) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- ExcelJS (for native xlsx with embedded images) -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <!-- docx -->
     <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     <!-- JSZip -->
@@ -120,6 +122,27 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
+                <!-- Ver 1.21 -->
+                <div class="border-l-4 border-blue-500 pl-4 py-1">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.21</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li>優化全班條碼匯出 Word 分頁保護機制：表格列全面啟用 <span class="font-semibold text-blue-600">禁止跨頁斷行 (cantSplit)</span>，確保每位學生的 QR Code 標籤不會被跨頁切斷；標題列自動跨頁重複顯示 (tableHeader)，作業欄位過多時自動以橫向頁面 (Landscape) 排版。</li>
+                    </ul>
+                </div>
+                <!-- Ver 1.20 -->
+                <div class="border-l-4 border-blue-500 pl-4 py-1">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.20</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li>優化全班條碼匯出互動流程：使用者點選作業與設定尺寸後，點擊「預覽條碼對照表」按鈕才進行生成呈現，避免點選時頻繁重新計算與轉圈。</li>
+                        <li>於「全班條碼匯出」加入「全選 / 全不選」快速選取作業按鈕。</li>
+                    </ul>
+                </div>
                 <!-- Ver 1.19 -->
                 <div class="border-l-4 border-blue-500 pl-4 py-1">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
@@ -222,7 +245,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.19</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.21</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
@@ -542,38 +565,65 @@
         <!-- Tab 5: 全班條碼匯出 -->
         <div id="tab-5" class="tab-content bg-white p-6 rounded-b shadow">
             <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. 全班條碼匯出</h2>
-            <p class="mb-3 text-gray-600">產生全班作業條碼對照表（左側為學生，右側為各項作業防偽條碼），支援匯出 Word 與 Excel 格式；亦可直接下載學生防偽代碼清單。</p>
-            <div class="mb-4 flex flex-col md:flex-row gap-4">
-                <div class="w-full md:w-1/2">
-                    <label class="block mb-2 text-lg font-bold text-gray-800">選擇要產生的作業 (可多選)：</label>
-                    <div id="tab4-task-checkboxes" class="border p-2 rounded w-full h-64 overflow-y-auto bg-gray-50"></div>
-                </div>
-                <div class="w-full md:w-1/2">
-                    <label class="block mb-2 text-lg font-bold text-gray-800">單張標籤尺寸 (公分，Word 適用)：</label>
-                    <div class="flex gap-2 mb-2">
-                        <input type="number" id="tab4-w" value="3.5" step="0.1" class="border p-2 rounded w-1/2" placeholder="寬度(cm)" oninput="previewWord()">
-                        <input type="number" id="tab4-h" value="2" step="0.1" class="border p-2 rounded w-1/2" placeholder="高度 (cm)" oninput="previewWord()">
+            <p class="mb-4 text-gray-600">產生全班作業條碼對照表（左側為學生，右側為各項作業防偽條碼）。點選作業後，請點擊「<strong>預覽條碼對照表</strong>」即可於下方即時呈現表格；確認後可匯出 Word（圖檔）或 Excel（內嵌圖檔），亦可直接下載學生防偽代碼與作業條碼字串清單。</p>
+            
+            <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg border">
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-lg font-bold text-gray-800">1. 選擇要產生的作業 (可多選)：</label>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="selectAllStudents('tab4-task-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2.5 py-1 rounded font-medium text-gray-700">全選</button>
+                            <button type="button" onclick="deselectAllStudents('tab4-task-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2.5 py-1 rounded font-medium text-gray-700">全不選</button>
+                        </div>
                     </div>
-                    <p class="text-sm text-gray-500">調整後將即時更新預覽與匯出的 Word 表格內的圖片大小。</p>
+                    <div id="tab4-task-checkboxes" class="border p-2 rounded w-full h-64 overflow-y-auto bg-white"></div>
+                </div>
+                <div>
+                    <label class="block mb-2 text-lg font-bold text-gray-800">2. 單張標籤尺寸 (公分，Word/Excel 適用)：</label>
+                    <div class="flex gap-3 mb-2">
+                        <div>
+                            <span class="text-xs text-gray-500 font-semibold block mb-1">寬度 (cm)</span>
+                            <input type="number" id="tab4-w" value="3.5" step="0.1" class="border p-2.5 rounded w-full font-mono">
+                        </div>
+                        <div>
+                            <span class="text-xs text-gray-500 font-semibold block mb-1">高度 (cm)</span>
+                            <input type="number" id="tab4-h" value="2" step="0.1" class="border p-2.5 rounded w-full font-mono">
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">勾選作業後，點擊下方「預覽條碼對照表」按鈕即可在網頁上即時呈現對照表，確認無誤後再下載 Word 或 Excel 檔。</p>
                 </div>
             </div>
-            <div class="flex flex-wrap items-center gap-3">
-                <button onclick="generateWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded shadow font-bold flex items-center gap-2">
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b">
+                <button onclick="previewWord()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg shadow font-bold flex items-center gap-2 transition active:scale-95">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    預覽條碼對照表
+                </button>
+                <button onclick="generateWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow font-bold flex items-center gap-2 transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     下載 Word 檔 (.docx)
                 </button>
-                <button onclick="generateExcelBarcodeTable()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded shadow font-bold flex items-center gap-2">
+                <button onclick="generateExcelBarcodeTable()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg shadow font-bold flex items-center gap-2 transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    下載 Excel 檔 (.xlsx)
+                    下載 Excel 檔 (含標籤圖檔)
                 </button>
-                <button onclick="exportRawCodes()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded shadow font-bold flex items-center gap-2">
+                <button onclick="exportRawCodes()" class="bg-gray-700 hover:bg-gray-800 text-white px-5 py-2.5 rounded-lg shadow font-bold flex items-center gap-2 transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    匯出學生防偽代碼清單 (Excel)
+                    匯出學生防偽代碼清單 (代碼與字串)
                 </button>
             </div>
-            <div id="word-preview-container" class="mt-4 hidden border rounded p-4 bg-gray-50 overflow-x-auto">
-                <h3 class="font-bold mb-2">預覽畫面：</h3>
-                <div id="word-preview-content"></div>
+
+            <!-- Preview Container -->
+            <div id="word-preview-container" class="hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-lg text-gray-800 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                        條碼對照表預覽畫面
+                    </h3>
+                    <span class="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">可直接檢視每位學生各項作業之條碼標籤</span>
+                </div>
+                <div id="word-preview-content" class="border rounded-lg p-4 bg-gray-50 overflow-x-auto max-h-[70vh] custom-scrollbar shadow-inner"></div>
             </div>
         </div>
 
@@ -1470,22 +1520,43 @@ function addTask() {
 
 
         async function exportRawCodes() {
+            if(db.students.length === 0) { alert('尚未建立學生名單'); return; }
             showLoading();
             setTimeout(() => {
                 try {
                     const wb = XLSX.utils.book_new();
-                    let data = [['座號', '姓名', '系統Token', '防偽密碼(Salt)']];
+                    
+                    // Sheet 1: 學生識別代碼
+                    let tokenData = [['座號', '姓名', '系統識別Token', '防偽密碼(Salt)']];
                     db.students.forEach(s => {
-                        data.push([s.id, s.name, s.token, s.salt]);
+                        tokenData.push([s.id, s.name, s.token, s.salt]);
                     });
-                    const ws = XLSX.utils.aoa_to_sheet(data);
-                    XLSX.utils.book_append_sheet(wb, ws, "防偽代碼清單");
-                    XLSX.writeFile(wb, "學生防偽代碼清單.xlsx");
+                    const ws1 = XLSX.utils.aoa_to_sheet(tokenData);
+                    XLSX.utils.book_append_sheet(wb, ws1, "學生防偽代碼");
+
+                    // Sheet 2: 各項作業條碼字串 (純文字條碼內容)
+                    const allTasks = db.tasks;
+                    if(allTasks.length > 0) {
+                        const barcodeHeader = ['座號', '姓名'];
+                        allTasks.forEach(t => barcodeHeader.push(`[${t.subject}] ${t.name}`));
+                        const barcodeData = [barcodeHeader];
+                        db.students.forEach(s => {
+                            const row = [s.id, s.name];
+                            allTasks.forEach(t => {
+                                row.push(getQRText(s, t));
+                            });
+                            barcodeData.push(row);
+                        });
+                        const ws2 = XLSX.utils.aoa_to_sheet(barcodeData);
+                        XLSX.utils.book_append_sheet(wb, ws2, "各項作業條碼字串");
+                    }
+
+                    XLSX.writeFile(wb, "學生防偽代碼與作業條碼清單.xlsx");
                 } catch(e) {
                     alert("匯出失敗: " + e.message);
                 }
                 hideLoading();
-            }, 500);
+            }, 300);
         }
 
         function resetData() {
@@ -1538,8 +1609,8 @@ function addTask() {
             populateSelect('tab3-task-select', floatingTasks);
             toggleNoticeInput();
             
-            // Tab 4
-            renderCheckboxes('tab4-task-checkboxes', allTasks, 'previewWord()', true);
+            // Tab 4 (Tab 5 全班條碼匯出)
+            renderCheckboxes('tab4-task-checkboxes', allTasks, null, true);
             
             // Tab 5
             renderCheckboxes('tab5-task-checkboxes', allTasks, null, true);
@@ -3377,20 +3448,22 @@ function renderStatistics() {
         async function previewWord() {
             const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
             if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
+            if(!db.students || db.students.length === 0) { alert('尚未建立學生名單'); return; }
             
             showLoading();
             setTimeout(async () => {
-                const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id));
-                
-                let tableHtml = '<table class="w-full border-collapse border border-gray-300 text-sm">';
-                tableHtml += '<thead><tr><th class="border border-gray-300 p-2">學生姓名</th>';
-                for (const t of selectedTasks) {
-                    tableHtml += `<th class="border border-gray-300 p-2">[${t.subject}] ${t.name}</th>`;
-                }
-                tableHtml += '</tr></thead><tbody>';
+                try {
+                    const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id)).filter(Boolean);
+                    
+                    let tableHtml = '<table class="w-full border-collapse border border-gray-300 text-sm shadow-sm rounded bg-white">';
+                    tableHtml += '<thead class="bg-gray-100 sticky top-0 z-10 shadow-sm"><tr>';
+                    tableHtml += '<th class="border border-gray-300 p-2.5 text-center w-16 bg-gray-100 font-bold text-gray-700">座號</th>';
+                    tableHtml += '<th class="border border-gray-300 p-2.5 text-center w-24 bg-gray-100 font-bold text-gray-700">姓名</th>';
+                    for (const t of selectedTasks) {
+                        tableHtml += `<th class="border border-gray-300 p-2.5 text-center font-bold text-gray-800 bg-gray-100">[${t.subject}] ${t.name}</th>`;
+                    }
+                    tableHtml += '</tr></thead><tbody>';
 
-                for (const student of db.students) {
-                    tableHtml += `<tr><td class="border border-gray-300 p-2 text-center font-bold">${student.name}</td>`;
                     const cmToPx = 118.11; // 300dpi approx
                     const wCm = parseFloat(document.getElementById('tab4-w').value) || 3.5;
                     const hCm = parseFloat(document.getElementById('tab4-h').value) || 2;
@@ -3400,16 +3473,26 @@ function renderStatistics() {
                     const wCss = Math.floor(wCm * 38);
                     const hCss = Math.floor(hCm * 38);
 
-                    for (const task of selectedTasks) {
-                        const dataUrl = await createLabelImage(student, task, '', true, wPx, hPx);
-                        tableHtml += `<td class="border border-gray-300 p-2 text-center"><img src="${dataUrl}" style="width: ${wCss}px; height: ${hCss}px; margin: 0 auto;"></td>`;
-                    }
-                    tableHtml += '</tr>';
-                }
-                tableHtml += '</tbody></table>';
+                    for (const student of db.students) {
+                        tableHtml += `<tr class="hover:bg-blue-50 transition-colors">`;
+                        tableHtml += `<td class="border border-gray-300 p-2 text-center font-mono font-semibold text-gray-500">${student.id}</td>`;
+                        tableHtml += `<td class="border border-gray-300 p-2 text-center font-bold text-gray-900">${student.name}</td>`;
 
-                document.getElementById('word-preview-content').innerHTML = tableHtml;
-                document.getElementById('word-preview-container').classList.remove('hidden');
+                        for (const task of selectedTasks) {
+                            const dataUrl = await createLabelImage(student, task, '', true, wPx, hPx);
+                            tableHtml += `<td class="border border-gray-300 p-2 text-center align-middle"><img src="${dataUrl}" style="width: ${wCss}px; height: ${hCss}px; margin: 0 auto; display: block;" class="rounded border shadow-sm"></td>`;
+                        }
+                        tableHtml += '</tr>';
+                    }
+                    tableHtml += '</tbody></table>';
+
+                    document.getElementById('word-preview-content').innerHTML = tableHtml;
+                    const container = document.getElementById('word-preview-container');
+                    container.classList.remove('hidden');
+                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } catch(e) {
+                    alert("產生預覽失敗: " + e.message);
+                }
                 hideLoading();
             }, 100);
         }
@@ -3417,42 +3500,83 @@ function renderStatistics() {
         async function generateWord() {
             const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
             if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
-            const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id));
+            if(!db.students || db.students.length === 0) { alert('尚未建立學生名單'); return; }
+            const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id)).filter(Boolean);
 
             showLoading();
             setTimeout(async () => {
                 try {
-                    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, WidthType, BorderStyle } = docx;
+                    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, WidthType, AlignmentType, VerticalAlign, PageOrientation } = docx;
                     
+                    const cmToPx = 118.11; // 300dpi approx
+                    const wCm = parseFloat(document.getElementById('tab4-w').value) || 3.5;
+                    const hCm = parseFloat(document.getElementById('tab4-h').value) || 2;
+                    const wPx = Math.floor(wCm * cmToPx);
+                    const hPx = Math.floor(hCm * cmToPx);
+                    // docx ImageRun uses 1 cm ~ 38 pixels
+                    const docxW = Math.floor(wCm * 38);
+                    const docxH = Math.floor(hCm * 38);
+
                     const rows = [];
-                    // Header
+                    // Header Row: cantSplit + tableHeader (自動跨頁重複標題列)
                     let headerCells = [
-                        new TableCell({ children: [new Paragraph({text: "姓名", bold: true})] }),
+                        new TableCell({
+                            verticalAlign: VerticalAlign.CENTER,
+                            children: [new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                children: [new TextRun({ text: "座號", bold: true, size: 22 })]
+                            })],
+                        }),
+                        new TableCell({
+                            verticalAlign: VerticalAlign.CENTER,
+                            children: [new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                children: [new TextRun({ text: "姓名", bold: true, size: 22 })]
+                            })],
+                        }),
                     ];
                     selectedTasks.forEach(task => {
-                        headerCells.push(new TableCell({ children: [new Paragraph({text: task.name, bold: true})] }));
+                        headerCells.push(new TableCell({
+                            verticalAlign: VerticalAlign.CENTER,
+                            children: [new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                children: [new TextRun({ text: `[${task.subject}] ${task.name}`, bold: true, size: 22 })]
+                            })],
+                        }));
                     });
-                    rows.push(new TableRow({ children: headerCells }));
+                    rows.push(new TableRow({
+                        cantSplit: true,
+                        tableHeader: true,
+                        children: headerCells
+                    }));
 
                     for (const student of db.students) {
                         let studentCells = [
-                            new TableCell({ children: [new Paragraph(student.name)] })
+                            new TableCell({
+                                verticalAlign: VerticalAlign.CENTER,
+                                children: [new Paragraph({
+                                    alignment: AlignmentType.CENTER,
+                                    children: [new TextRun({ text: String(student.id), size: 20 })]
+                                })]
+                            }),
+                            new TableCell({
+                                verticalAlign: VerticalAlign.CENTER,
+                                children: [new Paragraph({
+                                    alignment: AlignmentType.CENTER,
+                                    children: [new TextRun({ text: student.name, bold: true, size: 22 })]
+                                })]
+                            })
                         ];
-                        const cmToPx = 118.11; // 300dpi approx
-                        const wCm = parseFloat(document.getElementById('tab4-w').value) || 3.5;
-                        const hCm = parseFloat(document.getElementById('tab4-h').value) || 2;
-                        const wPx = Math.floor(wCm * cmToPx);
-                        const hPx = Math.floor(hCm * cmToPx);
-                        // docx ImageRun uses EMUs or Pixels? Usually pixels at 72dpi. 1 cm ~ 28.346 pt (or 38 pixels)
-                        const docxW = Math.floor(wCm * 38);
-                        const docxH = Math.floor(hCm * 38);
 
                         for (const task of selectedTasks) {
                             const dataUrl = await createLabelImage(student, task, '', true, wPx, hPx);
                             const base64Data = dataUrl.split(',')[1];
                             studentCells.push(new TableCell({
+                                verticalAlign: VerticalAlign.CENTER,
                                 children: [
                                     new Paragraph({
+                                        alignment: AlignmentType.CENTER,
+                                        spacing: { before: 40, after: 40 },
                                         children: [
                                             new ImageRun({
                                                 data: Uint8Array.from(atob(base64Data), c => c.charCodeAt(0)),
@@ -3464,7 +3588,11 @@ function renderStatistics() {
                             }));
                         }
 
-                        rows.push(new TableRow({ children: studentCells }));
+                        // 每一位學生的表格列均設定 cantSplit: true，Word 排版時若頁尾放不下則自動整列換頁，絕不截斷 QRCode
+                        rows.push(new TableRow({
+                            cantSplit: true,
+                            children: studentCells
+                        }));
                     }
 
                     const table = new Table({
@@ -3472,10 +3600,19 @@ function renderStatistics() {
                         width: { size: 100, type: WidthType.PERCENTAGE },
                     });
 
+                    // 自動判斷寬度：若作業欄位多則自動轉為橫向 (Landscape)，避免被壓縮
+                    const totalEstWidthCm = 1.5 + 2.5 + (selectedTasks.length * wCm);
+                    const isLandscape = totalEstWidthCm > 17;
+
                     const doc = new Document({
                         sections: [{
                             properties: {
                                 page: {
+                                    size: {
+                                        orientation: isLandscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
+                                        width: isLandscape ? 16838 : 11906,
+                                        height: isLandscape ? 11906 : 16838
+                                    },
                                     margin: {
                                         top: 720,
                                         right: 720,
@@ -3486,7 +3623,8 @@ function renderStatistics() {
                             },
                             children: [
                                 new Paragraph({
-                                    children: [new TextRun({ text: "作業條碼對照表", bold: true, size: 32 })],
+                                    spacing: { after: 200 },
+                                    children: [new TextRun({ text: "全班作業條碼對照表", bold: true, size: 32 })],
                                 }),
                                 table,
                             ],
@@ -3497,44 +3635,155 @@ function renderStatistics() {
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = "作業條碼對照表.docx";
+                    a.download = "全班作業條碼對照表.docx";
                     a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
                 } catch(e) {
                     alert("匯出 Word 失敗: " + e.message);
                 }
                 hideLoading();
-            }, 500);
+            }, 300);
         }
 
         async function generateExcelBarcodeTable() {
             const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
             if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
-            const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id));
+            if(!db.students || db.students.length === 0) { alert('尚未建立學生名單'); return; }
+            const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id)).filter(Boolean);
 
             showLoading();
-            setTimeout(() => {
+            setTimeout(async () => {
                 try {
-                    const wb = XLSX.utils.book_new();
-                    const header = ['座號', '姓名'];
-                    selectedTasks.forEach(t => header.push(`[${t.subject}] ${t.name}`));
-                    
-                    const data = [header];
-                    db.students.forEach(s => {
-                        const row = [s.id, s.name];
-                        selectedTasks.forEach(t => {
-                            row.push(getQRText(s, t));
-                        });
-                        data.push(row);
-                    });
+                    const cmToPx = 118.11; // 300dpi approx
+                    const wCm = parseFloat(document.getElementById('tab4-w').value) || 3.5;
+                    const hCm = parseFloat(document.getElementById('tab4-h').value) || 2;
+                    const wPx = Math.floor(wCm * cmToPx);
+                    const hPx = Math.floor(hCm * cmToPx);
 
-                    const ws = XLSX.utils.aoa_to_sheet(data);
-                    XLSX.utils.book_append_sheet(wb, ws, "全班作業條碼表");
-                    XLSX.writeFile(wb, "全班作業條碼對照表.xlsx");
+                    if (window.ExcelJS) {
+                        const workbook = new ExcelJS.Workbook();
+                        const worksheet = workbook.addWorksheet('全班作業條碼表', {
+                            views: [{ showGridLines: true }]
+                        });
+
+                        // Set header columns
+                        const columns = [
+                            { header: '座號', key: 'seat', width: 8 },
+                            { header: '姓名', key: 'name', width: 14 }
+                        ];
+                        // Approximate Excel column width for cm: 1 cm is roughly 5.2 character units
+                        const colWidth = Math.max(16, Math.floor(wCm * 5.5) + 4);
+                        selectedTasks.forEach(t => {
+                            columns.push({
+                                header: `[${t.subject}] ${t.name}`,
+                                key: `task_${t.id}`,
+                                width: colWidth
+                            });
+                        });
+                        worksheet.columns = columns;
+
+                        // Header style
+                        const headerRow = worksheet.getRow(1);
+                        headerRow.height = 28;
+                        headerRow.font = { bold: true, size: 12, color: { argb: 'FF1E293B' } };
+                        headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                        headerRow.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FFF1F5F9' }
+                        };
+
+                        // Calculate row height in Excel points: 1 cm ~ 28.35 pt
+                        const rowHeightPt = Math.floor(hCm * 28.35) + 12;
+                        // Image display size in pixels for excel: 1cm ~ 37.8 pixels
+                        const imgDisplayW = Math.floor(wCm * 37.8);
+                        const imgDisplayH = Math.floor(hCm * 37.8);
+
+                        for (let sIdx = 0; sIdx < db.students.length; sIdx++) {
+                            const student = db.students[sIdx];
+                            const rowIndex = sIdx + 2; // 1-based, header is row 1
+                            const row = worksheet.getRow(rowIndex);
+                            row.height = rowHeightPt;
+                            row.getCell(1).value = student.id;
+                            row.getCell(2).value = student.name;
+                            row.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+                            row.getCell(2).alignment = { vertical: 'middle', horizontal: 'center', font: { bold: true } };
+
+                            for (let tIdx = 0; tIdx < selectedTasks.length; tIdx++) {
+                                const task = selectedTasks[tIdx];
+                                const colIndex = tIdx + 3; // 1-based (1: seat, 2: name, 3+: tasks)
+                                const dataUrl = await createLabelImage(student, task, '', true, wPx, hPx);
+                                const base64Data = dataUrl.split(',')[1];
+                                
+                                const imageId = workbook.addImage({
+                                    base64: base64Data,
+                                    extension: 'png',
+                                });
+
+                                // Place image inside the cell
+                                worksheet.addImage(imageId, {
+                                    tl: { col: colIndex - 1 + 0.05, row: rowIndex - 1 + 0.08 },
+                                    ext: { width: imgDisplayW, height: imgDisplayH },
+                                    editAs: 'oneCell'
+                                });
+                            }
+                        }
+
+                        // Add cell borders
+                        worksheet.eachRow((row, rowNumber) => {
+                            row.eachCell((cell) => {
+                                cell.border = {
+                                    top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                                    left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                                    bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                                    right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+                                };
+                            });
+                        });
+
+                        const buffer = await workbook.xlsx.writeBuffer();
+                        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = "全班作業條碼對照表.xlsx";
+                        a.click();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    } else {
+                        // Fallback: HTML Spreadsheet .xls
+                        let tableHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>table{border-collapse:collapse;} th,td{border:0.5pt solid #cbd5e1;padding:8px;text-align:center;vertical-align:middle;} th{background-color:#f1f5f9;font-weight:bold;}</style></head><body><table>`;
+                        tableHtml += '<thead><tr><th>座號</th><th>姓名</th>';
+                        for (const t of selectedTasks) {
+                            tableHtml += `<th>[${t.subject}] ${t.name}</th>`;
+                        }
+                        tableHtml += '</tr></thead><tbody>';
+
+                        const wCss = Math.floor(wCm * 38);
+                        const hCss = Math.floor(hCm * 38);
+
+                        for (const student of db.students) {
+                            tableHtml += `<tr><td>${student.id}</td><td><b>${student.name}</b></td>`;
+                            for (const task of selectedTasks) {
+                                const dataUrl = await createLabelImage(student, task, '', true, wPx, hPx);
+                                tableHtml += `<td><img src="${dataUrl}" width="${wCss}" height="${hCss}"></td>`;
+                            }
+                            tableHtml += '</tr>';
+                        }
+                        tableHtml += '</tbody></table></body></html>';
+
+                        const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = "全班作業條碼對照表.xls";
+                        a.click();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }
                 } catch(e) {
                     alert("匯出 Excel 失敗: " + e.message);
                 }
                 hideLoading();
-            }, 300);
+            }, 100);
         }
 
         let currentCanvasDataUrl = null;
