@@ -1522,41 +1522,143 @@ function addTask() {
         async function exportRawCodes() {
             if(db.students.length === 0) { alert('尚未建立學生名單'); return; }
             showLoading();
-            setTimeout(() => {
+            setTimeout(async () => {
                 try {
-                    const wb = XLSX.utils.book_new();
-                    
-                    // Sheet 1: 學生識別代碼
-                    let tokenData = [['座號', '姓名', '系統識別Token', '防偽密碼(Salt)']];
-                    db.students.forEach(s => {
-                        tokenData.push([s.id, s.name, s.token, s.salt]);
-                    });
-                    const ws1 = XLSX.utils.aoa_to_sheet(tokenData);
-                    XLSX.utils.book_append_sheet(wb, ws1, "學生防偽代碼");
-
-                    // Sheet 2: 各項作業條碼字串 (純文字條碼內容)
-                    const allTasks = db.tasks;
-                    if(allTasks.length > 0) {
-                        const barcodeHeader = ['座號', '姓名'];
-                        allTasks.forEach(t => barcodeHeader.push(`[${t.subject}] ${t.name}`));
-                        const barcodeData = [barcodeHeader];
+                    if (window.ExcelJS) {
+                        const workbook = new ExcelJS.Workbook();
+                        
+                        // Sheet 1: 學生識別代碼
+                        const ws1 = workbook.addWorksheet('學生防偽代碼');
+                        ws1.columns = [
+                            { header: '座號', key: 'id', width: 10 },
+                            { header: '姓名', key: 'name', width: 15 },
+                            { header: '系統識別Token', key: 'token', width: 25 },
+                            { header: '防偽密碼(Salt)', key: 'salt', width: 20 }
+                        ];
+                        ws1.getRow(1).font = { bold: true };
+                        ws1.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+                        
                         db.students.forEach(s => {
-                            const row = [s.id, s.name];
-                            allTasks.forEach(t => {
-                                row.push(getQRText(s, t));
-                            });
-                            barcodeData.push(row);
+                            ws1.addRow({ id: s.id, name: s.name, token: s.token, salt: s.salt });
                         });
-                        const ws2 = XLSX.utils.aoa_to_sheet(barcodeData);
-                        XLSX.utils.book_append_sheet(wb, ws2, "各項作業條碼字串");
-                    }
 
-                    XLSX.writeFile(wb, "學生防偽代碼與作業條碼清單.xlsx");
+                        // Sheet 2: 各項作業條碼清單 (圖 + 代碼)
+                        const allTasks = db.tasks;
+                        if(allTasks.length > 0) {
+                            const ws2 = workbook.addWorksheet('作業條碼清單(圖與代碼)');
+                            
+                            const columns = [
+                                { header: '座號', key: 'id', width: 8 },
+                                { header: '姓名', key: 'name', width: 14 }
+                            ];
+                            
+                            const wCm = 3.5;
+                            const hCm = 2.0;
+                            const cmToPx = 118.11;
+                            const wPx = Math.floor(wCm * cmToPx);
+                            const hPx = Math.floor(hCm * cmToPx);
+                            const colImgWidth = Math.max(16, Math.floor(wCm * 5.5) + 4);
+                            
+                            allTasks.forEach(t => {
+                                columns.push({ header: `[${t.subject}] ${t.name} (圖)`, key: `img_${t.id}`, width: colImgWidth });
+                                columns.push({ header: `[${t.subject}] ${t.name} (代碼)`, key: `code_${t.id}`, width: 30 });
+                            });
+                            ws2.columns = columns;
+                            
+                            const headerRow = ws2.getRow(1);
+                            headerRow.height = 25;
+                            headerRow.font = { bold: true };
+                            headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+                            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+                            const rowHeightPt = Math.floor(hCm * 28.35) + 12;
+                            const imgDisplayW = Math.floor(wCm * 37.8);
+                            const imgDisplayH = Math.floor(hCm * 37.8);
+
+                            for (let sIdx = 0; sIdx < db.students.length; sIdx++) {
+                                const student = db.students[sIdx];
+                                const rowIndex = sIdx + 2;
+                                const row = ws2.getRow(rowIndex);
+                                row.height = rowHeightPt;
+                                
+                                row.getCell(1).value = student.id;
+                                row.getCell(2).value = student.name;
+                                row.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+                                row.getCell(2).alignment = { vertical: 'middle', horizontal: 'center', font: { bold: true } };
+
+                                for (let tIdx = 0; tIdx < allTasks.length; tIdx++) {
+                                    const task = allTasks[tIdx];
+                                    const colImgIndex = 3 + (tIdx * 2);
+                                    const colCodeIndex = 4 + (tIdx * 2);
+                                    
+                                    // 填寫代碼
+                                    const codeCell = row.getCell(colCodeIndex);
+                                    codeCell.value = getQRText(student, task);
+                                    codeCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+                                    codeCell.font = { name: 'Courier New', size: 9 };
+
+                                    // 產生並插入圖片
+                                    const dataUrl = await createLabelImage(student, task, '', true, wPx, hPx);
+                                    const base64Data = dataUrl.split(',')[1];
+                                    const imageId = workbook.addImage({ base64: base64Data, extension: 'png' });
+                                    
+                                    ws2.addImage(imageId, {
+                                        tl: { col: colImgIndex - 1 + 0.05, row: rowIndex - 1 + 0.08 },
+                                        ext: { width: imgDisplayW, height: imgDisplayH },
+                                        editAs: 'oneCell'
+                                    });
+                                }
+                            }
+                            
+                            // 畫邊框
+                            ws2.eachRow((row) => {
+                                row.eachCell((cell) => {
+                                    cell.border = {
+                                        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                                        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                                        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                                        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+                                    };
+                                });
+                            });
+                        }
+                        
+                        const buffer = await workbook.xlsx.writeBuffer();
+                        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = "學生防偽代碼與作業條碼清單.xlsx";
+                        a.click();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    } else {
+                        // Fallback to basic SheetJS without images if ExcelJS fails to load
+                        const wb = XLSX.utils.book_new();
+                        let tokenData = [['座號', '姓名', '系統識別Token', '防偽密碼(Salt)']];
+                        db.students.forEach(s => tokenData.push([s.id, s.name, s.token, s.salt]));
+                        const ws1 = XLSX.utils.aoa_to_sheet(tokenData);
+                        XLSX.utils.book_append_sheet(wb, ws1, "學生防偽代碼");
+
+                        const allTasks = db.tasks;
+                        if(allTasks.length > 0) {
+                            const barcodeHeader = ['座號', '姓名'];
+                            allTasks.forEach(t => barcodeHeader.push(`[${t.subject}] ${t.name}`));
+                            const barcodeData = [barcodeHeader];
+                            db.students.forEach(s => {
+                                const row = [s.id, s.name];
+                                allTasks.forEach(t => row.push(getQRText(s, t)));
+                                barcodeData.push(row);
+                            });
+                            const ws2 = XLSX.utils.aoa_to_sheet(barcodeData);
+                            XLSX.utils.book_append_sheet(wb, ws2, "各項作業條碼字串");
+                        }
+                        XLSX.writeFile(wb, "學生防偽代碼與作業條碼清單.xlsx");
+                    }
                 } catch(e) {
                     alert("匯出失敗: " + e.message);
                 }
                 hideLoading();
-            }, 300);
+            }, 100);
         }
 
         function resetData() {
