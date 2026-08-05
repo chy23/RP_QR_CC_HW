@@ -408,9 +408,10 @@
                 <!-- 學生管理 -->
                 <div class="border p-4 rounded bg-gray-50">
                     <h3 class="text-xl font-semibold mb-2">學生管理</h3>
-                    <div class="flex mb-2">
-                        <input type="text" id="new-student-name" placeholder="學生姓名" class="border p-2 mr-2 flex-grow rounded">
-                        <button onclick="addStudent()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">新增</button>
+                    <div class="flex mb-2 gap-2">
+                        <input type="number" id="new-student-id" placeholder="座號 (自動)" min="1" class="border p-2 w-28 rounded">
+                        <input type="text" id="new-student-name" placeholder="學生姓名" class="border p-2 flex-grow rounded">
+                        <button onclick="addStudent()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow">新增</button>
                     </div>
                     <div class="flex flex-col md:flex-row gap-2 mb-2">
                         <button onclick="batchAddStudents()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4">預設新增 25 人</button>
@@ -1264,14 +1265,37 @@
             ].filter(Boolean);
             return parts.length > 0 ? parts.join('_') + "_" : "";
         }
-function addStudent() {
+        function addStudent() {
+            const idInput = document.getElementById('new-student-id');
             const nameInput = document.getElementById('new-student-name');
             const name = nameInput.value.trim();
             if (!name) return;
-            const newId = db.students.length > 0 ? Math.max(...db.students.map(s => s.id)) + 1 : 1;
+            
+            let newId;
+            if (idInput && idInput.value.trim() !== '') {
+                newId = parseInt(idInput.value, 10);
+                if (isNaN(newId) || newId <= 0) {
+                    alert('請輸入有效的座號！');
+                    return;
+                }
+                const existingIdx = db.students.findIndex(s => s.id === newId);
+                if (existingIdx !== -1) {
+                    if(!confirm(`座號 ${newId} 已經存在（${db.students[existingIdx].name}），是否要覆蓋該學生資料？`)) {
+                        return;
+                    }
+                    db.students.splice(existingIdx, 1);
+                }
+            } else {
+                newId = db.students.length > 0 ? Math.max(...db.students.map(s => s.id)) + 1 : 1;
+            }
+
             const token = `STU${String(newId).padStart(3, '0')}`;
             db.students.push({ id: newId, name, token, salt: generateSalt() });
+            db.students.sort((a, b) => a.id - b.id);
+            
             nameInput.value = '';
+            if(idInput) idInput.value = '';
+            
             saveData();
             renderStudents();
         }
