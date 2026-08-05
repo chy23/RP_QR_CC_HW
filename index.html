@@ -1568,21 +1568,36 @@ function addStudent() {
                         return;
                     }
 
-                    // 尋找姓名欄位索引。如果有表頭包含「姓名」，就抓那欄；否則預設抓第一欄 (index 0)
-                    let nameColIndex = 0;
+                    // 尋找姓名與座號欄位索引
+                    let nameColIndex = -1;
                     let seatColIndex = -1;
                     let startIndex = 0;
                     
                     const headerRow = json[0];
                     const nameHeaderIndex = headerRow.findIndex(cell => typeof cell === 'string' && cell.includes('姓名'));
-                    if (nameHeaderIndex !== -1) {
-                        nameColIndex = nameHeaderIndex;
-                        startIndex = 1; // 跳過表頭
-                    }
                     const seatHeaderIndex = headerRow.findIndex(cell => typeof cell === 'string' && cell.includes('座號'));
-                    if (seatHeaderIndex !== -1) {
-                        seatColIndex = seatHeaderIndex;
+
+                    if (nameHeaderIndex !== -1 || seatHeaderIndex !== -1) {
+                        // 有明確表頭
+                        if (nameHeaderIndex !== -1) nameColIndex = nameHeaderIndex;
+                        if (seatHeaderIndex !== -1) seatColIndex = seatHeaderIndex;
+                        startIndex = 1; // 跳過表頭
+                    } else {
+                        // 無明確表頭，用第一筆資料推測
+                        const firstDataRow = json[0];
+                        if (firstDataRow && firstDataRow.length > 0) {
+                            // 如果第一欄是數字，則認為第一欄是座號，第二欄是姓名
+                            if (!isNaN(parseInt(firstDataRow[0]))) {
+                                seatColIndex = 0;
+                                nameColIndex = firstDataRow.length > 1 ? 1 : 0;
+                            } else {
+                                // 否則認為第一欄是姓名
+                                nameColIndex = 0;
+                            }
+                        }
                     }
+
+                    if (nameColIndex === -1) nameColIndex = 0; // 最終防呆
 
                     let addedCount = 0;
                     let startId = db.students.length > 0 ? Math.max(...db.students.map(s => s.id)) + 1 : 1;
@@ -1615,7 +1630,7 @@ function addStudent() {
 
                     saveData();
                     renderStudents();
-                    alert(`成功匯入 ${addedCount} 位學生！`);
+                    alert(`成功匯入 ${addedCount} 位學生！(系統已自動識別${seatColIndex !== -1 ? '座號與姓名並處理跳號' : '姓名'})`);
                 } catch(err) {
                     console.error(err);
                     alert("讀取檔案失敗，請確定格式正確。");
@@ -3510,7 +3525,7 @@ function renderStatistics() {
             const margin = customH * 0.05;
             const qrSize = customH - (margin * 2);
             
-            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: qrSize, errorCorrectionLevel: 'L' });
+            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: qrSize, errorCorrectionLevel: 'L', color: { dark: '#000000', light: '#ffffff' } });
             
             return new Promise((resolve) => {
                 const img = new Image();
@@ -3577,7 +3592,7 @@ function renderStatistics() {
             const qrStartY = customW * 0.2;
             const qrSize = customW - (margin * 2);
             
-            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: qrSize, errorCorrectionLevel: 'L' });
+            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: qrSize, errorCorrectionLevel: 'L', color: { dark: '#000000', light: '#ffffff' } });
             
             return new Promise((resolve) => {
                 const img = new Image();
@@ -4231,7 +4246,7 @@ function renderStatistics() {
                         const folder = zip.folder(student.name);
                         for (const task of db.tasks) {
                             const qrText = getQRText(student, task);
-                            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 300, errorCorrectionLevel: 'L' });
+                            const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 300, errorCorrectionLevel: 'L', color: { dark: '#000000', light: '#ffffff' } });
                             const base64Data = qrDataUrl.split(',')[1];
                             folder.file(`${student.name}_${task.name}.png`, base64Data, {base64: true});
                         }
