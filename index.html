@@ -118,52 +118,47 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Ver 1.16 -->
-                <div class="border-l-4 border-blue-500 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>正式版 Ver. 1.1 / 正式版 Ver. 1.1</span>
+                <!-- Ver 1.1 Major Release -->
+                <div class="border-l-4 border-blue-600 pl-4 py-1 bg-blue-50/40 rounded-r-lg p-2">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-2">
+                        <span class="flex items-center gap-2">
+                            <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded font-bold">重大改版</span>
+                            正式版 Ver. 1.1
+                        </span>
                         <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
                     </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>新增網站右上角「<span class="font-semibold text-blue-600">更新紀錄</span>」功能面板，即時查閱各版本最新更新歷史。</li>
-                        <li>於頁面右上與右下加入 18 點字、25% 透明度灰色浮水印「網站建立自楊家驊老師」，並優化位置避免遮擋介面。</li>
-                        <li>修復「從雲端匯入」時因背景腳本引起的讀取轉圈與當機問題。</li>
-                    </ul>
-                </div>
-                <!-- Ver 1.14 -->
-                <div class="border-l-4 border-indigo-400 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.14</span>
-                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/01</span>
+                    <div class="space-y-3 text-gray-700">
+                        <div>
+                            <div class="font-semibold text-blue-900 mb-1 flex items-center gap-1">
+                                <span>⚡</span> 相機與掃描效能重大躍升
+                            </div>
+                            <ul class="list-disc list-inside space-y-0.5 text-gray-600 ml-1 text-xs md:text-sm">
+                                <li><strong>全新多碼連續掃描技術</strong>：支援原生 BarcodeDetector 與全新 jsQR 6 區域網格平行切割掃描雙核心引擎，相機畫面能同時偵測並瞬間連掃多張條碼，無需再反覆抬移載具。</li>
+                                <li><strong>高畫質鏡頭與穩定度提升</strong>：全面優化對焦與影像處理，提升低光源與微距辨識速度。</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-blue-900 mb-1 flex items-center gap-1">
+                                <span>📊</span> 雲端試算表雙向同步與統計報表
+                            </div>
+                            <ul class="list-disc list-inside space-y-0.5 text-gray-600 ml-1 text-xs md:text-sm">
+                                <li><strong>自動生成「統計報表」分頁</strong>：同步時自動計算全科目與各項作業之繳交率、準時率、缺交率，並自動豁免假別分母。</li>
+                                <li><strong>聯絡簿支援「遲到」假別</strong>：新增遲到狀態記錄並納入雲端獨立遲到率統計。</li>
+                                <li><strong>雙向智慧資料同步</strong>：以雲端試算表為主要來源同步回傳至網頁，並強化雲端匯入還原機制。</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-blue-900 mb-1 flex items-center gap-1">
+                                <span>🎨</span> 介面優化與系統防護
+                            </div>
+                            <ul class="list-disc list-inside space-y-0.5 text-gray-600 ml-1 text-xs md:text-sm">
+                                <li>新增版權浮水印「網站建立自楊家驊老師」，並優化位置避免與介面按鈕重疊。</li>
+                                <li>新增右上角「<strong>更新紀錄</strong>」彈出視窗，隨時查閱系統版本功能歷程。</li>
+                            </ul>
+                        </div>
                     </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>新增 jsQR 6 區域網格平行切割掃描（Emulated Multi-Scan），解決 iOS Safari 無法使用原生多碼 API 的問題。</li>
-                        <li>優化相機啟動流程與幀率處理，大幅提升手機鏡頭連續掃描辨識率。</li>
-                    </ul>
                 </div>
-                <!-- Ver 1.13 -->
-                <div class="border-l-4 border-indigo-300 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.13</span>
-                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/01</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>Google 試算表同步新增「統計報表」自動統計分頁（計算繳交率、準時率、缺交率及假別比率）。</li>
-                        <li>聯絡簿增加「遲到」假別狀態記錄與獨立遲到率統計。</li>
-                    </ul>
-                </div>
-                <!-- Ver 1.11 - 1.12 -->
-                <div class="border-l-4 border-gray-300 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.11 ~ 1.12</span>
-                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/01</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>相機支援多重條碼掃描功能（Native BarcodeDetector / ZXing 雙架構支援）。</li>
-                        <li>正式版與 Beta 版資料獨立隔離儲存（BETA_ 前綴），避免測試干擾正式資料。</li>
-                        <li>試算表雙向智慧同步（以試算表變更為主要來源更新網頁暫存）。</li>
-                    </ul>
-                </div>
+
                 <!-- Ver 1.0 -->
                 <div class="border-l-4 border-gray-200 pl-4 py-1">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
