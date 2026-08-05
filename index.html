@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.18)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.19)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -120,6 +120,17 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
+                <!-- Ver 1.19 -->
+                <div class="border-l-4 border-blue-500 pl-4 py-1">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.19</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li>調整「全班條碼匯出」頁籤標題為簡潔的「<span class="font-semibold text-blue-600">全班條碼匯出</span>」。</li>
+                        <li>於「全班條碼匯出」新增 <span class="font-semibold text-emerald-600">Excel 格式 (.xlsx)</span> 匯出功能，支援同時提供 Word 與 Excel 兩種格式。</li>
+                    </ul>
+                </div>
                 <!-- Ver 1.18 -->
                 <div class="border-l-4 border-blue-500 pl-4 py-1">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
@@ -211,7 +222,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.18</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.19</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
@@ -528,17 +539,17 @@
             </div>
         </div>
 
-        <!-- Tab 5: 全班條碼匯出 (Word / 清單) -->
+        <!-- Tab 5: 全班條碼匯出 -->
         <div id="tab-5" class="tab-content bg-white p-6 rounded-b shadow">
             <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. 全班條碼匯出</h2>
-            <p class="mb-3 text-gray-600">可下載全班二維條碼對照表（Word 檔，左側為學生，右側為各項作業條碼），或直接匯出學生防偽代碼清單（Excel 檔）。</p>
+            <p class="mb-3 text-gray-600">產生全班作業條碼對照表（左側為學生，右側為各項作業防偽條碼），支援匯出 Word 與 Excel 格式；亦可直接下載學生防偽代碼清單。</p>
             <div class="mb-4 flex flex-col md:flex-row gap-4">
                 <div class="w-full md:w-1/2">
                     <label class="block mb-2 text-lg font-bold text-gray-800">選擇要產生的作業 (可多選)：</label>
                     <div id="tab4-task-checkboxes" class="border p-2 rounded w-full h-64 overflow-y-auto bg-gray-50"></div>
                 </div>
                 <div class="w-full md:w-1/2">
-                    <label class="block mb-2 text-lg font-bold text-gray-800">單張標籤尺寸 (公分)：</label>
+                    <label class="block mb-2 text-lg font-bold text-gray-800">單張標籤尺寸 (公分，Word 適用)：</label>
                     <div class="flex gap-2 mb-2">
                         <input type="number" id="tab4-w" value="3.5" step="0.1" class="border p-2 rounded w-1/2" placeholder="寬度(cm)" oninput="previewWord()">
                         <input type="number" id="tab4-h" value="2" step="0.1" class="border p-2 rounded w-1/2" placeholder="高度 (cm)" oninput="previewWord()">
@@ -549,11 +560,15 @@
             <div class="flex flex-wrap items-center gap-3">
                 <button onclick="generateWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded shadow font-bold flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    下載全班條碼表 (Word 檔)
+                    下載 Word 檔 (.docx)
+                </button>
+                <button onclick="generateExcelBarcodeTable()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded shadow font-bold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    下載 Excel 檔 (.xlsx)
                 </button>
                 <button onclick="exportRawCodes()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded shadow font-bold flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    匯出學生防偽代碼清單 (Excel 檔)
+                    匯出學生防偽代碼清單 (Excel)
                 </button>
             </div>
             <div id="word-preview-container" class="mt-4 hidden border rounded p-4 bg-gray-50 overflow-x-auto">
@@ -3489,6 +3504,37 @@ function renderStatistics() {
                 }
                 hideLoading();
             }, 500);
+        }
+
+        async function generateExcelBarcodeTable() {
+            const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
+            if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
+            const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id));
+
+            showLoading();
+            setTimeout(() => {
+                try {
+                    const wb = XLSX.utils.book_new();
+                    const header = ['座號', '姓名'];
+                    selectedTasks.forEach(t => header.push(`[${t.subject}] ${t.name}`));
+                    
+                    const data = [header];
+                    db.students.forEach(s => {
+                        const row = [s.id, s.name];
+                        selectedTasks.forEach(t => {
+                            row.push(getQRText(s, t));
+                        });
+                        data.push(row);
+                    });
+
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+                    XLSX.utils.book_append_sheet(wb, ws, "全班作業條碼表");
+                    XLSX.writeFile(wb, "全班作業條碼對照表.xlsx");
+                } catch(e) {
+                    alert("匯出 Excel 失敗: " + e.message);
+                }
+                hideLoading();
+            }, 300);
         }
 
         let currentCanvasDataUrl = null;
