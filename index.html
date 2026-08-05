@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.21)</title>
+    <title>QRcode自動清點作業系統 (Ver. 2.0)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -121,110 +121,23 @@
                 </div>
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Ver 1.21 -->
+                <!-- Ver 2.0 -->
                 <div class="border-l-4 border-blue-500 pl-4 py-1">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.21</span>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
+                        <span>Ver. 2.0 (重大更新)</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>優化全班條碼匯出 Word 分頁保護機制：表格列全面啟用 <span class="font-semibold text-blue-600">禁止跨頁斷行 (cantSplit)</span>，確保每位學生的 QR Code 標籤不會被跨頁切斷；標題列自動跨頁重複顯示 (tableHeader)，作業欄位過多時自動以橫向頁面 (Landscape) 排版。</li>
-                    </ul>
-                </div>
-                <!-- Ver 1.20 -->
-                <div class="border-l-4 border-blue-500 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.20</span>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>優化全班條碼匯出互動流程：使用者點選作業與設定尺寸後，點擊「預覽條碼對照表」按鈕才進行生成呈現，避免點選時頻繁重新計算與轉圈。</li>
-                        <li>於「全班條碼匯出」加入「全選 / 全不選」快速選取作業按鈕。</li>
-                    </ul>
-                </div>
-                <!-- Ver 1.19 -->
-                <div class="border-l-4 border-blue-500 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.19</span>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>調整「全班條碼匯出」頁籤標題為簡潔的「<span class="font-semibold text-blue-600">全班條碼匯出</span>」。</li>
-                        <li>於「全班條碼匯出」新增 <span class="font-semibold text-emerald-600">Excel 格式 (.xlsx)</span> 匯出功能，支援同時提供 Word 與 Excel 兩種格式。</li>
-                    </ul>
-                </div>
-                <!-- Ver 1.18 -->
-                <div class="border-l-4 border-blue-500 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.18</span>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>整合功能：將「學生防偽代碼清單 (Excel)」下載功能移至「<span class="font-semibold text-blue-600">5. 全班條碼匯出</span>」頁籤，集中管理全班條碼與資料匯出。</li>
-                    </ul>
-                </div>
-                <!-- Ver 1.17 -->
-                <div class="border-l-4 border-indigo-400 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.17</span>
-                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/05</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>調整功能名稱：「Word條碼」更名為「<span class="font-semibold text-blue-600">全班條碼匯出</span>」。</li>
-                        <li>調整功能名稱：「批次標籤」更名為「<span class="font-semibold text-blue-600">部分學生條碼匯出</span>」。</li>
-                    </ul>
-                </div>
-                <!-- Ver 1.16 -->
-                <div class="border-l-4 border-indigo-400 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.16</span>
-                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/05</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>新增網站右上角「<span class="font-semibold text-blue-600">更新紀錄</span>」功能面板，即時查閱各版本最新更新歷史。</li>
-                        <li>於頁面右上與右下加入 18 點字、25% 透明度灰色浮水印「網站建立自楊家驊老師」，並優化位置避免遮擋介面。</li>
-                        <li>修復「從雲端匯入」時因背景腳本引起的讀取轉圈與當機問題。</li>
-                    </ul>
-                </div>
-                <!-- Ver 1.14 -->
-                <div class="border-l-4 border-indigo-400 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.14</span>
-                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/01</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>新增 jsQR 6 區域網格平行切割掃描（Emulated Multi-Scan），解決 iOS Safari 無法使用原生多碼 API 的問題。</li>
-                        <li>優化相機啟動流程與幀率處理，大幅提升手機鏡頭連續掃描辨識率。</li>
-                    </ul>
-                </div>
-                <!-- Ver 1.13 -->
-                <div class="border-l-4 border-indigo-300 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.13</span>
-                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/01</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>Google 試算表同步新增「統計報表」自動統計分頁（計算繳交率、準時率、缺交率及假別比率）。</li>
-                        <li>聯絡簿增加「遲到」假別狀態記錄與獨立遲到率統計。</li>
-                    </ul>
-                </div>
-                <!-- Ver 1.11 - 1.12 -->
-                <div class="border-l-4 border-gray-300 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.11 ~ 1.12</span>
-                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/01</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>相機支援多重條碼掃描功能（Native BarcodeDetector / ZXing 雙架構支援）。</li>
-                        <li>正式版與 Beta 版資料獨立隔離儲存（BETA_ 前綴），避免測試干擾正式資料。</li>
-                        <li>試算表雙向智慧同步（以試算表變更為主要來源更新網頁暫存）。</li>
+                        <li>全面升級掃描引擎，加入 jsQR 6 區域網格平行切割掃描，大幅提升連續掃描效能，並解決 iOS Safari 限制。</li>
+                        <li>自動排版與匯出強化：支援全班條碼與學生防偽代碼 Excel (.xlsx) / Word (.docx) 一鍵匯出，內嵌圖片並自動處理寬高分頁。</li>
+                        <li>Google 試算表雙向同步強化，自動新增統計報表（計算繳交率、遲到率等）並將試算表變更即時回傳。</li>
+                        <li>操作介面優化：新增「更新紀錄」功能面板、一鍵全選作業按鈕，以及優化匯出預覽動線。</li>
                     </ul>
                 </div>
                 <!-- Ver 1.0 -->
                 <div class="border-l-4 border-gray-200 pl-4 py-1">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>正式版 Ver. 1.0</span>
+                        <span>Ver. 1.0</span>
                         <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/07</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
@@ -245,7 +158,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.21</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-gray-500 font-bold tracking-wide">Ver. 2.0</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
