@@ -1955,14 +1955,11 @@ function addTask() {
             populateSelect('tab3-task-select', floatingTasks);
             toggleNoticeInput();
             
-            // Tab 4 (Tab 5 全班條碼匯出)
+            // Tab 4: 條碼匯出與列印
             renderCheckboxes('tab4-task-checkboxes', allTasks, null, true);
-            
-            // Tab 5
-            renderCheckboxes('tab5-task-checkboxes', allTasks, null, true);
-            const tab5StudentCheckboxes = document.getElementById('tab5-student-checkboxes');
-            if(tab5StudentCheckboxes) {
-                tab5StudentCheckboxes.innerHTML = db.students.map(s => `
+            const tab4StudentCheckboxes = document.getElementById('tab4-student-checkboxes');
+            if(tab4StudentCheckboxes) {
+                tab4StudentCheckboxes.innerHTML = db.students.map(s => `
                     <label class="flex items-center space-x-3 p-2 border-b last:border-0 hover:bg-blue-50 cursor-pointer transition-colors rounded">
                         <input type="checkbox" value="${s.id}" class="h-5 w-5 cursor-pointer rounded text-blue-600" checked>
                         <span class="text-base font-semibold text-gray-700 select-none">${s.name} <span class="text-gray-400 font-normal text-sm">(${s.id}號)</span></span>
@@ -4142,7 +4139,7 @@ function renderStatistics() {
             if(!container) return;
             container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
                 const task = db.tasks.find(t => t.id === cb.value);
-                if (task && task.subject === subject) {
+                if (task && task.subject === subject && task.type === 'fixed') {
                     cb.checked = true;
                 }
             });
