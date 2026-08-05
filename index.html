@@ -1298,6 +1298,10 @@
             
             saveData();
             renderStudents();
+            
+            setTimeout(() => {
+                alert("新增成功！\n\n若您有設定 Google 雲端同步，請記得點選右方「備份至雲端」按鈕，以確保最新名單同步至試算表中。");
+            }, 100);
         }
 
         function batchAddStudents() {
@@ -1678,9 +1682,10 @@
             list.innerHTML = '';
             db.students.forEach(s => {
                 const li = document.createElement('li');
-                li.className = 'flex justify-between items-center py-1 border-b last:border-0';
-                li.innerHTML = `<span class="font-mono text-blue-600 w-20">${s.token}</span>
-                                <span class="flex-grow">${s.name}</span>
+                li.className = 'flex justify-between items-center py-1 border-b last:border-0 hover:bg-gray-50';
+                li.innerHTML = `<span class="font-mono text-gray-500 w-12 text-right pr-2">${s.id}.</span>
+                                <span class="font-mono text-blue-600 w-24">${s.token}</span>
+                                <span class="flex-grow font-medium text-gray-800">${s.name}</span>
                                 <button onclick="removeStudent(${s.id})" class="text-red-500 hover:text-red-700 text-sm px-2">刪除</button>`;
                 list.appendChild(li);
             });
