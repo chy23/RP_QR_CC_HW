@@ -367,8 +367,14 @@
             </div>
             <div id="help-tab0" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
                 <button onclick="document.getElementById('help-tab0').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
-                <ul class="list-disc list-inside space-y-1.5">
-                    <li>直接在 google 試算表建立「學生名單管理」，設定 Apps Script 從雲端下載，再填寫班級資訊並備份雲端。</li>
+                <ul class="list-disc list-outside ml-4 space-y-1.5">
+                    <li>
+                        直接在 Google 試算表建立「學生名單管理」，設定 Apps Script 從雲端下載，再填寫班級資訊並備份雲端。
+                        <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'flex'" class="text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer inline-flex items-center ml-1">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            查看詳細設定教學與程式碼
+                        </button>
+                    </li>
                 </ul>
             </div>
             
@@ -470,13 +476,7 @@
                     <button onclick="saveGasUrl()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">儲存網址</button>
                     <button onclick="testGasUrl()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">測試連線</button>
                 </div>
-                <div class="mt-2">
-                    <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'flex'" class="text-indigo-600 hover:text-indigo-800 text-sm font-bold underline cursor-pointer flex items-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        點此查看 Google 試算表設定教學與程式碼
-                    </button>
-                </div>
-                <div id="gas-status" class="text-sm font-bold"></div>
+                <div id="gas-status" class="text-sm font-bold mt-2"></div>
             </div>
             <div class="mt-6 flex justify-end">
                 <button onclick="resetData()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm">清除所有系統資料</button>
