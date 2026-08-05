@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.33)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.34)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -189,6 +189,16 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
+                <!-- Beta Ver 1.34 -->
+                <div class="border-l-4 border-emerald-600 pl-4 py-1">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.34</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>固定簿冊標籤優化：</strong>在「3. 固定簿冊標籤 (PDF)」區塊新增了【全選】、【全不選】以及【國語】、【數學】、【社會】的科目快速選取按鈕，方便老師按科目批次印製整學期作業本標籤。</li>
+                    </ul>
+                </div>
                 <!-- Beta Ver 1.33 -->
                 <div class="border-l-4 border-emerald-600 pl-4 py-1">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
@@ -356,7 +366,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.33</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.34</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
@@ -663,7 +673,16 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label class="block mb-2 text-lg font-bold text-gray-800">選擇固定作業 (可多選)：</label>
+                    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+                        <label class="block text-lg font-bold text-gray-800">選擇固定作業 (可多選)：</label>
+                        <div class="flex gap-1.5 flex-wrap">
+                            <button onclick="selectAllStudents('tab2-task-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全選</button>
+                            <button onclick="deselectAllStudents('tab2-task-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全不選</button>
+                            <button onclick="selectSubjectTasks('tab2-task-checkboxes', '國語')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium whitespace-nowrap">國語</button>
+                            <button onclick="selectSubjectTasks('tab2-task-checkboxes', '數學')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium whitespace-nowrap">數學</button>
+                            <button onclick="selectSubjectTasks('tab2-task-checkboxes', '社會')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium whitespace-nowrap">社會</button>
+                        </div>
+                    </div>
                     <div id="tab2-task-checkboxes" class="border p-2 rounded w-full h-64 overflow-y-auto bg-gray-50 mb-2"></div>
                 </div>
                 <div>
@@ -4241,6 +4260,16 @@ function renderStatistics() {
             container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
                 const task = db.tasks.find(t => t.id === cb.value);
                 cb.checked = (task && task.type === 'fixed');
+            });
+        }
+        function selectSubjectTasks(containerId, subject) {
+            const container = document.getElementById(containerId);
+            if(!container) return;
+            container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                const task = db.tasks.find(t => t.id === cb.value);
+                if (task && task.subject === subject) {
+                    cb.checked = true;
+                }
             });
         }
         function getCheckedStudentIds(containerId) {
