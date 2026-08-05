@@ -1225,8 +1225,13 @@
         // UI 工具
         // ==========================================
         function switchTab(tabIndex) {
-            document.querySelectorAll('.tab-content').forEach((el, idx) => el.classList.toggle('active', idx === tabIndex));
-            document.querySelectorAll('.tab-btn').forEach((el, idx) => el.classList.toggle('active', idx === tabIndex));
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.toggle('active', el.id === 'tab-' + tabIndex);
+            });
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                const onClickAttr = el.getAttribute('onclick');
+                el.classList.toggle('active', onClickAttr && onClickAttr.includes(`switchTab(${tabIndex})`));
+            });
             if(tabIndex === 1) initScanner();
             else stopScanner();
             
