@@ -95,7 +95,9 @@
             </div>
         </div>
     </div>
-<div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex-col items-center justify-center text-gray-800" style="display: none;">
+
+    <!-- Status Change Modal -->
+    <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex-col items-center justify-center text-gray-800" style="display: none;">
         <div class="bg-white p-6 rounded shadow-lg w-80 text-center">
             <h3 id="status-modal-title" class="text-lg font-bold mb-4">手動設定交件狀態</h3>
             <div class="flex flex-col gap-3">
@@ -118,11 +120,22 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Ver 1.16 -->
+                <!-- Ver 1.17 -->
                 <div class="border-l-4 border-blue-500 pl-4 py-1">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.16 / 正式版 Ver. 1.1</span>
+                        <span>Beta Ver. 1.17</span>
                         <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li>調整功能名稱：「Word條碼」更名為「<span class="font-semibold text-blue-600">全班條碼匯出</span>」。</li>
+                        <li>調整功能名稱：「批次標籤」更名為「<span class="font-semibold text-blue-600">部分學生條碼匯出</span>」。</li>
+                    </ul>
+                </div>
+                <!-- Ver 1.16 -->
+                <div class="border-l-4 border-indigo-400 pl-4 py-1">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.16</span>
+                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/05</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
                         <li>新增網站右上角「<span class="font-semibold text-blue-600">更新紀錄</span>」功能面板，即時查閱各版本最新更新歷史。</li>
@@ -188,7 +201,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.16</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.17</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
@@ -207,8 +220,8 @@
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-blue-600 font-bold" onclick="switchTab(2)">2. 雲端總表</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(3)">3. 固定簿冊(PDF)</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(4)">4. 浮動卷單(PDF)</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(5)">5. Word條碼</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(6)">6. 批次標籤</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(5)">5. 全班條碼匯出</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(6)">6. 部分學生條碼匯出</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-red-600 font-bold" onclick="switchTab(8)">8. 批改與退回</button>
         </div>
 
@@ -506,10 +519,10 @@
             </div>
         </div>
 
-        <!-- Tab 4: Word 條碼表 -->
+        <!-- Tab 5: 全班條碼匯出 (Word) -->
         <div id="tab-5" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. Word 條碼表匯出</h2>
-            <p class="mb-2 text-gray-600">產生一張二維對照表，左側為學生，右側為各項作業的防偽條碼。</p>
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. 全班條碼匯出 (Word)</h2>
+            <p class="mb-2 text-gray-600">產生一張全班二維對照表，左側為學生，右側為各項作業的防偽條碼。</p>
             <div class="mb-4 flex flex-col md:flex-row gap-4">
                 <div class="w-full md:w-1/2">
                     <label class="block mb-2 text-lg font-bold text-gray-800">選擇要產生的作業 (可多選)：</label>
@@ -533,9 +546,9 @@
             </div>
         </div>
 
-        <!-- Tab 5: 批次標籤 (Canvas) -->
+        <!-- Tab 6: 部分學生條碼匯出 (批次標籤) -->
         <div id="tab-6" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">6. 批次省紙標籤 (圖檔)</h2>
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">6. 部分學生條碼匯出 (批次省紙標籤)</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                     <label class="block mb-2 text-lg font-bold text-gray-800">1. 選擇學生 (可多選)：</label>
