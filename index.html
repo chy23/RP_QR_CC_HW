@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Ver. 1.2)</title>
+    <title>QRcode自動清點作業系統 (Ver. 1.3)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -111,6 +111,73 @@
         </div>
     </div>
 
+    <!-- Onboarding Modal -->
+    <div id="onboarding-modal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+            <div class="px-6 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <h3 class="text-2xl font-bold tracking-wide">系統使用教學</h3>
+                </div>
+                <button onclick="closeOnboardingModal()" class="text-white hover:text-gray-200 text-3xl font-bold leading-none">&times;</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto bg-gray-50 flex-grow">
+                <div class="space-y-6">
+                    
+                    <!-- Step 1 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex gap-4 items-start relative overflow-hidden">
+                        <div class="bg-emerald-100 text-emerald-700 font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 z-10">1</div>
+                        <div class="z-10">
+                            <h4 class="text-lg font-bold text-gray-800 mb-1">雲端建置與同步</h4>
+                            <p class="text-gray-600 leading-relaxed text-sm">
+                                直接在 Google 試算表建立「學生名單管理」，設定 Apps Script 從雲端下載。接著在系統填寫「班級資訊」並備份至雲端，確保資料不遺失。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex gap-4 items-start relative overflow-hidden">
+                        <div class="bg-emerald-100 text-emerald-700 font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 z-10">2</div>
+                        <div class="z-10">
+                            <h4 class="text-lg font-bold text-gray-800 mb-1">印製標籤與匯入作業</h4>
+                            <p class="text-gray-600 leading-relaxed text-sm">
+                                介紹如何利用「固定簿冊(PDF)」或「全班條碼匯出」印製標籤，及浮動作業如何透過批次標籤功能匯入系統。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 3 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex gap-4 items-start relative overflow-hidden">
+                        <div class="bg-emerald-100 text-emerald-700 font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 z-10">3</div>
+                        <div class="z-10">
+                            <h4 class="text-lg font-bold text-gray-800 mb-1">相機清點與登記</h4>
+                            <p class="text-gray-600 leading-relaxed text-sm">
+                                接著介紹如何清點作業：切換至「相機掃描與登記」，開啟鏡頭連續掃描，系統會自動辨識並將作業標記為已繳交。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 4 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex gap-4 items-start relative overflow-hidden">
+                        <div class="bg-emerald-100 text-emerald-700 font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 z-10">4</div>
+                        <div class="z-10">
+                            <h4 class="text-lg font-bold text-gray-800 mb-1">批改狀態與退回</h4>
+                            <p class="text-gray-600 leading-relaxed text-sm">
+                                最後介紹批改及退回機制：完成清點後，可查看繳交與缺交名單。若有需重寫的作業，亦能切換狀態將該作業退回。
+                            </p>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 bg-white border-t flex justify-end shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] relative z-10">
+                <button onclick="closeOnboardingModal()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-md transition-all hover:shadow-lg transform hover:-translate-y-0.5">開始使用</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Changelog Modal -->
     <div id="changelog-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-fade-in">
@@ -121,23 +188,32 @@
                 </div>
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto space-y-8 bg-gray-50 text-sm text-gray-700">
-                <!-- Ver 1.2 -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="bg-blue-50 border-b border-blue-100 px-5 py-3 flex items-center justify-between">
-                        <span class="font-bold text-blue-900 text-lg flex items-center gap-2">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-                            Ver. 1.2 (重大更新)
-                        </span>
-                        <span class="text-xs bg-white text-blue-800 border border-blue-200 px-2.5 py-1 rounded-full font-mono font-medium shadow-sm">2026/08/05</span>
+            <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
+                <!-- Ver 1.3 -->
+                <div class="bg-white rounded-xl shadow-sm border border-emerald-200 overflow-hidden">
+                    <div class="bg-emerald-50 border-b border-emerald-100 px-5 py-3 flex items-center justify-between">
+                        <span class="font-bold text-emerald-800 text-base">Ver. 1.3 (重大更新)</span>
+                        <span class="text-xs bg-white text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-full font-mono font-medium">2026/08/05</span>
                     </div>
                     <div class="p-5">
-                        <ul class="list-disc list-outside ml-4 space-y-3 text-gray-600 leading-relaxed">
-                            <li><span class="font-semibold text-gray-800">Word 分頁保護機制：</span>優化全班條碼匯出表格，全面啟用「禁止跨頁斷行 (cantSplit)」，確保標籤不會被切斷；自動跨頁重複標題列，作業過多時自動橫向 (Landscape) 排版。</li>
-                            <li><span class="font-semibold text-gray-800">互動流程優化：</span>全班條碼匯出改為點擊「預覽條碼對照表」後才生成，避免設定中頻繁轉圈；加入「全選 / 全不選」快速按鈕。</li>
-                            <li><span class="font-semibold text-gray-800">匯出格式升級：</span>新增 Excel 格式 (.xlsx) 匯出功能，並將「學生防偽代碼清單」集中至同一頁籤管理。</li>
-                            <li><span class="font-semibold text-gray-800">操作介面翻新：</span>「Word條碼」更名為「全班條碼匯出」，「批次標籤」更名為「部分學生條碼匯出」，並新增本「更新紀錄」面板。</li>
-                            <li><span class="font-semibold text-gray-800">系統穩定性提升：</span>修復雲端匯入背景腳本當機問題；新增灰色防偽浮水印（不遮擋介面）。</li>
+                        <ul class="list-disc list-outside ml-4 space-y-2 text-gray-700 leading-relaxed">
+                            <li><strong>新增各頁籤獨立教學：</strong>加入「第一次使用教學」導覽與各分頁專屬「📘 使用說明」面板，新手操作更無礙。</li>
+                            <li><strong>雙向同步與名單抓取：</strong>升級 Google Apps Script，支援直接由雲端抓取與還原班級資料、學生名單，以及同步試算表的手動變更。</li>
+                            <li><strong>全班條碼匯出優化：</strong>支援 Word (自動防呆切割排版避免跨頁) 與 Excel (防偽代碼) 雙格式同時匯出。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Ver 1.2 -->
+                <div class="bg-white rounded-xl shadow-sm border border-blue-200 overflow-hidden opacity-95">
+                    <div class="bg-blue-50 border-b border-blue-100 px-5 py-3 flex items-center justify-between">
+                        <span class="font-bold text-blue-800 text-base">Ver. 1.2 (雙向同步與掃描升級)</span>
+                        <span class="text-xs bg-white text-blue-600 border border-blue-200 px-2.5 py-1 rounded-full font-mono font-medium">2026/08/01</span>
+                    </div>
+                    <div class="p-5">
+                        <ul class="list-disc list-outside ml-4 space-y-2 text-gray-600 leading-relaxed">
+                            <li>新增 jsQR 6 區域網格平行切割掃描，解決 iOS Safari 無法使用原生多碼 API 的問題，掃描速度與成功率大幅提升。</li>
+                            <li>Google 試算表同步新增「統計報表」分頁，自動計算繳交率、缺交率及假別比率；新增「遲到」假別狀態。</li>
                         </ul>
                     </div>
                 </div>
@@ -168,11 +244,15 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-gray-500 font-bold tracking-wide">Ver. 1.2</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-emerald-600 font-bold tracking-wide">Ver. 1.3</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
             <div class="mt-2 md:mt-0 md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2">
+                <button onclick="openOnboardingModal()" class="flex items-center gap-1.5 text-xs md:text-sm bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full shadow-sm transition hover:shadow cursor-pointer font-medium mr-2">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    使用教學
+                </button>
                 <button onclick="openChangelogModal()" class="flex items-center gap-1.5 text-xs md:text-sm bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full shadow-sm transition hover:shadow cursor-pointer font-medium">
                     <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     更新紀錄
@@ -194,7 +274,26 @@
 
         <!-- Tab 0: 前端資料建置 -->
         <div id="tab-0" class="tab-content active bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">0. 資料建置</h2>
+            
+            <div class="flex items-center justify-between border-b pb-2 mb-4">
+                <h2 class="text-2xl font-bold m-0 border-0 pb-0">0. 資料建置</h2>
+                <button onclick="document.getElementById('help-tab0').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer ml-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    使用說明
+                </button>
+            </div>
+            <div id="help-tab0" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
+                <button onclick="document.getElementById('help-tab0').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                <ul class="list-disc list-outside ml-4 space-y-1.5">
+                    <li>
+                        直接在 Google 試算表建立「學生名單管理」，設定 Apps Script 從雲端下載，再填寫班級資訊並備份雲端。
+                        <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'flex'" class="text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer inline-flex items-center ml-1">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            點此查看詳細設定教學與程式碼
+                        </button>
+                    </li>
+                </ul>
+            </div>
             
             <!-- 班級資訊 -->
             <div class="border p-4 rounded bg-gray-50 mb-6">
@@ -294,13 +393,7 @@
                     <button onclick="saveGasUrl()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">儲存網址</button>
                     <button onclick="testGasUrl()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">測試連線</button>
                 </div>
-                <div class="mt-2">
-                    <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'flex'" class="text-indigo-600 hover:text-indigo-800 text-sm font-bold underline cursor-pointer flex items-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        點此查看 Google 試算表設定教學與程式碼
-                    </button>
-                </div>
-                <div id="gas-status" class="text-sm font-bold"></div>
+                <div id="gas-status" class="text-sm font-bold mt-2"></div>
             </div>
             <div class="mt-6 flex justify-end">
                 <button onclick="resetData()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm">清除所有系統資料</button>
@@ -309,7 +402,23 @@
 
         <!-- Tab 1: 掃描與統計 -->
         <div id="tab-1" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">1. 掃描與統計</h2>
+            
+            <div class="flex items-center justify-between border-b pb-2 mb-4">
+                <h2 class="text-2xl font-bold  m-0 border-0 pb-0">1. 掃描與統計</h2>
+                <button onclick="document.getElementById('help-tab1').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    使用說明
+                </button>
+            </div>
+            <div id="help-tab1" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
+                <button onclick="document.getElementById('help-tab1').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                
+<ul class="list-disc list-inside space-y-1.5">
+    <li><strong>連續掃描</strong>：選擇作業並確認相機正常後，對準學生作業條碼即可快速連續掃描，系統發出「嗶」聲代表登記成功。</li>
+    <li><strong>退回作業</strong>：若批改後需發回重寫，勾選「標記為：退回(需訂正)」再掃描該作業，狀態即轉為退回。</li>
+    <li><strong>手動登記</strong>：相機無法辨識時，可點擊右側名單中的學生姓名，強制變更該名學生的繳交狀態。</li>
+</ul>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- 掃描區 -->
                 <div class="md:col-span-1 border p-4 rounded bg-gray-50 flex flex-col">
@@ -400,7 +509,23 @@
 
         <!-- Tab 2: 雲端總表 -->
         <div id="tab-2" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2 text-blue-700">2. 雲端總表 (Google 試算表)</h2>
+            
+            <div class="flex items-center justify-between border-b pb-2 mb-4">
+                <h2 class="text-2xl font-bold text-blue-700 m-0 border-0 pb-0">2. 雲端總表 (Google 試算表)</h2>
+                <button onclick="document.getElementById('help-tab2').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    使用說明
+                </button>
+            </div>
+            <div id="help-tab2" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
+                <button onclick="document.getElementById('help-tab2').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                
+<ul class="list-disc list-inside space-y-1.5">
+    <li><strong>自動同步</strong>：若在「0. 資料建置」已設定 Google Apps Script，系統將自動於背景同步您的變更。</li>
+    <li><strong>強制操作</strong>：您可隨時使用「強制上傳最新狀態」來備份，或「從雲端覆蓋」還原本機資料。</li>
+    <li><strong>查看報表</strong>：點擊「開啟 Google 試算表」，可前往雲端查看系統自動產生的繳交率與各式統計報表。</li>
+</ul>
+            </div>
             <div id="sheet-iframe-container" class="w-full h-[600px] border rounded bg-gray-50 flex items-center justify-center text-gray-500">
                 請先在「0. 資料建置」中設定 Google 試算表共用網址。
             </div>
@@ -408,7 +533,22 @@
 
         <!-- Tab 3: 固定簿冊 (PDF) -->
         <div id="tab-3" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">3. 固定簿冊標籤 (PDF)</h2>
+            
+            <div class="flex items-center justify-between border-b pb-2 mb-4">
+                <h2 class="text-2xl font-bold  m-0 border-0 pb-0">3. 固定簿冊標籤 (PDF)</h2>
+                <button onclick="document.getElementById('help-tab3').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    使用說明
+                </button>
+            </div>
+            <div id="help-tab3" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
+                <button onclick="document.getElementById('help-tab3').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                
+<ul class="list-disc list-inside space-y-1.5">
+    <li><strong>適用情境</strong>：用於「整學期固定不變」的作業本（例如：國語習作、數學習作）。</li>
+    <li><strong>操作方式</strong>：選擇一項作業、設定標籤尺寸後生成 PDF。印出後請發給全班學生，貼在其作業本固定位置。</li>
+</ul>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block mb-2 text-lg font-bold text-gray-800">選擇固定作業 (可多選)：</label>
@@ -487,7 +627,22 @@
 
         <!-- Tab 5: 全班條碼匯出 -->
         <div id="tab-5" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. 全班條碼匯出</h2>
+            
+            <div class="flex items-center justify-between border-b pb-2 mb-4">
+                <h2 class="text-2xl font-bold  m-0 border-0 pb-0">5. 全班條碼匯出</h2>
+                <button onclick="document.getElementById('help-tab5').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    使用說明
+                </button>
+            </div>
+            <div id="help-tab5" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
+                <button onclick="document.getElementById('help-tab5').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                
+<ul class="list-disc list-inside space-y-1.5">
+    <li><strong>適用情境</strong>：提供給老師自己留存的「全班條碼總表」，或當作備用條碼列印。</li>
+    <li><strong>匯出格式</strong>：勾選所需作業後，可匯出含圖片的 <strong>Word 檔</strong>（自動防呆切割排版），或 <strong>Excel 檔</strong>（含防偽代碼）。</li>
+</ul>
+            </div>
             <p class="mb-4 text-gray-600">產生全班作業條碼對照表（左側為學生，右側為各項作業防偽條碼）。點選作業後，請點擊「<strong>預覽條碼對照表</strong>」即可於下方即時呈現表格；確認後可匯出 Word（圖檔）或 Excel（內嵌圖檔），亦可直接下載學生防偽代碼與作業條碼字串清單。</p>
             
             <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg border">
@@ -552,7 +707,22 @@
 
         <!-- Tab 6: 部分學生條碼匯出 (批次標籤) -->
         <div id="tab-6" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">6. 部分學生條碼匯出 (批次省紙標籤)</h2>
+            
+            <div class="flex items-center justify-between border-b pb-2 mb-4">
+                <h2 class="text-2xl font-bold  m-0 border-0 pb-0">6. 部分學生條碼匯出 (批次省紙標籤)</h2>
+                <button onclick="document.getElementById('help-tab6').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    使用說明
+                </button>
+            </div>
+            <div id="help-tab6" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
+                <button onclick="document.getElementById('help-tab6').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                
+<ul class="list-disc list-inside space-y-1.5">
+    <li><strong>適用情境</strong>：用於「臨時性」的單次卷單（例如平時測驗），或只需為「部分補交/遺失條碼」的學生印製標籤時，以節省紙張。</li>
+    <li><strong>操作方式</strong>：選擇作業及特定學生，系統會將這些學生的連續條碼排版在同一頁，方便列印並貼附於臨時卷單上。</li>
+</ul>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                     <label class="block mb-2 text-lg font-bold text-gray-800">1. 選擇學生 (可多選)：</label>
@@ -596,10 +766,25 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                     8. 批改與退回
                 </h2>
-                <button onclick="loadGradingData()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-1 font-bold">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    重整雲端資料
-                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="document.getElementById('help-tab8').classList.toggle('hidden')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-full font-medium transition cursor-pointer flex items-center gap-1.5 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        使用說明
+                    </button>
+                    <button onclick="loadGradingData()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-1 font-bold">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        重整雲端資料
+                    </button>
+                </div>
+            </div>
+            
+            <div id="help-tab8" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
+                <button onclick="document.getElementById('help-tab8').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                <ul class="list-disc list-inside space-y-1.5">
+                    <li><strong>用途</strong>：當批改完作業後，可在此處快速瀏覽全班各項作業的繳交狀態。</li>
+                    <li><strong>批改退回</strong>：若發現學生作業需要訂正重寫，可點擊該名學生的狀態標籤，將其改為「退回(需訂正)」。</li>
+                    <li><strong>資料同步</strong>：所有操作將自動與雲端同步；您亦可隨時點擊「重整雲端資料」確保讀取到最新狀態。</li>
+                </ul>
             </div>
             
             <div class="bg-gray-50 p-4 rounded border mb-4">
@@ -914,6 +1099,11 @@
             initAllSelects();
             renderStatistics();
             renderSheetIframe();
+            
+            // 第一次使用教學彈出邏輯
+            if (localStorage.getItem('hasSeenOnboarding') !== 'true') {
+                setTimeout(openOnboardingModal, 500);
+            }
         }
 
         function saveData(skipUI = false) {
@@ -2759,6 +2949,17 @@ function renderStatistics() {
             const m = document.getElementById('changelog-modal');
             if (m) m.classList.add('hidden');
         }
+        
+        function openOnboardingModal() {
+            const m = document.getElementById('onboarding-modal');
+            if (m) m.classList.remove('hidden');
+        }
+
+        function closeOnboardingModal() {
+            const m = document.getElementById('onboarding-modal');
+            if (m) m.classList.add('hidden');
+            localStorage.setItem('hasSeenOnboarding', 'true');
+        }
 
         function closeStatusModal() {
             document.getElementById('status-modal').style.display = 'none';
@@ -4425,6 +4626,9 @@ function renderStatistics() {
                 <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'none'" class="text-gray-500 hover:text-gray-800 font-bold text-2xl">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto flex-grow text-gray-800 space-y-4">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-3 rounded text-blue-800 font-medium text-sm mb-4">
+                    💡 <strong class="text-blue-900">核心概念：</strong>設定 Apps Script 從雲端下載資料，再填寫班級資訊並備份雲端。
+                </div>
                 <p>為了取得那串神祕的「網頁應用程式網址」，請您跟著以下 3 個簡單的步驟操作：</p>
                 
                 <h4 class="text-lg font-bold text-blue-700 border-b pb-1">第一步：建立試算表與開啟 Apps Script</h4>
@@ -4448,17 +4652,117 @@ function renderStatistics() {
       return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(ContentService.MimeType.JSON);
     }
     
+    // 取得設定與學生名單
+    if (payload.action === 'get_students') {
+      var studentSheet = ss.getSheetByName("學生名單");
+      if (!studentSheet) {
+        return ContentService.createTextOutput(JSON.stringify({status: 'error', message: '找不到名為「學生名單」的分頁'})).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // 讀取設定檔
+      var config = null;
+      var configSheet = ss.getSheetByName("SystemConfig");
+      if (configSheet) {
+        var configStr = configSheet.getRange("A1").getValue();
+        if (configStr) {
+          try { config = JSON.parse(configStr); } catch (e) {}
+        }
+      }
+
+      var data = studentSheet.getDataRange().getDisplayValues();
+      if (data.length <= 1) {
+        return ContentService.createTextOutput(JSON.stringify({status: 'success', students: [], config: config})).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      var headers = data[0];
+      var idIndex = headers.indexOf("座號");
+      var nameIndex = headers.indexOf("姓名");
+      var tokenIndex = headers.indexOf("防偽碼");
+      
+      if (idIndex === -1) idIndex = 0; // 找不到預設抓第一欄
+      if (nameIndex === -1) nameIndex = 1; // 找不到預設抓第二欄
+      
+      var students = [];
+      for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+        var id = row[idIndex];
+        var name = row[nameIndex];
+        var token = (tokenIndex !== -1 && row[tokenIndex]) ? row[tokenIndex].toString().trim() : '';
+        if (id && name) {
+          students.push({ id: id.toString().trim(), name: name.toString().trim(), token: token });
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({status: 'success', students: students, config: config})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 從雲端拉取所有繳交紀錄
+    if (payload.action === 'pull_sync') {
+      var allSheets = ss.getSheets();
+      var sheetsData = [];
+      
+      for (var i = 0; i < allSheets.length; i++) {
+        var sheetName = allSheets[i].getName();
+        // 排除非科目分頁
+        if (sheetName === "學生名單" || sheetName === "SystemConfig" || sheetName === "所有掃描紀錄" || sheetName.indexOf("統計") !== -1) {
+          continue;
+        }
+        
+        var data = allSheets[i].getDataRange().getDisplayValues();
+        // 確保這是一個有效的二維陣列 (至少要有 表頭3列 + 1個學生)
+        if (data.length >= 4) {
+          sheetsData.push({
+            name: sheetName,
+            data: data
+          });
+        }
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({status: 'success', sheetsData: sheetsData})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 備份全系統設定與學生名單
+    if (payload.action === 'sync_students') {
+      var studentSheet = ss.getSheetByName("學生名單");
+      if (!studentSheet) {
+        studentSheet = ss.insertSheet("學生名單");
+      }
+      studentSheet.clear();
+      
+      var students = payload.students || [];
+      var dataToPush = [["座號", "姓名", "防偽碼"]];
+      
+      students.forEach(function(s) {
+        dataToPush.push([s.id, s.name, s.token || '']);
+      });
+      
+      studentSheet.getRange(1, 1, dataToPush.length, 3).setValues(dataToPush);
+      studentSheet.getRange(1, 1, 1, 3).setFontWeight("bold").setBackground("#f3f4f6");
+      studentSheet.setFrozenRows(1);
+      
+      // 儲存設定檔
+      if (payload.config) {
+        var configSheet = ss.getSheetByName("SystemConfig");
+        if (!configSheet) {
+          configSheet = ss.insertSheet("SystemConfig");
+          configSheet.hideSheet(); // 隱藏起來避免干擾使用者
+        }
+        configSheet.getRange("A1").setValue(JSON.stringify(payload.config));
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     if (payload.action === 'upload_records' || payload.action === 'full_sync') {
       var records = payload.records || [];
       if (records.length > 0) {
         var logSheet = ss.getSheetByName("所有掃描紀錄");
         if (!logSheet) {
           logSheet = ss.insertSheet("所有掃描紀錄");
-          logSheet.appendRow(["打卡時間", "科目", "作業名稱", "範圍", "學生姓名", "狀態"]);
+          logSheet.appendRow(["打卡時間", "班級", "科目", "作業名稱", "範圍", "學生姓名", "狀態"]);
           logSheet.setFrozenRows(1);
         }
         records.forEach(function(row) {
-          logSheet.appendRow([row.timestamp, row.subject, row.taskName, row.range, row.studentName, row.status]);
+          logSheet.appendRow([row.timestamp, row.className || '', row.subject, row.taskName, row.range, row.studentName, row.status]);
         });
       }
       
@@ -4472,17 +4776,22 @@ function renderStatistics() {
             targetSheet.clear();
             targetSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
             
-            // 設定凍結窗格 (前三列為表頭：作業名稱、應繳交日期、範圍)
             targetSheet.setFrozenRows(3);
             targetSheet.setFrozenColumns(1);
-            
-            // 美化表頭
             targetSheet.getRange(1, 1, 3, data[0].length).setFontWeight("bold").setBackground("#f3f4f6");
             
-            // 讓「缺交」變紅字
-            var rule = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("缺交").setFontColor("#ef4444").build();
-            var rules = targetSheet.getConditionalFormatRules();
-            rules.push(rule);
+            var rules = [];
+            var range = targetSheet.getDataRange();
+            var ruleRed1 = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("缺交").setFontColor("#ef4444").setBold(true).setRanges([range]).build();
+            var ruleRed2 = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("曠課").setFontColor("#ef4444").setBold(true).setRanges([range]).build();
+            rules.push(ruleRed1, ruleRed2);
+            
+            var leaves = ["事假", "病假", "公假", "喪假", "其他"];
+            leaves.forEach(function(leave) {
+               var rulePurple = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(leave).setFontColor("#7e22ce").setBold(true).setRanges([range]).build();
+               rules.push(rulePurple);
+            });
+            
             targetSheet.setConditionalFormatRules(rules);
           }
         });
