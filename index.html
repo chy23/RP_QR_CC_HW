@@ -3506,9 +3506,9 @@ function renderStatistics() {
             showLoading();
             setTimeout(async () => {
                 try {
-                    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, WidthType, AlignmentType, VerticalAlign, PageOrientation, PageBreak } = docx;
+                    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, WidthType, AlignmentType, VerticalAlign } = docx;
                     
-                    const cmToPx = 118.11; // 300dpi approx
+                    const cmToPx = 118.11;
                     const wCm = parseFloat(document.getElementById('tab4-w').value) || 3.5;
                     const hCm = parseFloat(document.getElementById('tab4-h').value) || 2;
                     const wPx = Math.floor(wCm * cmToPx);
@@ -3516,68 +3516,61 @@ function renderStatistics() {
                     const docxW = Math.floor(wCm * 38);
                     const docxH = Math.floor(hCm * 38);
 
-                    // 自動判斷寬度：若作業欄位多則自動轉為橫向 (Landscape)
-                    const totalEstWidthCm = 1.5 + 2.5 + (selectedTasks.length * wCm);
-                    const isLandscape = totalEstWidthCm > 17;
+                    // ★ 計算頁面寬度可容納多少作業欄位
+                    // A4 可用寬度 = 21cm - 左右邊距各 1.27cm = 18.46cm
+                    const usableWidthCm = 18.46;
+                    const fixedColsCm = 1.5 + 2.5; // 座號(1.5cm) + 姓名(2.5cm)
+                    const maxTasksPerRow = Math.max(1, Math.floor((usableWidthCm - fixedColsCm) / (wCm + 0.3)));
 
-                    // ★ 手動計算每頁可容納的學生列數，確保絕不截斷 QR Code
-                    // A4 = 29.7cm; 上下邊距各 720 twips = 1.27cm; Landscape 高度 = 21cm
-                    const pageHeightCm = isLandscape ? 21.0 : 29.7;
-                    const marginCm = 1.27 * 2; // 上+下
-                    const usableHeightCm = pageHeightCm - marginCm;
-                    // 每列高度 = 圖片高度 + 上下 padding (~0.6cm)
-                    const rowHeightCm = hCm + 0.6;
-                    const headerRowCm = 1.0;
-                    const titleHeightCm = 1.6; // 標題 + 間距
-
-                    // 第一頁有標題，可放較少列
-                    const rowsFirstPage = Math.max(1, Math.floor((usableHeightCm - titleHeightCm - headerRowCm) / rowHeightCm));
-                    // 後續頁只有表頭
-                    const rowsPerPage = Math.max(1, Math.floor((usableHeightCm - headerRowCm) / rowHeightCm));
-
-                    // 將學生分頁
-                    const studentChunks = [];
-                    let remaining = [...db.students];
-                    // 第一頁
-                    studentChunks.push(remaining.splice(0, rowsFirstPage));
-                    // 後續頁
-                    while (remaining.length > 0) {
-                        studentChunks.push(remaining.splice(0, rowsPerPage));
+                    // ★ 將作業分組（自動換行）
+                    const taskGroups = [];
+                    for (let i = 0; i < selectedTasks.length; i += maxTasksPerRow) {
+                        taskGroups.push(selectedTasks.slice(i, i + maxTasksPerRow));
                     }
 
-                    // 建立 header row 的函式（每頁表格都需要）
-                    function makeHeaderRow() {
-                        let hCells = [
+                    // 預先產生所有學生 x 所有作業的標籤圖片 (避免重複產生)
+                    const imageCache = {};
+                    for (const student of db.students) {
+                        for (const task of selectedTasks) {
+                            const key = `${student.id}_${task.id}`;
+                            const dataUrl = await createLabelImage(student, task, '', true, wPx, hPx);
+                            imageCache[key] = dataUrl.split(',')[1];
+                        }
+                    }
+
+                    // 建立表頭列
+                    function makeHeaderRow(taskGroup) {
+                        const hCells = [
                             new TableCell({
                                 verticalAlign: VerticalAlign.CENTER,
                                 children: [new Paragraph({
                                     alignment: AlignmentType.CENTER,
                                     children: [new TextRun({ text: "座號", bold: true, size: 22 })]
-                                })],
+                                })]
                             }),
                             new TableCell({
                                 verticalAlign: VerticalAlign.CENTER,
                                 children: [new Paragraph({
                                     alignment: AlignmentType.CENTER,
                                     children: [new TextRun({ text: "姓名", bold: true, size: 22 })]
-                                })],
+                                })]
                             }),
                         ];
-                        selectedTasks.forEach(task => {
+                        taskGroup.forEach(task => {
                             hCells.push(new TableCell({
                                 verticalAlign: VerticalAlign.CENTER,
                                 children: [new Paragraph({
                                     alignment: AlignmentType.CENTER,
-                                    children: [new TextRun({ text: `[${task.subject}] ${task.name}`, bold: true, size: 22 })]
-                                })],
+                                    children: [new TextRun({ text: `[${task.subject}] ${task.name}`, bold: true, size: 20 })]
+                                })]
                             }));
                         });
                         return new TableRow({ cantSplit: true, tableHeader: true, children: hCells });
                     }
 
-                    // 建立學生資料列的函式
-                    async function makeStudentRow(student) {
-                        let cells = [
+                    // 建立學生資料列（只含該組的作業）
+                    function makeStudentRow(student, taskGroup) {
+                        const cells = [
                             new TableCell({
                                 verticalAlign: VerticalAlign.CENTER,
                                 children: [new Paragraph({
@@ -3593,15 +3586,14 @@ function renderStatistics() {
                                 })]
                             })
                         ];
-                        for (const task of selectedTasks) {
-                            const dataUrl = await createLabelImage(student, task, '', true, wPx, hPx);
-                            const base64Data = dataUrl.split(',')[1];
+                        taskGroup.forEach(task => {
+                            const base64Data = imageCache[`${student.id}_${task.id}`];
                             cells.push(new TableCell({
                                 verticalAlign: VerticalAlign.CENTER,
                                 children: [
                                     new Paragraph({
                                         alignment: AlignmentType.CENTER,
-                                        spacing: { before: 40, after: 40 },
+                                        spacing: { before: 20, after: 20 },
                                         children: [
                                             new ImageRun({
                                                 data: Uint8Array.from(atob(base64Data), c => c.charCodeAt(0)),
@@ -3611,29 +3603,26 @@ function renderStatistics() {
                                     })
                                 ]
                             }));
-                        }
+                        });
                         return new TableRow({ cantSplit: true, children: cells });
                     }
 
-                    // ★ 組裝文件內容：每一頁獨立一張表格，中間插入分頁符
+                    // ★ 組裝文件：標題 + 依序排列各組表格
                     const docChildren = [];
 
-                    for (let pageIdx = 0; pageIdx < studentChunks.length; pageIdx++) {
-                        const chunk = studentChunks[pageIdx];
-                        if (chunk.length === 0) continue;
+                    // 標題
+                    docChildren.push(new Paragraph({
+                        spacing: { after: 200 },
+                        children: [new TextRun({ text: "全班作業條碼對照表", bold: true, size: 32 })],
+                    }));
 
-                        // 第一頁加標題
-                        if (pageIdx === 0) {
-                            docChildren.push(new Paragraph({
-                                spacing: { after: 200 },
-                                children: [new TextRun({ text: "全班作業條碼對照表", bold: true, size: 32 })],
-                            }));
-                        }
+                    // 每組作業各建一張表格（座號＋姓名重複出現），表格間留間距
+                    for (let gIdx = 0; gIdx < taskGroups.length; gIdx++) {
+                        const group = taskGroups[gIdx];
 
-                        // 建立該頁的表格（含 header + 該頁學生）
-                        const tableRows = [makeHeaderRow()];
-                        for (const student of chunk) {
-                            tableRows.push(await makeStudentRow(student));
+                        const tableRows = [makeHeaderRow(group)];
+                        for (const student of db.students) {
+                            tableRows.push(makeStudentRow(student, group));
                         }
 
                         docChildren.push(new Table({
@@ -3641,11 +3630,9 @@ function renderStatistics() {
                             width: { size: 100, type: WidthType.PERCENTAGE },
                         }));
 
-                        // 非最後一頁就加分頁符
-                        if (pageIdx < studentChunks.length - 1) {
-                            docChildren.push(new Paragraph({
-                                children: [new PageBreak()],
-                            }));
+                        // 組與組之間加空行分隔
+                        if (gIdx < taskGroups.length - 1) {
+                            docChildren.push(new Paragraph({ spacing: { before: 200, after: 100 }, children: [] }));
                         }
                     }
 
@@ -3653,11 +3640,6 @@ function renderStatistics() {
                         sections: [{
                             properties: {
                                 page: {
-                                    size: {
-                                        orientation: isLandscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
-                                        width: isLandscape ? 16838 : 11906,
-                                        height: isLandscape ? 11906 : 16838
-                                    },
                                     margin: {
                                         top: 720,
                                         right: 720,
