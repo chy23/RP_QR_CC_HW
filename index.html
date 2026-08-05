@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.15)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.18)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -120,11 +120,21 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Ver 1.17 -->
+                <!-- Ver 1.18 -->
                 <div class="border-l-4 border-blue-500 pl-4 py-1">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.17</span>
+                        <span>Beta Ver. 1.18</span>
                         <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/05</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li>整合功能：將「學生防偽代碼清單 (Excel)」下載功能移至「<span class="font-semibold text-blue-600">5. 全班條碼匯出</span>」頁籤，集中管理全班條碼與資料匯出。</li>
+                    </ul>
+                </div>
+                <!-- Ver 1.17 -->
+                <div class="border-l-4 border-indigo-400 pl-4 py-1">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.17</span>
+                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/05</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
                         <li>調整功能名稱：「Word條碼」更名為「<span class="font-semibold text-blue-600">全班條碼匯出</span>」。</li>
@@ -201,7 +211,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.17</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.18</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
@@ -335,9 +345,8 @@
                 </div>
                 <div id="gas-status" class="text-sm font-bold"></div>
             </div>
-            <div class="mt-6 flex justify-between">
-                <button onclick="exportRawCodes()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow">匯出防偽代碼清單 (Excel)</button>
-                <button onclick="resetData()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow">清除所有系統資料</button>
+            <div class="mt-6 flex justify-end">
+                <button onclick="resetData()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm">清除所有系統資料</button>
             </div>
         </div>
 
@@ -519,10 +528,10 @@
             </div>
         </div>
 
-        <!-- Tab 5: 全班條碼匯出 (Word) -->
+        <!-- Tab 5: 全班條碼匯出 (Word / 清單) -->
         <div id="tab-5" class="tab-content bg-white p-6 rounded-b shadow">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. 全班條碼匯出 (Word)</h2>
-            <p class="mb-2 text-gray-600">產生一張全班二維對照表，左側為學生，右側為各項作業的防偽條碼。</p>
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">5. 全班條碼匯出</h2>
+            <p class="mb-3 text-gray-600">可下載全班二維條碼對照表（Word 檔，左側為學生，右側為各項作業條碼），或直接匯出學生防偽代碼清單（Excel 檔）。</p>
             <div class="mb-4 flex flex-col md:flex-row gap-4">
                 <div class="w-full md:w-1/2">
                     <label class="block mb-2 text-lg font-bold text-gray-800">選擇要產生的作業 (可多選)：</label>
@@ -537,8 +546,15 @@
                     <p class="text-sm text-gray-500">調整後將即時更新預覽與匯出的 Word 表格內的圖片大小。</p>
                 </div>
             </div>
-            <div class="flex gap-2">
-                <button onclick="generateWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow">下載 Word 檔</button>
+            <div class="flex flex-wrap items-center gap-3">
+                <button onclick="generateWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded shadow font-bold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    下載全班條碼表 (Word 檔)
+                </button>
+                <button onclick="exportRawCodes()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded shadow font-bold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    匯出學生防偽代碼清單 (Excel 檔)
+                </button>
             </div>
             <div id="word-preview-container" class="mt-4 hidden border rounded p-4 bg-gray-50 overflow-x-auto">
                 <h3 class="font-bold mb-2">預覽畫面：</h3>
