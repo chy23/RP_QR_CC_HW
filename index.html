@@ -121,37 +121,40 @@
                 </div>
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
+            <div class="p-6 overflow-y-auto space-y-8 bg-gray-50 text-sm text-gray-700">
                 <!-- Ver 1.2 -->
-                <div class="border-l-4 border-blue-500 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Ver. 1.2 (重大更新)</span>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08</span>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="bg-blue-50 border-b border-blue-100 px-5 py-3 flex items-center justify-between">
+                        <span class="font-bold text-blue-900 text-lg flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                            Ver. 1.2 (重大更新)
+                        </span>
+                        <span class="text-xs bg-white text-blue-800 border border-blue-200 px-2.5 py-1 rounded-full font-mono font-medium shadow-sm">2026/08</span>
                     </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>優化全班條碼匯出 Word 分頁保護機制：表格列全面啟用 禁止跨頁斷行 (cantSplit)，確保每位學生的 QR Code 標籤不會被跨頁切斷；標題列自動跨頁重複顯示 (tableHeader)，作業欄位過多時自動以橫向頁面 (Landscape) 排版。</li>
-                        <li>優化全班條碼匯出互動流程：使用者點選作業與設定尺寸後，點擊「預覽條碼對照表」按鈕才進行生成呈現，避免點選時頻繁重新計算與轉圈。</li>
-                        <li>於「全班條碼匯出」加入「全選 / 全不選」快速選取作業按鈕。</li>
-                        <li>調整「全班條碼匯出」頁籤標題為簡潔的「全班條碼匯出」。</li>
-                        <li>於「全班條碼匯出」新增 Excel 格式 (.xlsx) 匯出功能，支援同時提供 Word 與 Excel 兩種格式。</li>
-                        <li>整合功能：將「學生防偽代碼清單 (Excel)」下載功能移至「5. 全班條碼匯出」頁籤，集中管理全班條碼與資料匯出。</li>
-                        <li>調整功能名稱：「Word條碼」更名為「全班條碼匯出」。</li>
-                        <li>調整功能名稱：「批次標籤」更名為「部分學生條碼匯出」。</li>
-                        <li>新增網站右上角「更新紀錄」功能面板，即時查閱各版本最新更新歷史。</li>
-                        <li>於頁面右上與右下加入 18 點字、25% 透明度灰色浮水印「網站建立自楊家驊老師」，並優化位置避免遮擋介面。</li>
-                        <li>修復「從雲端匯入」時因背景腳本引起的讀取轉圈與當機問題。</li>
-                    </ul>
+                    <div class="p-5">
+                        <ul class="list-disc list-outside ml-4 space-y-3 text-gray-600 leading-relaxed">
+                            <li><span class="font-semibold text-gray-800">Word 分頁保護機制：</span>優化全班條碼匯出表格，全面啟用「禁止跨頁斷行 (cantSplit)」，確保標籤不會被切斷；自動跨頁重複標題列，作業過多時自動橫向 (Landscape) 排版。</li>
+                            <li><span class="font-semibold text-gray-800">互動流程優化：</span>全班條碼匯出改為點擊「預覽條碼對照表」後才生成，避免設定中頻繁轉圈；加入「全選 / 全不選」快速按鈕。</li>
+                            <li><span class="font-semibold text-gray-800">匯出格式升級：</span>新增 Excel 格式 (.xlsx) 匯出功能，並將「學生防偽代碼清單」集中至同一頁籤管理。</li>
+                            <li><span class="font-semibold text-gray-800">操作介面翻新：</span>「Word條碼」更名為「全班條碼匯出」，「批次標籤」更名為「部分學生條碼匯出」，並新增本「更新紀錄」面板。</li>
+                            <li><span class="font-semibold text-gray-800">系統穩定性提升：</span>修復雲端匯入背景腳本當機問題；新增灰色防偽浮水印（不遮擋介面）。</li>
+                        </ul>
+                    </div>
                 </div>
+
                 <!-- Ver 1.0 -->
-                <div class="border-l-4 border-gray-200 pl-4 py-1">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Ver. 1.0</span>
-                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/07</span>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden opacity-90">
+                    <div class="bg-gray-100 border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+                        <span class="font-bold text-gray-700 text-base">Ver. 1.0 (正式上線)</span>
+                        <span class="text-xs bg-white text-gray-600 border border-gray-200 px-2.5 py-1 rounded-full font-mono font-medium">2026/07</span>
                     </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li>系統正式上線：提供班級學生資料建置與 QR Code 條碼生成。</li>
-                        <li>支援固定簿冊(PDF)、浮動卷單(PDF)、Word 條碼與批次標籤列印。</li>
-                        <li>支援相機與條碼槍掃描作業、批改退回與 Google 試算表雲端同步。</li>
-                    </ul>
+                    <div class="p-5">
+                        <ul class="list-disc list-outside ml-4 space-y-2 text-gray-600 leading-relaxed">
+                            <li>系統正式上線：提供班級學生資料建置與 QR Code 條碼生成。</li>
+                            <li>支援固定簿冊(PDF)、浮動卷單(PDF)、Word 條碼與批次標籤列印。</li>
+                            <li>支援相機與條碼槍掃描作業、批改退回與 Google 試算表雲端同步。</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             <div class="px-6 py-3 bg-gray-50 border-t flex justify-end">
