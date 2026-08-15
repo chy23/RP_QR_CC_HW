@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.41)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.42)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -195,8 +195,18 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Beta Ver 1.41 -->
+                <!-- Beta Ver 1.42 -->
                 <div class="border-l-4 border-emerald-600 pl-4 py-1">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.42</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/15</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>新增【6. 缺交提醒單】功能：</strong>全新的自動化親師溝通模組，自動統計學生缺交清單，並依據不同情境（如請假、漏寫等）自動產生提醒文案，提供一鍵複製。</li>
+                    </ul>
+                </div>
+                <!-- Beta Ver 1.41 -->
+                <div class="border-l-4 border-emerald-600 pl-4 py-1 mt-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
                         <span>Beta Ver. 1.41</span>
                         <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/06</span>
@@ -208,7 +218,6 @@
                         <li><strong>手機端掃描最佳化 (RWD)：</strong>手機版進入相機與批改分頁時，會自動隱藏上方選單，讓掃描畫面全螢幕化。</li>
                         <li><strong>誤刪復原機制 (Undo)：</strong>刪除學生、作業或欄位時，右下角會跳出通知與「復原」按鈕（停留5秒），可一鍵救回資料。</li>
                         <li><strong>本機定時備份 (IndexedDB)：</strong>系統背景自動紀錄最近 10 次的資料變更，並在「資料建置」提供本地自動備份還原按鈕。</li>
-                        <li><strong>新增【6. 缺交提醒單】功能：</strong>全新的自動化親師溝通模組，自動統計學生缺交清單，並依據不同情境（如請假、漏寫等）自動產生提醒文案，提供一鍵複製。</li>
                     </ul>
                 </div>
                 <!-- Ver 1.4 -->
@@ -264,7 +273,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.41</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.42</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
