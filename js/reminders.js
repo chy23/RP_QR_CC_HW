@@ -242,11 +242,10 @@ function renderReminderStats() {
     db.tasks.forEach(t => {
         if (currentSubjectFilter !== '全部' && t.subject !== currentSubjectFilter) return;
         
-        // 加入 base task
+        // 檢查 Base Task 是否「已經開始被收集」：有提交紀錄或有自訂範圍
         const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
-        const hasSubRecords = db.records.some(r => r.taskId === t.id && r.noticeName);
-        const hasSubRanges = (db.ranges || []).some(r => r.taskId === t.id && r.noticeName);
-        if (hasBaseRecords || (!hasSubRecords && !hasSubRanges)) {
+        const hasBaseRange = (db.ranges || []).some(r => r.taskId === t.id && !r.noticeName);
+        if (hasBaseRecords || hasBaseRange) {
             activeTasks.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
         }
     });
@@ -284,7 +283,7 @@ function renderReminderStats() {
 
     // 產生 Body
     let tbodyHtml = '';
-    const sortedStudents = [...db.students].sort((a,b) => a.number - b.number);
+    const sortedStudents = [...db.students].sort((a,b) => a.id - b.id);
     
     sortedStudents.forEach(student => {
         // 檢查該學生是否有缺交 (只要有一項未交即高亮姓名)
@@ -324,7 +323,7 @@ function renderReminderStats() {
             <tr class="hover:bg-gray-50 border-b">
                 <td class="px-4 py-2 ${nameClass}" onclick="openReminderModal(${student.id})">
                     <div class="flex items-center justify-center">
-                        ${student.number}. ${student.name} ${badge}
+                        ${student.id}. ${student.name} ${badge}
                     </div>
                 </td>
                 ${cellHtml}
@@ -345,7 +344,7 @@ function openReminderModal(studentId) {
     const student = db.students.find(s => s.id === studentId);
     if (!student) return;
 
-    document.getElementById('reminder-student-name').textContent = `${student.number}. ${student.name}`;
+    document.getElementById('reminder-student-name').textContent = `${student.id}. ${student.name}`;
     
     // 找出所有缺交作業 (忽略篩選，全部列出)
     currentReminderMissingTasks = [];
@@ -354,9 +353,8 @@ function openReminderModal(studentId) {
     let allValidTasks = [];
     db.tasks.forEach(t => {
         const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
-        const hasSubRecords = db.records.some(r => r.taskId === t.id && r.noticeName);
-        const hasSubRanges = (db.ranges || []).some(r => r.taskId === t.id && r.noticeName);
-        if (hasBaseRecords || (!hasSubRecords && !hasSubRanges)) {
+        const hasBaseRange = (db.ranges || []).some(r => r.taskId === t.id && !r.noticeName);
+        if (hasBaseRecords || hasBaseRange) {
             allValidTasks.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
         }
     });
