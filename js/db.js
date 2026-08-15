@@ -311,6 +311,7 @@ function undoLastAction() {
         if (typeof renderSubjects === 'function') renderSubjects();
         if (typeof renderStatistics === 'function') renderStatistics();
         if (typeof renderGradingTab === 'function') renderGradingTab();
+        if (typeof renderReminderStats === 'function') renderReminderStats();
         hideUndoToast();
         if (typeof playBeep === 'function') playBeep('success');
     }

@@ -20,6 +20,9 @@
                 renderGradingTab();
                 document.body.classList.add('scanning-mode');
             }
+            if(tabIndex === 6) {
+                if(typeof renderReminderStats === 'function') renderReminderStats();
+            }
         }
 
         function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }

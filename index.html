@@ -208,6 +208,7 @@
                         <li><strong>手機端掃描最佳化 (RWD)：</strong>手機版進入相機與批改分頁時，會自動隱藏上方選單，讓掃描畫面全螢幕化。</li>
                         <li><strong>誤刪復原機制 (Undo)：</strong>刪除學生、作業或欄位時，右下角會跳出通知與「復原」按鈕（停留5秒），可一鍵救回資料。</li>
                         <li><strong>本機定時備份 (IndexedDB)：</strong>系統背景自動紀錄最近 10 次的資料變更，並在「資料建置」提供本地自動備份還原按鈕。</li>
+                        <li><strong>新增【6. 缺交提醒單】功能：</strong>全新的自動化親師溝通模組，自動統計學生缺交清單，並依據不同情境（如請假、漏寫等）自動產生提醒文案，提供一鍵複製。</li>
                     </ul>
                 </div>
                 <!-- Ver 1.4 -->
@@ -287,6 +288,7 @@
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(3)">3. 浮動卷單(PDF)</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-emerald-700 font-bold" onclick="switchTab(4)">4. 條碼匯出與列印</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-red-600 font-bold" onclick="switchTab(5)">5. 批改與退回</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-purple-600 font-bold" onclick="switchTab(6)">6. 缺交提醒單</button>
         </div>
 
         <!-- Tab 0: 前端資料建置 -->
@@ -770,6 +772,124 @@
 
     </div>
 
+
+        <!-- Tab 6: 缺交提醒單建立 -->
+        <div id="tab-6" class="tab-content bg-white p-6 rounded-b shadow">
+            <div class="flex items-center justify-between border-b pb-2 mb-4">
+                <h2 class="text-2xl font-bold m-0 border-0 pb-0 text-purple-700 flex items-center gap-2">
+                    6. 缺交提醒單建立
+                </h2>
+                <button onclick="document.getElementById('help-tab6').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer ml-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    使用說明
+                </button>
+            </div>
+            
+            <div id="help-tab6" class="hidden mb-4 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm leading-relaxed border border-blue-100 shadow-inner">
+                <ul class="list-disc list-inside space-y-1">
+                    <li>此頁面會顯示所有作業的繳交狀態總表，<span class="text-red-500 font-bold">紅字</span>代表缺交。</li>
+                    <li>點選左側「學生姓名」即可開啟【缺交提醒單】產生器。</li>
+                    <li>可依照不同情境（如：缺交件數、請假、漏寫等）自動帶入適合的親師溝通模板。</li>
+                </ul>
+            </div>
+
+            <!-- 科目篩選 -->
+            <div class="flex gap-2 mb-4 overflow-x-auto pb-2" id="reminder-subject-filters">
+                <!-- 動態產生按鈕 -->
+            </div>
+
+            <div class="overflow-x-auto rounded border">
+                <table class="w-full whitespace-nowrap text-sm text-center">
+                    <thead class="bg-gray-100 border-b" id="reminder-thead">
+                        <!-- 動態產生 Header -->
+                    </thead>
+                    <tbody class="divide-y divide-gray-100" id="reminder-tbody">
+                        <!-- 動態產生資料列 -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="reminder-empty-msg" class="text-gray-500 text-center py-8 hidden">
+                沒有作業資料，請先至「0. 資料建置」新增作業。
+            </div>
+        </div>
+
+
+    <!-- Reminder Modal -->
+    <div id="reminder-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center bg-purple-50 rounded-t-lg">
+                <h3 class="text-lg font-bold text-purple-800 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    產生缺交提醒單 - <span id="reminder-student-name" class="text-purple-600 font-extrabold"></span>
+                </h3>
+                <button onclick="closeReminderModal()" class="text-gray-500 hover:text-gray-800 focus:outline-none cursor-pointer">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-grow bg-gray-50 flex flex-col gap-4">
+                
+                <!-- 作業勾選區 -->
+                <div class="bg-white p-4 rounded border shadow-sm flex-shrink-0">
+                    <h4 class="font-bold text-gray-700 mb-2 border-b pb-1">1. 選擇要提醒的作業</h4>
+                    <div id="reminder-task-list" class="flex flex-col gap-2 max-h-32 overflow-y-auto pl-1">
+                        <!-- 動態產生 Checkbox -->
+                    </div>
+                </div>
+
+                <!-- 模組選擇區 -->
+                <div class="bg-white p-4 rounded border shadow-sm flex-shrink-0">
+                    <h4 class="font-bold text-gray-700 mb-2 border-b pb-1">2. 選擇溝通模組與狀態</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">主情境模組</label>
+                            <select id="reminder-module-select" onchange="onReminderModuleChange()" class="w-full border rounded p-2 focus:ring focus:ring-purple-200 outline-none">
+                                <option value="1">模組一：依「缺交件數」提醒 (一般缺交)</option>
+                                <option value="2">模組二：因「請假」缺交作業</option>
+                                <option value="3">模組三：漏寫 / 敷衍未完成 / 退回重寫</option>
+                                <option value="4">模組四：未訂正 / 漏簽名</option>
+                                <option value="5">模組五：作業弄丟 / 破損遺失</option>
+                                <option value="6">模組六：有寫但忘記帶 / 放在家裡</option>
+                                <option value="7">模組七：依「無故缺交天數」提醒 (持續性未交)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">對應狀態</label>
+                            <select id="reminder-state-select" onchange="generateReminderText()" class="w-full border rounded p-2 focus:ring focus:ring-purple-200 outline-none">
+                                <!-- 動態產生 -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- 日期選擇 -->
+                    <div class="mt-3 flex gap-4">
+                        <div class="flex-grow">
+                            <label class="block text-sm text-gray-600 mb-1">提醒單日期 (預設今日)</label>
+                            <input type="text" id="reminder-date-input" oninput="generateReminderText()" class="w-full border rounded p-2 focus:ring focus:ring-purple-200 outline-none" placeholder="例如：10/24 (四)">
+                        </div>
+                        <div class="flex-grow">
+                            <label class="block text-sm text-gray-600 mb-1">手動變更句型</label>
+                            <button onclick="generateReminderText(true)" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 border rounded p-2 transition cursor-pointer">
+                                換句話說 (隨機抽換)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 文案預覽區 -->
+                <div class="bg-white p-4 rounded border shadow-sm flex flex-col flex-grow min-h-[150px]">
+                    <div class="flex justify-between items-end mb-2 border-b pb-1">
+                        <h4 class="font-bold text-gray-700">3. 預覽與修改</h4>
+                        <button onclick="copyReminderText()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded shadow text-sm font-bold flex items-center gap-1 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                            一鍵複製
+                        </button>
+                    </div>
+                    <textarea id="reminder-preview-text" class="w-full flex-grow p-3 border rounded focus:ring focus:ring-purple-200 outline-none resize-none text-gray-800 leading-relaxed"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Backup Modal -->
     <div id="backup-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
         <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
@@ -793,6 +913,7 @@
     <script src="js/ui.js"></script>
     <script src="js/scanner.js"></script>
     <script src="js/export.js"></script>
+    <script src="js/reminders.js"></script>
     <script src="js/main.js"></script>
 
     <!-- GAS Tutorial Modal -->
