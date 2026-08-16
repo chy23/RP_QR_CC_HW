@@ -54,6 +54,25 @@
         table { border-collapse: collapse; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 沉浸式掃描模式 */
+        body.immersive-active #main-header,
+        body.immersive-active #main-tabs,
+        body.immersive-active #tab-1-header {
+            display: none !important;
+        }
+        body.immersive-active .max-w-7xl {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+        body.immersive-active #tab-1 {
+            padding: 0.5rem !important;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            min-height: 100vh;
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -83,7 +102,7 @@
             </div>
             
             <div class="flex justify-end gap-2">
-                <button onclick="cancelScanSession()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">取消並繼續掃描</button>
+                <button onclick="closeSessionModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">取消並繼續掃描</button>
                 <button onclick="confirmScanSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow font-bold">確認缺交無誤，存入系統</button>
             </div>
         </div>
@@ -476,7 +495,7 @@
         <!-- Tab 1: 掃描與統計 -->
         <div id="tab-1" class="tab-content bg-white p-6 rounded-b shadow">
             
-            <div class="flex items-center justify-between border-b pb-2 mb-4">
+            <div id="tab-1-header" class="flex items-center justify-between border-b pb-2 mb-4">
                 <h2 class="text-2xl font-bold  m-0 border-0 pb-0">1. 掃描與統計</h2>
                 <button onclick="document.getElementById('help-tab1').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -519,9 +538,14 @@
                         
                         <label class="block mb-2 font-semibold">條碼輸入：</label>
                         <input type="text" id="scanner-input" class="border p-2 rounded w-full mb-2" placeholder="使用實體掃描槍..." autofocus onkeydown="if(event.key === 'Enter') { processScan(this.value); this.value = ''; }">
-                        <button onclick="toggleCameraScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow w-full flex items-center justify-center gap-2 mb-2">
-                            <span>📷</span> 開啟相機/手機鏡頭掃描
-                        </button>
+                        <div class="flex gap-2 mb-2">
+                            <button onclick="toggleCameraScanner()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow flex items-center justify-center gap-2 transition-colors">
+                                <span>📷</span> 開啟相機
+                            </button>
+                            <button onclick="toggleImmersiveMode()" id="immersive-toggle-btn" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded shadow flex items-center justify-center gap-2 transition-colors">
+                                <span>📱</span> 沉浸掃描
+                            </button>
+                        </div>
                         <div id="camera-container" class="mt-2 hidden border-2 border-dashed border-gray-300 rounded p-2 text-center bg-gray-50 mb-4 relative">
                             <!-- Native Video element for custom scanning -->
                             <video id="native-video" class="w-full max-w-[500px] mx-auto bg-black rounded" playsinline autoplay muted></video>

@@ -812,6 +812,25 @@ function addTask() {
 // ==========================================
 // 備份介面 (Backup UI)
 // ==========================================
+// ==========================================
+// 沉浸式掃描模式
+// ==========================================
+function toggleImmersiveMode() {
+    document.body.classList.toggle('immersive-active');
+    const btn = document.getElementById('immersive-toggle-btn');
+    if(document.body.classList.contains('immersive-active')) {
+        btn.innerHTML = '<span>⬅️</span> 退出沉浸模式';
+        btn.classList.remove('bg-gray-800', 'hover:bg-gray-900');
+        btn.classList.add('bg-red-600', 'hover:bg-red-700');
+        // 自動捲動到最頂端，隱藏不必要的空間
+        document.getElementById('tab-1').scrollIntoView({behavior: 'smooth', block: 'start'});
+    } else {
+        btn.innerHTML = '<span>📱</span> 沉浸掃描';
+        btn.classList.remove('bg-red-600', 'hover:bg-red-700');
+        btn.classList.add('bg-gray-800', 'hover:bg-gray-900');
+    }
+}
+
 async function showBackupModal() {
     document.getElementById('backup-modal').style.display = 'flex';
     const list = document.getElementById('backup-list');

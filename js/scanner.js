@@ -600,6 +600,7 @@
             document.getElementById('scan-active-area').classList.add('hidden');
             document.getElementById('scan-active-area').classList.remove('flex');
             document.getElementById('scan-setup-area').classList.remove('hidden');
+            if(document.body.classList.contains('immersive-active')) toggleImmersiveMode();
         }
 
         function cancelScanSession() {
@@ -614,6 +615,7 @@
             document.getElementById('scan-active-area').classList.add('hidden');
             document.getElementById('scan-active-area').classList.remove('flex');
             document.getElementById('scan-setup-area').classList.remove('hidden');
+            if(document.body.classList.contains('immersive-active')) toggleImmersiveMode();
         }
 
         function endScanSession() {
@@ -661,7 +663,7 @@
             document.getElementById('session-modal').style.display = 'flex';
         }
 
-        function cancelScanSession() {
+        function closeSessionModal() {
             document.getElementById('session-modal').style.display = 'none';
             setTimeout(() => document.getElementById('scanner-input').focus(), 100);
         }
