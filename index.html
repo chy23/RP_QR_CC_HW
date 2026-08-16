@@ -772,9 +772,17 @@
                 <div id="grading-subject-tabs" class="flex flex-wrap gap-2 border-b border-gray-300">
                     <!-- 科目按鈕 -->
                 </div>
-                <div id="grading-task-buttons" class="flex flex-wrap gap-2 pt-4">
-                    <!-- 作業按鈕 -->
-                    <span class="text-gray-500">請先選擇上方科目</span>
+                <div class="flex flex-col md:flex-row gap-4 pt-4 items-center">
+                    <div id="grading-task-buttons" class="flex-grow w-full md:w-auto">
+                        <!-- 作業按鈕 -->
+                        <span class="text-gray-500">請先選擇上方科目</span>
+                    </div>
+                    <div class="relative w-full md:w-64 flex-shrink-0">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <input type="text" id="grading-search-input" onkeyup="handleGradingSearch()" placeholder="搜尋作業、學生或日期..." class="pl-10 w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    </div>
                 </div>
             </div>
             
@@ -828,9 +836,17 @@
                 <div class="flex gap-2 overflow-x-auto pb-2 md:pb-0 flex-grow" id="reminder-subject-filters">
                     <!-- 動態產生按鈕 -->
                 </div>
-                <div class="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border flex-shrink-0">
-                    <input type="checkbox" id="reminder-show-all-toggle" onchange="renderReminderStats()" class="w-4 h-4 text-purple-600 rounded cursor-pointer">
-                    <label for="reminder-show-all-toggle" class="cursor-pointer select-none font-medium">顯示全勤學生與已交齊作業</label>
+                <div class="flex flex-col md:flex-row gap-2 flex-shrink-0">
+                    <div class="relative w-full md:w-64">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <input type="text" id="reminder-search-input" onkeyup="handleReminderSearch()" placeholder="搜尋作業、學生或日期..." class="pl-10 w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-1.5 px-3 border">
+                    </div>
+                    <div class="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border">
+                        <input type="checkbox" id="reminder-show-all-toggle" onchange="renderReminderStats()" class="w-4 h-4 text-purple-600 rounded cursor-pointer">
+                        <label for="reminder-show-all-toggle" class="cursor-pointer select-none font-medium">顯示全勤學生與已交齊作業</label>
+                    </div>
                 </div>
             </div>
 
@@ -944,13 +960,13 @@
         </div>
     </div>
 
-    <script src="js/audio.js?v=1.43"></script>
-    <script src="js/db.js?v=1.43"></script>
-    <script src="js/ui.js?v=1.43"></script>
-    <script src="js/scanner.js?v=1.44"></script>
-    <script src="js/export.js?v=1.43"></script>
-    <script src="js/reminders.js?v=1.44"></script>
-    <script src="js/main.js?v=1.43"></script>
+    <script src="js/audio.js?v=1.45"></script>
+    <script src="js/db.js?v=1.45"></script>
+    <script src="js/ui.js?v=1.45"></script>
+    <script src="js/scanner.js?v=1.45"></script>
+    <script src="js/export.js?v=1.45"></script>
+    <script src="js/reminders.js?v=1.45"></script>
+    <script src="js/main.js?v=1.45"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">

@@ -227,82 +227,114 @@ async function handleTab6Sync() {
     }
 }
 
-function renderReminderStats() {
-    const thead = document.getElementById('reminder-thead');
-    const tbody = document.getElementById('reminder-tbody');
-    const filterContainer = document.getElementById('reminder-subject-filters');
-    const emptyMsg = document.getElementById('reminder-empty-msg');
-    const showAllToggle = document.getElementById('reminder-show-all-toggle');
-    const showAll = showAllToggle ? showAllToggle.checked : false;
-    
-    if(!thead || !tbody) return;
-
-    // 取得並渲染科目篩選器
-    const subjects = ['全部', ...new Set(db.tasks.map(t => t.subject).filter(Boolean))];
-    
-    // 生成篩選器 HTML
-    let filterHtml = '';
-    subjects.forEach(sub => {
-        const activeClass = sub === currentSubjectFilter ? 'bg-purple-600 text-white shadow' : 'bg-white text-gray-700 hover:bg-gray-50';
-        filterHtml += `<button onclick="setReminderSubjectFilter('${sub}')" class="px-3 py-1 rounded-full border text-sm font-medium transition whitespace-nowrap ${activeClass}">${sub}</button>`;
-    });
-    filterContainer.innerHTML = filterHtml;
-
-    // 找出符合條件的 Task + NoticeName
-    let activeTasks = [];
-    db.tasks.forEach(t => {
-        if (currentSubjectFilter !== '全部' && t.subject !== currentSubjectFilter) return;
-        
-        // 檢查 Base Task 是否「已經開始被收集」：有提交紀錄或有自訂範圍
-        const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
-        const hasBaseRange = (db.ranges || []).some(r => r.taskId === t.id && !r.noticeName);
-        if (hasBaseRecords || hasBaseRange) {
-            activeTasks.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
+        window.reminderSearchQuery = '';
+        function handleReminderSearch() {
+            const input = document.getElementById('reminder-search-input');
+            window.reminderSearchQuery = input ? input.value.trim().toLowerCase() : '';
+            renderReminderStats();
         }
-    });
 
-    if (db.ranges) {
-        db.ranges.forEach(r => {
-            if (r.noticeName) {
-                const t = db.tasks.find(t => t.id === r.taskId);
-                if (t && (currentSubjectFilter === '全部' || t.subject === currentSubjectFilter)) {
-                    if (!activeTasks.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName)) {
-                        activeTasks.push({ taskId: t.id, noticeName: r.noticeName, label: t.name + '-' + r.noticeName });
+        function renderReminderStats() {
+            const thead = document.getElementById('reminder-thead');
+            const tbody = document.getElementById('reminder-tbody');
+            const filterContainer = document.getElementById('reminder-subject-filters');
+            const emptyMsg = document.getElementById('reminder-empty-msg');
+            const showAllToggle = document.getElementById('reminder-show-all-toggle');
+            const showAll = showAllToggle ? showAllToggle.checked : false;
+            
+            if(!thead || !tbody) return;
+
+            // 取得並渲染科目篩選器
+            const subjects = ['全部', ...new Set(db.tasks.map(t => t.subject).filter(Boolean))];
+            
+            // 生成篩選器 HTML
+            let filterHtml = '';
+            subjects.forEach(sub => {
+                const activeClass = sub === currentSubjectFilter ? 'bg-purple-600 text-white shadow' : 'bg-white text-gray-700 hover:bg-gray-50';
+                filterHtml += `<button onclick="setReminderSubjectFilter('${sub}')" class="px-3 py-1 rounded-full border text-sm font-medium transition whitespace-nowrap ${activeClass}">${sub}</button>`;
+            });
+            filterContainer.innerHTML = filterHtml;
+
+            // 找出符合條件的 Task + NoticeName
+            let activeTasks = [];
+            db.tasks.forEach(t => {
+                if (currentSubjectFilter !== '全部' && t.subject !== currentSubjectFilter) return;
+                
+                const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
+                const hasBaseRange = (db.ranges || []).some(r => r.taskId === t.id && !r.noticeName);
+                if (hasBaseRecords || hasBaseRange) {
+                    activeTasks.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
+                }
+            });
+
+            if (db.ranges) {
+                db.ranges.forEach(r => {
+                    if (r.noticeName) {
+                        const t = db.tasks.find(t => t.id === r.taskId);
+                        if (t && (currentSubjectFilter === '全部' || t.subject === currentSubjectFilter)) {
+                            if (!activeTasks.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName)) {
+                                activeTasks.push({ taskId: t.id, noticeName: r.noticeName, label: t.name + '-' + r.noticeName });
+                            }
+                        }
                     }
+                });
+            }
+
+            // 預設將最新作業排序在最左邊 (反轉陣列)
+            activeTasks.reverse();
+
+            // 處理搜尋過濾
+            const searchQ = window.reminderSearchQuery || '';
+            let sortedStudents = [...db.students].sort((a,b) => a.id - b.id);
+            
+            if (searchQ) {
+                // 檢查是否匹配作業
+                const tasksMatchingSearch = activeTasks.filter(k => {
+                    const taskDef = db.tasks.find(t=>t.id===k.taskId);
+                    const createdDate = taskDef?.created || '';
+                    return k.label.toLowerCase().includes(searchQ) || createdDate.includes(searchQ);
+                });
+                
+                // 檢查是否匹配學生
+                const studentsMatchingSearch = sortedStudents.filter(s => {
+                    return s.id.toString().includes(searchQ) || s.name.toLowerCase().includes(searchQ);
+                });
+
+                // 如果有匹配作業，就過濾作業欄位
+                if (tasksMatchingSearch.length > 0) {
+                    activeTasks = tasksMatchingSearch;
+                }
+                // 如果有匹配學生，就過濾學生名單
+                if (studentsMatchingSearch.length > 0) {
+                    sortedStudents = studentsMatchingSearch;
                 }
             }
-        });
-    }
 
-    // 預設將最新作業排序在最左邊 (反轉陣列)
-    activeTasks.reverse();
+            // 預先計算每個 task 的全班缺交數
+            const taskMissingCounts = new Map();
+            
+            activeTasks.forEach(task => {
+                let missing = 0;
+                sortedStudents.forEach(student => {
+                    const range = (db.ranges || []).find(r => r.taskId === task.taskId && r.noticeName === task.noticeName);
+                    let shouldSubmit = true;
+                    if (range && range.type === 'specific') {
+                        shouldSubmit = range.students.includes(student.id);
+                    }
+                    if (shouldSubmit) {
+                        const isSubmitted = db.records.some(r => r.taskId === task.taskId && r.noticeName === task.noticeName && r.studentId === student.id);
+                        if (!isSubmitted) missing++;
+                    }
+                });
+                taskMissingCounts.set(task.taskId + ':::' + task.noticeName, missing);
+            });
 
-    // 預先計算每個 task 的全班缺交數
-    const sortedStudents = [...db.students].sort((a,b) => a.id - b.id);
-    const taskMissingCounts = new Map();
-    
-    activeTasks.forEach(task => {
-        let missing = 0;
-        sortedStudents.forEach(student => {
-            const range = (db.ranges || []).find(r => r.taskId === task.taskId && r.noticeName === task.noticeName);
-            let shouldSubmit = true;
-            if (range && range.type === 'specific') {
-                shouldSubmit = range.students.includes(student.id);
+            // 隱藏大家都交齊的作業 (除非開啟顯示)
+            if (!showAll) {
+                activeTasks = activeTasks.filter(task => {
+                    return taskMissingCounts.get(task.taskId + ':::' + task.noticeName) > 0;
+                });
             }
-            if (shouldSubmit) {
-                const isSubmitted = db.records.some(r => r.taskId === task.taskId && r.noticeName === task.noticeName && r.studentId === student.id);
-                if (!isSubmitted) missing++;
-            }
-        });
-        taskMissingCounts.set(task.taskId + ':::' + task.noticeName, missing);
-    });
-
-    // 隱藏大家都交齊的作業 (除非開啟顯示)
-    if (!showAll) {
-        activeTasks = activeTasks.filter(task => {
-            return taskMissingCounts.get(task.taskId + ':::' + task.noticeName) > 0;
-        });
-    }
     
     // 如果沒有作業，顯示提示
     if (activeTasks.length === 0) {

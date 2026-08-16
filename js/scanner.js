@@ -1288,6 +1288,13 @@ function renderStatistics() {
             renderGradingSubjects();
         }
 
+        window.gradingSearchQuery = '';
+        function handleGradingSearch() {
+            const input = document.getElementById('grading-search-input');
+            window.gradingSearchQuery = input ? input.value.trim().toLowerCase() : '';
+            renderGradingTasks();
+        }
+
         function renderGradingTasks() {
             const container = document.getElementById('grading-task-buttons');
             if (!activeGradingSubject || !gradingTaskGroups[activeGradingSubject]) {
@@ -1297,7 +1304,23 @@ function renderStatistics() {
             }
 
             // 反轉順序，讓最新建立的作業排在最上面
-            const tasks = [...gradingTaskGroups[activeGradingSubject]].reverse();
+            let tasks = [...gradingTaskGroups[activeGradingSubject]].reverse();
+            
+            // 處理搜尋過濾
+            const searchQ = window.gradingSearchQuery || '';
+            let tasksMatchingSearch = [];
+            if (searchQ) {
+                tasksMatchingSearch = tasks.filter(k => {
+                    const taskDef = db.tasks.find(t=>t.id===k.taskId);
+                    const displayLabel = k.noticeName ? `${taskDef?.name} (${k.noticeName})` : taskDef?.name;
+                    const createdDate = taskDef?.created || '';
+                    return displayLabel.toLowerCase().includes(searchQ) || createdDate.includes(searchQ);
+                });
+                // 如果搜尋字詞有匹配到任何作業，就過濾選單 (否則假設使用者是在搜學生，就不動選單)
+                if (tasksMatchingSearch.length > 0) {
+                    tasks = tasksMatchingSearch;
+                }
+            }
             
             if (activeGradingTaskValue && !tasks.some(k => `${k.taskId}:::${k.noticeName}` === activeGradingTaskValue)) {
                 activeGradingTaskValue = null;
@@ -1351,7 +1374,23 @@ function renderStatistics() {
             
             let bodyHTML = '';
             
-            db.students.forEach(s => {
+            // 處理學生搜尋過濾
+            const searchQ = window.gradingSearchQuery || '';
+            let filteredStudents = db.students;
+            if (searchQ) {
+                filteredStudents = db.students.filter(s => {
+                    const studentIdStr = s.id.toString();
+                    const studentName = s.name.toLowerCase();
+                    return studentIdStr.includes(searchQ) || studentName.includes(searchQ);
+                });
+            }
+
+            if (filteredStudents.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">找不到符合條件的學生</td></tr>';
+                return;
+            }
+
+            filteredStudents.forEach(s => {
                 const record = db.records.find(r => r.studentId === s.id && r.taskId === taskId && r.noticeName === noticeName);
                 
                 let statusHTML = '<span class="text-yellow-600 font-bold bg-yellow-50 px-2 py-1 rounded border border-yellow-200 shadow-sm">缺交</span>';
