@@ -928,7 +928,15 @@
         async function renderVisualPdfPreview() {
             const fileInput = document.getElementById('tab3-pdf-upload');
             if(!fileInput || !fileInput.files.length) return;
+            const file = fileInput.files[0];
             
+            // Auto-fill notice name with filename
+            const noticeInput = document.getElementById('tab3-notice-name');
+            if(noticeInput && file) {
+                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+                noticeInput.value = nameWithoutExt;
+            }
+
             showLoading();
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
             const fileReader = new FileReader();
