@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.51)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.60)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -214,15 +214,18 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Beta Ver 1.51 -->
+                <!-- Beta Ver 1.60 -->
                 <div class="border-l-4 border-emerald-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.51</span>
+                        <span>Beta Ver. 1.60</span>
                         <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/16</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>新功能：</strong> 浮動套印上傳 PDF 底板時，自動抓取檔名填入通知單主題。</li>
                         <li><strong>UI 優化：</strong> 新增手機端「沉浸式掃描模式」，自動隱藏非必要選單，最大化螢幕掃描空間。</li>
-                        <li><strong>Bug 修復：</strong> 修正浮動作業（非 A4 或非標準裁切）PDF 匯出時，條碼位置異常偏移的問題。</li>
+                        <li><strong>UI 優化：</strong> 浮動套印上傳 PDF 時立即顯示處理中動畫，消除畫面停頓感。</li>
+                        <li><strong>Bug 修復：</strong> 徹底重寫底層座標映射引擎，精準解決非 A4 或非標準裁切 PDF 匯出時，條碼位置異常偏移的問題。</li>
+                        <li><strong>Bug 修復：</strong> 修正條碼框放置於左上角時，會被控制面板遮擋而無法拖曳的問題。</li>
                     </ul>
                 </div>
 
@@ -344,7 +347,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.51</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.60</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
