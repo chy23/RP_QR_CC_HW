@@ -1126,20 +1126,24 @@
                                 const widthPx = box.offsetWidth;
                                 const heightPx = box.offsetHeight;
                                 
-                                // Convert visual px to PDF pt
-                                const leftPt = leftPx / visualPdfScale;
-                                const topPt = topPx / visualPdfScale;
-                                const customWidthPt = widthPx / visualPdfScale;
-                                const customHeightPt = heightPx / visualPdfScale;
+                                // Use pdfjsLib's viewport to do precise coordinate mapping (handles CropBox, Rotation, UserUnit)
+                                const pdfjsPage = await pdfDocumentGlobal.getPage(i);
+                                const viewport = pdfjsPage.getViewport({scale: visualPdfScale});
                                 
-                                const cropBox = pages[i-1].getCropBox();
-                                const pageHeightPt = cropBox.height;
-                                // PDF coordinates are from bottom-left of the crop box
-                                const relativeY = pageHeightPt - topPt - customHeightPt;
+                                // Box bottom-left in CSS pixels relative to the wrapper
+                                const boxBottomLeftX = leftPx;
+                                const boxBottomLeftY = topPx + heightPx;
+                                const [pdfX, pdfY] = viewport.convertToPdfPoint(boxBottomLeftX, boxBottomLeftY);
+                                
+                                // Box top-right in CSS pixels to calculate precise width/height
+                                const [pdfTopRightX, pdfTopRightY] = viewport.convertToPdfPoint(leftPx + widthPx, topPx);
+                                
+                                const customWidthPt = Math.abs(pdfTopRightX - pdfX);
+                                const customHeightPt = Math.abs(pdfTopRightY - pdfY);
                                 
                                 boxPositions[i-1] = { 
-                                    x: cropBox.x + leftPt, 
-                                    y: cropBox.y + relativeY,
+                                    x: Math.min(pdfX, pdfTopRightX), 
+                                    y: Math.min(pdfY, pdfTopRightY),
                                     w: customWidthPt,
                                     h: customHeightPt
                                 };
