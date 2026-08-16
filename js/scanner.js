@@ -1295,6 +1295,11 @@ function renderStatistics() {
             renderGradingTasks();
         }
 
+        window.selectGradingTaskBase = function(taskId) {
+            activeGradingTaskValue = `${taskId}:::DUMMY_FORCE_RESET`;
+            renderGradingTasks();
+        }
+
         function renderGradingTasks() {
             const container = document.getElementById('grading-task-buttons');
             if (!activeGradingSubject || !gradingTaskGroups[activeGradingSubject]) {
@@ -1316,33 +1321,61 @@ function renderStatistics() {
                     const createdDate = taskDef?.created || '';
                     return displayLabel.toLowerCase().includes(searchQ) || createdDate.includes(searchQ);
                 });
-                // 如果搜尋字詞有匹配到任何作業，就過濾選單 (否則假設使用者是在搜學生，就不動選單)
                 if (tasksMatchingSearch.length > 0) {
                     tasks = tasksMatchingSearch;
                 }
             }
             
-            if (activeGradingTaskValue && !tasks.some(k => `${k.taskId}:::${k.noticeName}` === activeGradingTaskValue)) {
+            if (tasks.length === 0) {
+                container.innerHTML = '<span class="text-gray-500">沒有符合搜尋的作業</span>';
                 activeGradingTaskValue = null;
-            }
-            if (!activeGradingTaskValue && tasks.length > 0) {
-                activeGradingTaskValue = `${tasks[0].taskId}:::${tasks[0].noticeName}`;
+                renderGradingList();
+                return;
             }
 
-            let html = `
-                <div class="relative w-full md:w-64 inline-block">
-                    <select onchange="selectGradingTask(this.value)" class="w-full pl-4 pr-10 py-2.5 rounded-lg border border-gray-300 shadow-sm text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white cursor-pointer appearance-none text-base">
-            `;
-            
+            // 群組化 tasks by taskId
+            const taskGroups = {};
+            const baseTasksOrder = [];
             tasks.forEach(k => {
-                const val = `${k.taskId}:::${k.noticeName}`;
-                const isSelected = (val === activeGradingTaskValue) ? 'selected' : '';
-                const taskDef = db.tasks.find(t=>t.id===k.taskId);
-                const displayLabel = k.noticeName ? `${taskDef?.name} (${k.noticeName})` : taskDef?.name;
-                
-                html += `<option value="${val}" ${isSelected}>${displayLabel}</option>`;
+                if (!taskGroups[k.taskId]) {
+                    taskGroups[k.taskId] = [];
+                    baseTasksOrder.push(k.taskId);
+                }
+                taskGroups[k.taskId].push(k);
             });
+
+            let currentTaskId = activeGradingTaskValue ? activeGradingTaskValue.split(':::')[0] : null;
             
+            if (currentTaskId && !taskGroups[currentTaskId]) {
+                currentTaskId = null;
+                activeGradingTaskValue = null;
+            }
+            
+            if (!activeGradingTaskValue && tasks.length > 0) {
+                currentTaskId = baseTasksOrder[0];
+                const firstTask = taskGroups[currentTaskId][0];
+                activeGradingTaskValue = `${firstTask.taskId}:::${firstTask.noticeName}`;
+            } else if (currentTaskId && taskGroups[currentTaskId]) {
+                // Ensure the specific noticeName is still available
+                const stillExists = taskGroups[currentTaskId].some(k => `${k.taskId}:::${k.noticeName}` === activeGradingTaskValue);
+                if (!stillExists) {
+                    const firstTask = taskGroups[currentTaskId][0];
+                    activeGradingTaskValue = `${firstTask.taskId}:::${firstTask.noticeName}`;
+                }
+            }
+
+            let html = '<div class="flex flex-col sm:flex-row gap-2">';
+            
+            // 1. Base Task Select
+            html += `
+                <div class="relative w-full sm:w-48 inline-block flex-shrink-0">
+                    <select onchange="selectGradingTaskBase(this.value)" class="w-full pl-4 pr-10 py-2.5 rounded-lg border border-gray-300 shadow-sm text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white cursor-pointer appearance-none text-base">
+            `;
+            baseTasksOrder.forEach(tid => {
+                const taskDef = db.tasks.find(t=>t.id===tid);
+                const isSelected = (tid === currentTaskId) ? 'selected' : '';
+                html += `<option value="${tid}" ${isSelected}>${taskDef?.name}</option>`;
+            });
             html += `
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
@@ -1350,6 +1383,31 @@ function renderStatistics() {
                     </div>
                 </div>
             `;
+            
+            // 2. Range Select (NoticeName)
+            const currentGroup = taskGroups[currentTaskId] || [];
+            const hasRealRanges = currentGroup.length > 1 || (currentGroup.length === 1 && currentGroup[0].noticeName !== "");
+            
+            if (hasRealRanges) {
+                html += `
+                    <div class="relative w-full sm:w-48 inline-block flex-shrink-0">
+                        <select onchange="selectGradingTask('${currentTaskId}:::' + this.value)" class="w-full pl-4 pr-10 py-2.5 rounded-lg border border-gray-300 shadow-sm text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white cursor-pointer appearance-none text-base">
+                `;
+                currentGroup.forEach(k => {
+                    const isSelected = (`${k.taskId}:::${k.noticeName}` === activeGradingTaskValue) ? 'selected' : '';
+                    const displayLabel = k.noticeName ? k.noticeName : '全部範圍';
+                    html += `<option value="${k.noticeName}" ${isSelected}>${displayLabel}</option>`;
+                });
+                html += `
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
             container.innerHTML = html;
             
             renderGradingList();
