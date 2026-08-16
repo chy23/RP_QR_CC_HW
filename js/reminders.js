@@ -218,6 +218,15 @@ const REMINDER_MODULES = {
 
 let currentSubjectFilter = '全部';
 
+async function handleTab6Sync() {
+    if (typeof syncFromGoogleSheets === 'function') {
+        await syncFromGoogleSheets(false);
+        renderReminderStats();
+    } else {
+        alert('同步模組尚未載入！');
+    }
+}
+
 function renderReminderStats() {
     const thead = document.getElementById('reminder-thead');
     const tbody = document.getElementById('reminder-tbody');
