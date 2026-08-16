@@ -278,7 +278,10 @@
 
 
         async function syncFromGoogleSheets(silent = false) {
-            if(!gasUrl) return;
+            if(!gasUrl) {
+                if(!silent) alert('請先至「0. 資料建置」填寫您的 Google Apps Script 網址，才能進行雲端同步！');
+                return;
+            }
             
             if(!silent) {
                 showLoading();
