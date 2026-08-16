@@ -824,8 +824,14 @@
             </div>
 
             <!-- 科目篩選 -->
-            <div class="flex gap-2 mb-4 overflow-x-auto pb-2" id="reminder-subject-filters">
-                <!-- 動態產生按鈕 -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-2">
+                <div class="flex gap-2 overflow-x-auto pb-2 md:pb-0 flex-grow" id="reminder-subject-filters">
+                    <!-- 動態產生按鈕 -->
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border flex-shrink-0">
+                    <input type="checkbox" id="reminder-show-all-toggle" onchange="renderReminderStats()" class="w-4 h-4 text-purple-600 rounded cursor-pointer">
+                    <label for="reminder-show-all-toggle" class="cursor-pointer select-none font-medium">顯示全勤學生與已交齊作業</label>
+                </div>
             </div>
 
             <div class="overflow-x-auto rounded border">

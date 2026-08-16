@@ -232,6 +232,8 @@ function renderReminderStats() {
     const tbody = document.getElementById('reminder-tbody');
     const filterContainer = document.getElementById('reminder-subject-filters');
     const emptyMsg = document.getElementById('reminder-empty-msg');
+    const showAllToggle = document.getElementById('reminder-show-all-toggle');
+    const showAll = showAllToggle ? showAllToggle.checked : false;
     
     if(!thead || !tbody) return;
 
@@ -271,6 +273,36 @@ function renderReminderStats() {
             }
         });
     }
+
+    // 預設將最新作業排序在最左邊 (反轉陣列)
+    activeTasks.reverse();
+
+    // 預先計算每個 task 的全班缺交數
+    const sortedStudents = [...db.students].sort((a,b) => a.id - b.id);
+    const taskMissingCounts = new Map();
+    
+    activeTasks.forEach(task => {
+        let missing = 0;
+        sortedStudents.forEach(student => {
+            const range = (db.ranges || []).find(r => r.taskId === task.taskId && r.noticeName === task.noticeName);
+            let shouldSubmit = true;
+            if (range && range.type === 'specific') {
+                shouldSubmit = range.students.includes(student.id);
+            }
+            if (shouldSubmit) {
+                const isSubmitted = db.records.some(r => r.taskId === task.taskId && r.noticeName === task.noticeName && r.studentId === student.id);
+                if (!isSubmitted) missing++;
+            }
+        });
+        taskMissingCounts.set(task.taskId + ':::' + task.noticeName, missing);
+    });
+
+    // 隱藏大家都交齊的作業 (除非開啟顯示)
+    if (!showAll) {
+        activeTasks = activeTasks.filter(task => {
+            return taskMissingCounts.get(task.taskId + ':::' + task.noticeName) > 0;
+        });
+    }
     
     // 如果沒有作業，顯示提示
     if (activeTasks.length === 0) {
@@ -283,7 +315,7 @@ function renderReminderStats() {
     }
 
     // 產生 Header
-    let theadHtml = `<tr><th class="px-4 py-2 font-bold text-gray-700 sticky left-0 bg-gray-100 z-10 w-24">學生</th>`;
+    let theadHtml = `<tr><th class="px-4 py-2 font-bold text-gray-700 sticky left-0 bg-gray-100 z-10 w-24 border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)]">學生</th>`;
     activeTasks.forEach(t => {
         theadHtml += `<th class="px-2 py-2 font-bold text-gray-700 font-mono text-xs max-w-[100px] overflow-hidden text-ellipsis" title="${t.label}">${t.label}</th>`;
     });
@@ -292,40 +324,38 @@ function renderReminderStats() {
 
     // 產生 Body
     let tbodyHtml = '';
-    const sortedStudents = [...db.students].sort((a,b) => a.id - b.id);
     
     sortedStudents.forEach(student => {
-        // 檢查該學生是否有缺交 (只要有一項未交即高亮姓名)
         let missingCount = 0;
         let cellHtml = '';
         
         activeTasks.forEach(task => {
-            // 確認該學生是否應交該作業
             const range = (db.ranges || []).find(r => r.taskId === task.taskId && r.noticeName === task.noticeName);
             let shouldSubmit = true;
             if (range && range.type === 'specific') {
                 shouldSubmit = range.students.includes(student.id);
             }
-            // 轉入生過濾 (若作業的 created > 學生新增日，或作業不具 created，則皆為應交。唯獨學生新增日 > 作業新增日時，免交)
-            // 由於 Tab 6 用於提醒，這裡先統一判斷
             
             if (shouldSubmit) {
                 const isSubmitted = db.records.some(r => r.taskId === task.taskId && r.noticeName === task.noticeName && r.studentId === student.id);
                 if (isSubmitted) {
-                    cellHtml += `<td class="px-2 py-2 text-green-600 font-bold">✓</td>`;
+                    cellHtml += `<td class="px-2 py-2 text-green-600 font-bold border-l border-gray-50">✓</td>`;
                 } else {
                     missingCount++;
-                    cellHtml += `<td class="px-2 py-2 text-red-500 font-bold bg-red-50">缺</td>`;
+                    cellHtml += `<td class="px-2 py-2 text-red-500 font-bold bg-red-50 border-l border-red-100">缺</td>`;
                 }
             } else {
-                cellHtml += `<td class="px-2 py-2 text-gray-300">-</td>`;
+                cellHtml += `<td class="px-2 py-2 text-gray-300 border-l border-gray-50">-</td>`;
             }
         });
 
+        // 隱藏全勤學生 (除非開啟顯示)
+        if (!showAll && missingCount === 0) return;
+
         // 姓名欄位樣式
         const nameClass = missingCount > 0 
-            ? "cursor-pointer font-bold text-red-600 hover:text-red-800 hover:bg-red-100 transition sticky left-0 bg-white" 
-            : "cursor-pointer font-bold text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition sticky left-0 bg-white";
+            ? "cursor-pointer font-bold text-red-600 hover:text-red-800 hover:bg-red-50 transition sticky left-0 bg-white border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] z-10" 
+            : "cursor-pointer font-bold text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition sticky left-0 bg-white border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] z-10";
         const badge = missingCount > 0 ? `<span class="ml-1 text-[10px] bg-red-500 text-white rounded-full px-1.5 py-0.5">${missingCount}</span>` : '';
 
         tbodyHtml += `
