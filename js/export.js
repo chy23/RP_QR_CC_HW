@@ -65,7 +65,9 @@
                 
                 setupDraggableBox();
                 updatePreviewBox();
+                hideLoading();
             };
+            showLoading();
             fileReader.readAsArrayBuffer(fileInput.files[0]);
         }
 
@@ -927,10 +929,10 @@
             const fileInput = document.getElementById('tab3-pdf-upload');
             if(!fileInput || !fileInput.files.length) return;
             
+            showLoading();
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
             const fileReader = new FileReader();
             fileReader.onload = async function() {
-                showLoading();
                 try {
                     const typedarray = new Uint8Array(this.result);
                     const pdf = await pdfjsLib.getDocument(typedarray).promise;
