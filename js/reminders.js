@@ -511,9 +511,7 @@ function generateReminderText(forceRandom = false) {
 
     const template = `${student.name} 媽媽/爸爸您好，
 ${student.name} ${dateStr} 應繳交的作業：
-【${taskListStr}】尚未補繳。
-
-${sentence}`;
+【${taskListStr}】尚未補繳。${sentence}`;
     
     const textarea = document.getElementById('reminder-preview-text');
     textarea.value = template;
