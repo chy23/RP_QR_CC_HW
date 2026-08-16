@@ -1296,7 +1296,8 @@ function renderStatistics() {
                 return;
             }
 
-            const tasks = gradingTaskGroups[activeGradingSubject];
+            // 反轉順序，讓最新建立的作業排在最上面
+            const tasks = [...gradingTaskGroups[activeGradingSubject]].reverse();
             
             if (activeGradingTaskValue && !tasks.some(k => `${k.taskId}:::${k.noticeName}` === activeGradingTaskValue)) {
                 activeGradingTaskValue = null;
@@ -1305,18 +1306,27 @@ function renderStatistics() {
                 activeGradingTaskValue = `${tasks[0].taskId}:::${tasks[0].noticeName}`;
             }
 
-            let html = '';
+            let html = `
+                <div class="relative w-full md:w-64 inline-block">
+                    <select onchange="selectGradingTask(this.value)" class="w-full pl-4 pr-10 py-2.5 rounded-lg border border-gray-300 shadow-sm text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white cursor-pointer appearance-none text-base">
+            `;
+            
             tasks.forEach(k => {
                 const val = `${k.taskId}:::${k.noticeName}`;
-                const isActive = (val === activeGradingTaskValue);
+                const isSelected = (val === activeGradingTaskValue) ? 'selected' : '';
                 const taskDef = db.tasks.find(t=>t.id===k.taskId);
                 const displayLabel = k.noticeName ? `${taskDef?.name} (${k.noticeName})` : taskDef?.name;
                 
-                const baseCls = "px-4 py-2 rounded-lg font-semibold cursor-pointer shadow-sm transition-colors border";
-                const activeCls = isActive ? "bg-blue-600 text-white border-blue-700" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100";
-                
-                html += `<button class="${baseCls} ${activeCls}" onclick="selectGradingTask('${val}')">${displayLabel}</button>`;
+                html += `<option value="${val}" ${isSelected}>${displayLabel}</option>`;
             });
+            
+            html += `
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                </div>
+            `;
             container.innerHTML = html;
             
             renderGradingList();
