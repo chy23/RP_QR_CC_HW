@@ -789,7 +789,7 @@
                 if (existingInSession) return; // 已經掃過
                 
                 const now = new Date();
-                const timeString = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                const timeString = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
                 
                 scanSession.records.unshift({
                     studentId: student.id,
