@@ -515,7 +515,13 @@ ${student.name} ${dateStr} 應繳交的作業：
 
 ${sentence}`;
     
-    document.getElementById('reminder-preview-text').value = template;
+    const textarea = document.getElementById('reminder-preview-text');
+    textarea.value = template;
+    // Auto-resize
+    setTimeout(() => {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }, 0);
 }
 
 function copyReminderText() {
