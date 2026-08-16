@@ -1245,7 +1245,6 @@ function renderStatistics() {
                     const hasRecords = (db.records || []).some(r => r.taskId === k.taskId && r.noticeName === k.noticeName);
                     return hasRange || hasRecords;
                 });
-                allSubjectKeys[sub] = uniqueTaskKeys;
                 
                 if (uniqueTaskKeys.length > 0) {
                     gradingTaskGroups[sub] = uniqueTaskKeys;
