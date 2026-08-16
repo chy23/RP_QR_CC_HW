@@ -1130,13 +1130,14 @@
                                 const customWidthPt = widthPx / visualPdfScale;
                                 const customHeightPt = heightPx / visualPdfScale;
                                 
-                                const pageHeightPt = pages[i-1].getSize().height;
-                                // PDF coordinates are from bottom-left
-                                const pdfY = pageHeightPt - topPt - customHeightPt;
+                                const cropBox = pages[i-1].getCropBox();
+                                const pageHeightPt = cropBox.height;
+                                // PDF coordinates are from bottom-left of the crop box
+                                const relativeY = pageHeightPt - topPt - customHeightPt;
                                 
                                 boxPositions[i-1] = { 
-                                    x: leftPt, 
-                                    y: pdfY,
+                                    x: cropBox.x + leftPt, 
+                                    y: cropBox.y + relativeY,
                                     w: customWidthPt,
                                     h: customHeightPt
                                 };
