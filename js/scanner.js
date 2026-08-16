@@ -1024,7 +1024,7 @@ function renderStatistics() {
                     const deadline = taskDef && taskDef.deadline ? new Date(taskDef.deadline + 'T23:59:59') : null;
                     const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
                     
-                    let mark = '<span class="text-yellow-600 font-bold text-xs bg-yellow-50 border border-yellow-200 px-1 rounded block">缺交</span>';
+                    let mark = '<span class="text-red-700 font-bold text-xs bg-red-50 border border-red-200 px-1 rounded block">缺交</span>';
                     if (record) {
                         // 判斷是否遲交
                         let isLate = false;
@@ -1047,7 +1047,7 @@ function renderStatistics() {
                         }
                         
                         if (isLate) {
-                            mark = `<span class="text-red-700 font-bold text-xs bg-red-100 border border-red-200 px-1 rounded block truncate" title="遲交: ${record.timestamp}">遲交:${record.timestamp}</span>`;
+                            mark = `<span class="text-yellow-700 font-bold text-xs bg-yellow-100 border border-yellow-200 px-1 rounded block truncate" title="遲交: ${record.timestamp}">遲交:${record.timestamp}</span>`;
                         } else {
                             mark = `<span class="text-green-700 font-bold text-xs bg-green-100 px-1 rounded block truncate" title="準時: ${record.timestamp}">${record.timestamp}</span>`;
                         }
@@ -1468,7 +1468,7 @@ function renderStatistics() {
             filteredStudents.forEach(s => {
                 const record = db.records.find(r => r.studentId === s.id && r.taskId === taskId && r.noticeName === noticeName);
                 
-                let statusHTML = '<span class="text-yellow-600 font-bold bg-yellow-50 px-2 py-1 rounded border border-yellow-200 shadow-sm">缺交</span>';
+                let statusHTML = '<span class="text-red-700 font-bold bg-red-50 px-2 py-1 rounded border border-red-200 shadow-sm">缺交</span>';
                 let currentStatusType = 'missing';
                 
                 if (record) {
@@ -1486,7 +1486,7 @@ function renderStatistics() {
                     }
                     
                     if (isLate) {
-                        statusHTML = `<span class="text-red-700 font-bold bg-red-100 px-2 py-1 rounded border border-red-200 shadow-sm">遲交 (${record.timestamp})</span>`;
+                        statusHTML = `<span class="text-yellow-700 font-bold bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">遲交 (${record.timestamp})</span>`;
                         currentStatusType = 'late';
                     } else {
                         statusHTML = `<span class="text-green-700 font-bold bg-green-100 px-2 py-1 rounded border border-green-200 shadow-sm">準時 (${record.timestamp})</span>`;
