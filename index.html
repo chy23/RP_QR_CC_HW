@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.42)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.47)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -195,8 +195,23 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Beta Ver 1.43 -->
+                <!-- Beta Ver 1.47 -->
                 <div class="border-l-4 border-emerald-600 pl-4 py-1">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.47</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/16</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>新增：</strong> 【批改與退回】及【缺交提醒單】分頁新增「智慧萬用搜尋框」，可同時搜尋學生姓名、座號、作業名稱或日期。</li>
+                        <li><strong>優化：</strong> 解決【批改與退回】分頁作業按鈕過多的問題，全面升級為「主作業 + 範圍」的階層式雙層下拉選單。</li>
+                        <li><strong>優化：</strong> 作業選單一律將最新建立的作業排在最上方，方便快速點選。</li>
+                        <li><strong>修復：</strong> 修正了搜尋條件互相衝突時會導致名單清空的邏輯漏洞。</li>
+                        <li><strong>優化：</strong> 【缺交提醒單】新增「顯示全勤學生與已交齊作業」的隱藏開關，大幅縮減表格寬度，解決手機版面擁擠問題。</li>
+                    </ul>
+                </div>
+
+                <!-- Beta Ver 1.43 -->
+                <div class="border-l-4 border-emerald-600 pl-4 py-1 mt-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
                         <span>Beta Ver. 1.43</span>
                         <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/16</span>
@@ -288,7 +303,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.42</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.47</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
