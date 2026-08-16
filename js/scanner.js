@@ -1435,12 +1435,29 @@ function renderStatistics() {
             // 處理學生搜尋過濾
             const searchQ = window.gradingSearchQuery || '';
             let filteredStudents = db.students;
+            
             if (searchQ) {
-                filteredStudents = db.students.filter(s => {
+                const studentsMatchingSearch = db.students.filter(s => {
                     const studentIdStr = s.id.toString();
                     const studentName = s.name.toLowerCase();
                     return studentIdStr.includes(searchQ) || studentName.includes(searchQ);
                 });
+                
+                const currentTaskDef = db.tasks.find(t=>t.id===taskId);
+                const displayLabel = noticeName ? `${currentTaskDef?.name} (${noticeName})` : currentTaskDef?.name;
+                const createdDate = currentTaskDef?.created || '';
+                const taskMatchesSearch = (displayLabel && displayLabel.toLowerCase().includes(searchQ)) || createdDate.includes(searchQ);
+                
+                if (studentsMatchingSearch.length > 0) {
+                    // 有匹配的學生，過濾名單
+                    filteredStudents = studentsMatchingSearch;
+                } else if (taskMatchesSearch) {
+                    // 沒有匹配的學生，但匹配目前的作業 (表示使用者是在搜尋這項作業)，所以保留所有學生
+                    filteredStudents = db.students;
+                } else {
+                    // 兩者皆不匹配，找不到資料
+                    filteredStudents = [];
+                }
             }
 
             if (filteredStudents.length === 0) {

@@ -300,13 +300,21 @@ async function handleTab6Sync() {
                     return s.id.toString().includes(searchQ) || s.name.toLowerCase().includes(searchQ);
                 });
 
-                // 如果有匹配作業，就過濾作業欄位
-                if (tasksMatchingSearch.length > 0) {
+                // 智慧判斷邏輯
+                if (tasksMatchingSearch.length > 0 && studentsMatchingSearch.length === 0) {
+                    // 只匹配到作業：過濾作業欄位，保留所有學生
                     activeTasks = tasksMatchingSearch;
-                }
-                // 如果有匹配學生，就過濾學生名單
-                if (studentsMatchingSearch.length > 0) {
+                } else if (tasksMatchingSearch.length === 0 && studentsMatchingSearch.length > 0) {
+                    // 只匹配到學生：過濾學生，保留所有作業欄位
                     sortedStudents = studentsMatchingSearch;
+                } else if (tasksMatchingSearch.length > 0 && studentsMatchingSearch.length > 0) {
+                    // 兩者皆有匹配：雙重過濾
+                    activeTasks = tasksMatchingSearch;
+                    sortedStudents = studentsMatchingSearch;
+                } else {
+                    // 兩者皆不匹配：清空
+                    activeTasks = [];
+                    sortedStudents = [];
                 }
             }
 
