@@ -996,7 +996,7 @@
                         // QR Box
                         const box = document.createElement('div');
                         box.id = 'qr-box-' + i;
-                        box.className = 'qr-box absolute border-2 border-red-500 cursor-move bg-red-200 bg-opacity-50 flex flex-col items-center justify-center text-xs font-bold text-red-700 z-10';
+                        box.className = 'qr-box absolute border-2 border-red-500 cursor-move bg-red-200 bg-opacity-50 flex flex-col items-center justify-center text-xs font-bold text-red-700 z-30';
                         box.style.display = i === 1 ? 'flex' : 'none';
                         box.innerHTML = '姓名座號<br><br>條碼區塊';
                         wrapper.appendChild(box);
