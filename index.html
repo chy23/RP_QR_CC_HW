@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Ver. 1.5)</title>
+    <title>QRcode自動清點作業系統 (Ver. 1.6)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -54,6 +54,25 @@
         table { border-collapse: collapse; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 沉浸式掃描模式 */
+        body.immersive-active #main-header,
+        body.immersive-active #main-tabs,
+        body.immersive-active #tab-1-header {
+            display: none !important;
+        }
+        body.immersive-active .max-w-7xl {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+        body.immersive-active #tab-1 {
+            padding: 0.5rem !important;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            min-height: 100vh;
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -83,7 +102,7 @@
             </div>
             
             <div class="flex justify-end gap-2">
-                <button onclick="cancelScanSession()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">取消並繼續掃描</button>
+                <button onclick="closeSessionModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">取消並繼續掃描</button>
                 <button onclick="confirmScanSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow font-bold">確認缺交無誤，存入系統</button>
             </div>
         </div>
@@ -195,6 +214,21 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
+                <!-- Ver 1.6 -->
+                <div class="border-l-4 border-blue-600 pl-4 py-1 mb-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>正式版 Ver. 1.6</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/16</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>新功能：</strong> 浮動套印上傳 PDF 底板時，自動抓取檔名填入通知單主題。</li>
+                        <li><strong>UI 優化：</strong> 新增手機端「沉浸式掃描模式」，自動隱藏非必要選單，最大化螢幕掃描空間。</li>
+                        <li><strong>UI 優化：</strong> 浮動套印上傳 PDF 時立即顯示處理中動畫，消除畫面停頓感。</li>
+                        <li><strong>Bug 修復：</strong> 徹底重寫底層座標映射引擎，精準解決非 A4 或非標準裁切 PDF 匯出時，條碼位置異常偏移的問題。</li>
+                        <li><strong>Bug 修復：</strong> 修正條碼框放置於左上角時，會被控制面板遮擋而無法拖曳的問題。</li>
+                    </ul>
+                </div>
+
                 <!-- Ver 1.5 -->
                 <div class="border-l-4 border-blue-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
@@ -207,6 +241,73 @@
                         <li><strong>UI 視覺升級：</strong> 將「缺交」標籤改為醒目的紅色，「遲交」標籤改為黃色，提升視覺辨識度。移除掃描紀錄時間的「秒數」，讓版面更簡潔。</li>
                         <li><strong>Line 催繳優化：</strong> 移除產生 Line 催繳訊息時的換行符號，讓訊息在手機上更加緊湊連貫。</li>
                         <li><strong>手機版面優化：</strong> 【缺交提醒單】新增「顯示全勤學生與已交齊作業」的隱藏開關，大幅縮減表格寬度。</li>
+
+                <!-- Ver 1.4 -->
+                <div class="border-l-4 border-gray-200 pl-4 py-1 mb-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.50</span>
+                        <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono">2026/08/16</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>UI 優化：</strong> 將「缺交」標籤改為醒目的紅色，將「遲交」標籤改為黃色，提升視覺辨識度。</li>
+                        <li><strong>UI 優化：</strong> 移除產生 Line 催繳訊息時的換行符號，讓訊息在手機上更加緊湊連貫。</li>
+                        <li><strong>UI 優化：</strong> 移除掃描紀錄時間的「秒數」，統一以「時:分」顯示，讓版面更為簡潔。</li>
+                    </ul>
+                </div>
+
+                <!-- Beta Ver 1.47 -->
+                <div class="border-l-4 border-emerald-600 pl-4 py-1">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.47</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/16</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>新增：</strong> 【批改與退回】及【缺交提醒單】分頁新增「智慧萬用搜尋框」，可同時搜尋學生姓名、座號、作業名稱或日期。</li>
+                        <li><strong>優化：</strong> 解決【批改與退回】分頁作業按鈕過多的問題，全面升級為「主作業 + 範圍」的階層式雙層下拉選單。</li>
+                        <li><strong>優化：</strong> 作業選單一律將最新建立的作業排在最上方，方便快速點選。</li>
+                        <li><strong>修復：</strong> 修正了搜尋條件互相衝突時會導致名單清空的邏輯漏洞。</li>
+                        <li><strong>優化：</strong> 【缺交提醒單】新增「顯示全勤學生與已交齊作業」的隱藏開關，大幅縮減表格寬度，解決手機版面擁擠問題。</li>
+                    </ul>
+                </div>
+
+                <!-- Beta Ver 1.43 -->
+                <div class="border-l-4 border-emerald-600 pl-4 py-1 mt-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.43</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/16</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>修復行動版快取問題：</strong>修復了手機瀏覽器會讀取舊版快取，導致提醒單文案仍有空白段落的問題。</li>
+                        <li><strong>優化雲端資料同步：</strong>於【6. 缺交提醒單】分頁新增專屬的「雲端同步」按鈕，方便跨裝置時手動拉取最新資料。</li>
+                        <li><strong>修復同步異常問題：</strong>修復了跨裝置操作時，若未設定 GAS 網址會導致按鈕無反應的問題（新增提示），以及【5. 批改與退回】點擊重整雲端資料會導致畫面卡住的錯誤。</li>
+                    </ul>
+                </div>
+                <!-- Beta Ver 1.42 -->
+                <div class="border-l-4 border-emerald-600 pl-4 py-1 mt-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.42</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/15</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>新增【6. 缺交提醒單】功能：</strong>全新的自動化親師溝通模組，自動統計學生缺交清單，並依據不同情境自動產生提醒文案，提供一鍵複製。</li>
+                        <li><strong>優化缺交判斷邏輯：</strong>只有「已開始收集（有繳交紀錄）」或「有設定特定範圍」的作業才會列入缺交總表。</li>
+                        <li><strong>優化提醒單介面：</strong>修正座號顯示問題，並讓預覽文字框自動適應高度，完整呈現文案不裁切。</li>
+                        <li><strong>優化版面閱讀體驗：</strong>調降背景浮水印透明度與層級，不再阻擋表格與彈出視窗。</li>
+                    </ul>
+                </div>
+                <!-- Beta Ver 1.41 -->
+                <div class="border-l-4 border-emerald-600 pl-4 py-1 mt-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.41</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/06</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>程式碼模組化大重構：</strong>單一超長檔案已拆分為 db, ui, scanner, export 等模組，未來維護更輕鬆。</li>
+                        <li><strong>相機掃描提示音效：</strong>新增內建掃描音效，成功為高頻清脆聲，錯誤為低頻警告聲，且無須額外下載檔案！</li>
+                        <li><strong>全域快捷鍵：</strong>在掃描頁面按下 `Space` 鍵可快速暫停/恢復相機，並支援 `Ctrl+S` 全域同步資料。</li>
+                        <li><strong>手機端掃描最佳化 (RWD)：</strong>手機版進入相機與批改分頁時，會自動隱藏上方選單，讓掃描畫面全螢幕化。</li>
+                        <li><strong>誤刪復原機制 (Undo)：</strong>刪除學生、作業或欄位時，右下角會跳出通知與「復原」按鈕（停留5秒），可一鍵救回資料。</li>
+                        <li><strong>本機定時備份 (IndexedDB)：</strong>系統背景自動紀錄最近 10 次的資料變更，並在「資料建置」提供本地自動備份還原按鈕。</li>
                     </ul>
                 </div>
                 <!-- Ver 1.4 -->
@@ -259,7 +360,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-blue-500 font-bold tracking-wide">Ver. 1.5</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-blue-500 font-bold tracking-wide">Ver. 1.6</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
@@ -422,7 +523,7 @@
         <!-- Tab 1: 掃描與統計 -->
         <div id="tab-1" class="tab-content bg-white p-6 rounded-b shadow">
             
-            <div class="flex items-center justify-between border-b pb-2 mb-4">
+            <div id="tab-1-header" class="flex items-center justify-between border-b pb-2 mb-4">
                 <h2 class="text-2xl font-bold  m-0 border-0 pb-0">1. 掃描與統計</h2>
                 <button onclick="document.getElementById('help-tab1').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -465,9 +566,14 @@
                         
                         <label class="block mb-2 font-semibold">條碼輸入：</label>
                         <input type="text" id="scanner-input" class="border p-2 rounded w-full mb-2" placeholder="使用實體掃描槍..." autofocus onkeydown="if(event.key === 'Enter') { processScan(this.value); this.value = ''; }">
-                        <button onclick="toggleCameraScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow w-full flex items-center justify-center gap-2 mb-2">
-                            <span>📷</span> 開啟相機/手機鏡頭掃描
-                        </button>
+                        <div class="flex gap-2 mb-2">
+                            <button onclick="toggleCameraScanner()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow flex items-center justify-center gap-2 transition-colors">
+                                <span>📷</span> 開啟相機
+                            </button>
+                            <button onclick="toggleImmersiveMode()" id="immersive-toggle-btn" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded shadow flex items-center justify-center gap-2 transition-colors">
+                                <span>📱</span> 沉浸掃描
+                            </button>
+                        </div>
                         <div id="camera-container" class="mt-2 hidden border-2 border-dashed border-gray-300 rounded p-2 text-center bg-gray-50 mb-4 relative">
                             <!-- Native Video element for custom scanning -->
                             <video id="native-video" class="w-full max-w-[500px] mx-auto bg-black rounded" playsinline autoplay muted></video>

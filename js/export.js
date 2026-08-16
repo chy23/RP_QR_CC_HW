@@ -65,7 +65,9 @@
                 
                 setupDraggableBox();
                 updatePreviewBox();
+                hideLoading();
             };
+            showLoading();
             fileReader.readAsArrayBuffer(fileInput.files[0]);
         }
 
@@ -926,11 +928,19 @@
         async function renderVisualPdfPreview() {
             const fileInput = document.getElementById('tab3-pdf-upload');
             if(!fileInput || !fileInput.files.length) return;
+            const file = fileInput.files[0];
             
+            // Auto-fill notice name with filename
+            const noticeInput = document.getElementById('tab3-notice-name');
+            if(noticeInput && file) {
+                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+                noticeInput.value = nameWithoutExt;
+            }
+
+            showLoading();
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
             const fileReader = new FileReader();
             fileReader.onload = async function() {
-                showLoading();
                 try {
                     const typedarray = new Uint8Array(this.result);
                     const pdf = await pdfjsLib.getDocument(typedarray).promise;
@@ -986,7 +996,7 @@
                         // QR Box
                         const box = document.createElement('div');
                         box.id = 'qr-box-' + i;
-                        box.className = 'qr-box absolute border-2 border-red-500 cursor-move bg-red-200 bg-opacity-50 flex flex-col items-center justify-center text-xs font-bold text-red-700 z-10';
+                        box.className = 'qr-box absolute border-2 border-red-500 cursor-move bg-red-200 bg-opacity-50 flex flex-col items-center justify-center text-xs font-bold text-red-700 z-30';
                         box.style.display = i === 1 ? 'flex' : 'none';
                         box.innerHTML = '姓名座號<br><br>條碼區塊';
                         wrapper.appendChild(box);
@@ -1124,19 +1134,24 @@
                                 const widthPx = box.offsetWidth;
                                 const heightPx = box.offsetHeight;
                                 
-                                // Convert visual px to PDF pt
-                                const leftPt = leftPx / visualPdfScale;
-                                const topPt = topPx / visualPdfScale;
-                                const customWidthPt = widthPx / visualPdfScale;
-                                const customHeightPt = heightPx / visualPdfScale;
+                                // Use pdfjsLib's viewport to do precise coordinate mapping (handles CropBox, Rotation, UserUnit)
+                                const pdfjsPage = await pdfDocumentGlobal.getPage(i);
+                                const viewport = pdfjsPage.getViewport({scale: visualPdfScale});
                                 
-                                const pageHeightPt = pages[i-1].getSize().height;
-                                // PDF coordinates are from bottom-left
-                                const pdfY = pageHeightPt - topPt - customHeightPt;
+                                // Box bottom-left in CSS pixels relative to the wrapper
+                                const boxBottomLeftX = leftPx;
+                                const boxBottomLeftY = topPx + heightPx;
+                                const [pdfX, pdfY] = viewport.convertToPdfPoint(boxBottomLeftX, boxBottomLeftY);
+                                
+                                // Box top-right in CSS pixels to calculate precise width/height
+                                const [pdfTopRightX, pdfTopRightY] = viewport.convertToPdfPoint(leftPx + widthPx, topPx);
+                                
+                                const customWidthPt = Math.abs(pdfTopRightX - pdfX);
+                                const customHeightPt = Math.abs(pdfTopRightY - pdfY);
                                 
                                 boxPositions[i-1] = { 
-                                    x: leftPt, 
-                                    y: pdfY,
+                                    x: Math.min(pdfX, pdfTopRightX), 
+                                    y: Math.min(pdfY, pdfTopRightY),
                                     w: customWidthPt,
                                     h: customHeightPt
                                 };
