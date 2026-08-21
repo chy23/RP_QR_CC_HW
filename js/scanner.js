@@ -1048,7 +1048,10 @@ function renderStatistics() {
                             if (scanDate > deadline) isLate = true;
                         }
                         
-                        if (isLate) {
+                        if (record.manualStatus && ['病假', '事假', '公假', '喪假', '其他假別'].includes(record.manualStatus)) {
+                            const lName = record.manualStatus;
+                            mark = `<span class="text-blue-700 font-bold text-xs bg-blue-100 border border-blue-200 px-1 rounded block truncate" title="${lName}">${lName}</span>`;
+                        } else if (isLate) {
                             mark = `<span class="text-yellow-700 font-bold text-xs bg-yellow-100 border border-yellow-200 px-1 rounded block truncate" title="遲交: ${record.timestamp}">遲交:${record.timestamp}</span>`;
                         } else {
                             mark = `<span class="text-green-700 font-bold text-xs bg-green-100 px-1 rounded block truncate" title="準時: ${record.timestamp}">${record.timestamp}</span>`;
@@ -1102,7 +1105,7 @@ function renderStatistics() {
                     if (scanDate > deadline) isLate = true;
                 }
 
-                if (!isLate && record.manualStatus !== 'missing') {
+                if (!isLate && record.manualStatus !== 'missing' && (!record.manualStatus || !['病假', '事假', '公假', '喪假', '其他假別'].includes(record.manualStatus))) {
                     // 準時 -> 遲交
                     record.manualStatus = 'late';
                     record.timestamp = timeString;
@@ -1487,7 +1490,11 @@ function renderStatistics() {
                         if (scanDate > deadline) isLate = true;
                     }
                     
-                    if (isLate) {
+                    if (record.manualStatus && ['病假', '事假', '公假', '喪假', '其他假別'].includes(record.manualStatus)) {
+                        const lName = record.manualStatus;
+                        statusHTML = `<span class="text-blue-700 font-bold bg-blue-100 px-2 py-1 rounded border border-blue-200 shadow-sm">${lName}</span>`;
+                        currentStatusType = record.manualStatus;
+                    } else if (isLate) {
                         statusHTML = `<span class="text-yellow-700 font-bold bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">遲交 (${record.timestamp})</span>`;
                         currentStatusType = 'late';
                     } else {
@@ -1504,6 +1511,16 @@ function renderStatistics() {
                         <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'missing')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'missing' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-red-500 hover:bg-red-600 text-white'}" ${currentStatusType === 'missing' ? 'disabled' : ''}>退回 (缺交)</button>
                         <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'late')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'late' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}" ${currentStatusType === 'late' ? 'disabled' : ''}>改為遲交</button>
                         <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'ontime')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'ontime' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-green-500 hover:bg-green-600 text-white'}" ${currentStatusType === 'ontime' ? 'disabled' : ''}>標為準時</button>
+                        <div class="relative">
+                            <select onchange="if(this.value) { updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', this.value); this.value=''; }" class="px-4 py-2 rounded font-bold shadow-sm transition-colors text-center cursor-pointer appearance-none outline-none ${currentStatusType && ['病假', '事假', '公假', '喪假', '其他假別'].includes(currentStatusType) ? 'bg-blue-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}">
+                                <option value="" disabled selected>${currentStatusType && ['病假', '事假', '公假', '喪假', '其他假別'].includes(currentStatusType) ? '變更假別 ▼' : '設定請假 ▼'}</option>
+                                <option value="病假" class="text-black bg-white">病假</option>
+                                <option value="事假" class="text-black bg-white">事假</option>
+                                <option value="公假" class="text-black bg-white">公假</option>
+                                <option value="喪假" class="text-black bg-white">喪假</option>
+                                <option value="其他假別" class="text-black bg-white">其他假別</option>
+                            </select>
+                        </div>
                     </td>
                 </tr>`;
             });
