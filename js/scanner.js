@@ -1101,6 +1101,43 @@ window.handleLeaveSelect = function(selectEl, studentId, taskId, noticeName) {
     selectEl.value = '';
 };
 
+
+function isLeaveStatus(status) {
+    if (!status) return false;
+    if (status.startsWith('leave_')) return true;
+    return ['病假', '事假', '公假', '喪假', '其他假別', '曠課', '遲到', '其他'].includes(status);
+}
+function getLeaveName(status) {
+    if (!status) return '';
+    if (status.startsWith('leave_custom_')) return status.replace('leave_custom_', '');
+    if (status.startsWith('leave_')) return status.replace('leave_', '');
+    return status;
+}
+
+// Global handler for leave select
+window.handleLeaveSelect = function(selectEl, studentId, taskId, noticeName) {
+    if (!selectEl.value) return;
+    let val = selectEl.value;
+    if (val === '其他假別') {
+        const custom = prompt("請輸入自訂假別名稱 (例如: 生理假, 檢定等)：");
+        if (custom && custom.trim() !== '') {
+            val = 'leave_custom_' + custom.trim();
+        } else {
+            selectEl.value = '';
+            return;
+        }
+    } else {
+        val = 'leave_' + val;
+    }
+    
+    if (studentId === null) {
+        setManualStatus(val);
+    } else {
+        updateStudentTaskStatus(studentId, taskId, noticeName, val);
+    }
+    selectEl.value = '';
+};
+
 let currentTargetRecord = null;
         
         function toggleRecord(studentId, taskId, noticeName) {
