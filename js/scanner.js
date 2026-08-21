@@ -1048,8 +1048,8 @@ function renderStatistics() {
                             if (scanDate > deadline) isLate = true;
                         }
                         
-                        if (record.manualStatus && ['病假', '事假', '公假', '喪假', '其他假別'].includes(record.manualStatus)) {
-                            const lName = record.manualStatus;
+                        if (isLeaveStatus(record.manualStatus)) {
+                            const lName = getLeaveName(record.manualStatus);
                             mark = `<span class="text-blue-700 font-bold text-xs bg-blue-100 border border-blue-200 px-1 rounded block truncate" title="${lName}">${lName}</span>`;
                         } else if (isLate) {
                             mark = `<span class="text-yellow-700 font-bold text-xs bg-yellow-100 border border-yellow-200 px-1 rounded block truncate" title="遲交: ${record.timestamp}">遲交:${record.timestamp}</span>`;
@@ -1064,7 +1064,44 @@ function renderStatistics() {
             tbody.innerHTML = bodyHTML;
         }
 
-        let currentTargetRecord = null;
+        
+function isLeaveStatus(status) {
+    if (!status) return false;
+    if (status.startsWith('leave_')) return true;
+    return ['病假', '事假', '公假', '喪假', '其他假別', '曠課', '遲到', '其他'].includes(status);
+}
+function getLeaveName(status) {
+    if (!status) return '';
+    if (status.startsWith('leave_custom_')) return status.replace('leave_custom_', '');
+    if (status.startsWith('leave_')) return status.replace('leave_', '');
+    return status;
+}
+
+// Global handler for leave select
+window.handleLeaveSelect = function(selectEl, studentId, taskId, noticeName) {
+    if (!selectEl.value) return;
+    let val = selectEl.value;
+    if (val === '其他假別') {
+        const custom = prompt("請輸入自訂假別名稱 (例如: 生理假, 檢定等)：");
+        if (custom && custom.trim() !== '') {
+            val = 'leave_custom_' + custom.trim();
+        } else {
+            selectEl.value = '';
+            return;
+        }
+    } else {
+        val = 'leave_' + val;
+    }
+    
+    if (studentId === null) {
+        setManualStatus(val);
+    } else {
+        updateStudentTaskStatus(studentId, taskId, noticeName, val);
+    }
+    selectEl.value = '';
+};
+
+let currentTargetRecord = null;
         
         function toggleRecord(studentId, taskId, noticeName) {
             if (studentId === null) {
@@ -1105,7 +1142,7 @@ function renderStatistics() {
                     if (scanDate > deadline) isLate = true;
                 }
 
-                if (!isLate && record.manualStatus !== 'missing' && (!record.manualStatus || !['病假', '事假', '公假', '喪假', '其他假別'].includes(record.manualStatus))) {
+                if (!isLate && record.manualStatus !== 'missing' && (!isLeaveStatus(record.manualStatus))) {
                     // 準時 -> 遲交
                     record.manualStatus = 'late';
                     record.timestamp = timeString;
@@ -1490,8 +1527,8 @@ function renderStatistics() {
                         if (scanDate > deadline) isLate = true;
                     }
                     
-                    if (record.manualStatus && ['病假', '事假', '公假', '喪假', '其他假別'].includes(record.manualStatus)) {
-                        const lName = record.manualStatus;
+                    if (isLeaveStatus(record.manualStatus)) {
+                            const lName = getLeaveName(record.manualStatus);
                         statusHTML = `<span class="text-blue-700 font-bold bg-blue-100 px-2 py-1 rounded border border-blue-200 shadow-sm">${lName}</span>`;
                         currentStatusType = record.manualStatus;
                     } else if (isLate) {
@@ -1512,8 +1549,8 @@ function renderStatistics() {
                         <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'late')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'late' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}" ${currentStatusType === 'late' ? 'disabled' : ''}>改為遲交</button>
                         <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'ontime')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'ontime' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-green-500 hover:bg-green-600 text-white'}" ${currentStatusType === 'ontime' ? 'disabled' : ''}>標為準時</button>
                         <div class="relative">
-                            <select onchange="if(this.value) { updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', this.value); this.value=''; }" class="px-4 py-2 rounded font-bold shadow-sm transition-colors text-center cursor-pointer appearance-none outline-none ${currentStatusType && ['病假', '事假', '公假', '喪假', '其他假別'].includes(currentStatusType) ? 'bg-blue-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}">
-                                <option value="" disabled selected>${currentStatusType && ['病假', '事假', '公假', '喪假', '其他假別'].includes(currentStatusType) ? '變更假別 ▼' : '設定請假 ▼'}</option>
+                            <select onchange="handleLeaveSelect(this, ${s.id}, '${taskId}', '${noticeName}')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors text-center cursor-pointer appearance-none outline-none ${isLeaveStatus(currentStatusType) ? 'bg-blue-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}">
+                                <option value="" disabled selected>${isLeaveStatus(currentStatusType) ? '變更假別 ▼' : '設定請假 ▼'}</option>
                                 <option value="病假" class="text-black bg-white">病假</option>
                                 <option value="事假" class="text-black bg-white">事假</option>
                                 <option value="公假" class="text-black bg-white">公假</option>
