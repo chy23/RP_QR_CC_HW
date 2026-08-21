@@ -1291,8 +1291,12 @@
                         let cellValue = '缺交';
                         if (record) {
                             cellValue = record.timestamp;
-                            if (['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他'].includes(record.manualStatus)) {
-                                cellValue = record.manualStatus;
+                            if (record.manualStatus && (record.manualStatus.startsWith('leave_') || ['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他', '其他假別'].includes(record.manualStatus))) {
+                                
+                                let lName = record.manualStatus;
+                                if (lName.startsWith('leave_custom_')) lName = lName.replace('leave_custom_', '');
+                                else if (lName.startsWith('leave_')) lName = lName.replace('leave_', '');
+                                cellValue = lName;
                             } else if (record.manualStatus === 'missing') {
                                 cellValue = '缺交';
                             }
