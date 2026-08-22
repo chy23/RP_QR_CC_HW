@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.70)</title>
+    <title>QRcode自動清點作業系統 (Beta Ver. 1.71)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -224,7 +224,16 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Beta Ver 1.61 -->
+                <!-- Beta Ver 1.71 -->
+                <div class="border-l-4 border-emerald-600 pl-4 py-1 mb-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Beta Ver. 1.71</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/22</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>新功能：</strong> 新增「7. 個人報表」頁籤，可勾選指定學生及作業，匯出包含繳交狀況與統計資料的個人專屬 PDF 報告。</li>
+                    </ul>
+                </div>
                 <div class="border-l-4 border-emerald-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
                         <span>Beta Ver. 1.70</span>
@@ -381,7 +390,7 @@
             <div class="w-full text-center">
                 <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.70</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.71</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
@@ -406,6 +415,7 @@
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-emerald-700 font-bold" onclick="switchTab(4)">4. 條碼匯出與列印</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-red-600 font-bold" onclick="switchTab(5)">5. 批改與退回</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-purple-600 font-bold" onclick="switchTab(6)">6. 缺交提醒單</button>
+        <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-amber-600 font-bold" onclick="switchTab(7)">7. 個人報表</button>
         </div>
 
         <!-- Tab 0: 前端資料建置 -->

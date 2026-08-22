@@ -23,6 +23,9 @@
             if(tabIndex === 6) {
                 if(typeof renderReminderStats === 'function') renderReminderStats();
             }
+            if(tabIndex === 7) {
+                if(typeof renderReportTab === 'function') renderReportTab();
+            }
         }
 
         function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
