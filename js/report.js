@@ -178,28 +178,32 @@ let printHTML = `
             
             if (record) {
                 const manual = record.manualStatus;
-                const sysStatus = record.status; // '已交' or undefined
+                const leaves = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "免交", "請假"];
                 
-                if (manual === '已交' || manual === '遲交' || (!manual && sysStatus === '已交')) {
-                    displayStatus = manual || sysStatus;
+                if (!manual || manual === '已交' || manual === 'ontime') {
+                    displayStatus = '已交';
                     statusClass = 'status-ok';
                     stats.submitted++;
-                } else if (manual === '缺交' || manual === '未交') {
-                    displayStatus = manual;
+                } else if (manual === '遲交' || manual === 'late') {
+                    displayStatus = '遲交';
+                    statusClass = 'status-ok';
+                    stats.submitted++;
+                } else if (manual === '缺交' || manual === '未交' || manual === 'missing') {
+                    displayStatus = '缺交';
                     statusClass = 'status-missing';
                     stats.missing++;
                 } else if (manual === '退回') {
                     displayStatus = '退回';
                     statusClass = 'status-returned';
                     stats.returned++;
-                } else if (manual === '請假' || manual === '免交') {
+                } else if (leaves.includes(manual)) {
                     displayStatus = manual;
                     statusClass = 'status-excused';
                     stats.excused++;
                 } else {
-                    displayStatus = '缺交';
-                    statusClass = 'status-missing';
-                    stats.missing++;
+                    displayStatus = manual || '已交';
+                    statusClass = 'status-ok';
+                    stats.submitted++;
                 }
             } else {
                 stats.missing++;
