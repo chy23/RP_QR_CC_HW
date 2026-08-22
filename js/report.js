@@ -232,7 +232,7 @@ let printHTML = `
             <div class="page">
                 <h1>個人繳交狀況報表</h1>
                 <div class="header-info">
-                    <span>${classConfig.school} ${classConfig.grade}年${classConfig.classNo}班 (${classConfig.term})</span>
+                    <span>${(db.classInfo && db.classInfo.schoolName) || ""} ${(db.classInfo && db.classInfo.academicYear) ? db.classInfo.academicYear + "學年" : ""} ${(db.classInfo && db.classInfo.semester) || ""} ${(db.classInfo && db.classInfo.className) || ""}</span>
                     <span>姓名：${student.id} ${student.name}</span>
                 </div>
                 
