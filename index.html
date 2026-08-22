@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Beta Ver. 1.91)</title>
+    <title>QRcode自動清點作業系統 (Ver. 1.95)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -230,28 +230,19 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Beta Ver 1.85 -->
-                <div class="border-l-4 border-emerald-600 pl-4 py-1 mb-4">
+                <!-- Ver 1.95 -->
+                <div class="border-l-4 border-blue-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.85</span>
-                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/22</span>
+                        <span>Ver. 1.95 (正式發布)</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/22</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li><strong>介面升級：</strong> 導入 SweetAlert2 與 Toastify，以優雅的彈出氣泡與對話框取代傳統警告視窗。</li>
-                        <li><strong>行動版優化：</strong> 頂部頁籤在手機或窄螢幕下會自動收合為漢堡選單 (☰)，釋放最大掃描空間。</li>
-                        <li><strong>作業選單收納：</strong> 各區塊的作業清單改以「科目」為單位進行群組化與收折 (Accordion)，並新增「全展開 / 全收折」快速按鈕。</li>
-                        <li><strong>響應式排版：</strong> 各清單高度會依據您的視窗大小自動彈性縮放，不再被固定高度限制。</li>
-                        <li><strong>問題修正：</strong> 修復個人報表 (Tab 7) 中資料不同步，以及網格排版在特定解析度下過度拉伸的異常。</li>
-                    </ul>
-                </div>
-                <!-- Beta Ver 1.71 -->
-                <div class="border-l-4 border-emerald-600 pl-4 py-1 mb-4">
-                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Beta Ver. 1.71</span>
-                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/08/22</span>
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li><strong>新功能：</strong> 新增「7. 個人報表」頁籤，可勾選指定學生及作業，匯出包含繳交狀況與統計資料的個人專屬 PDF 報告。</li>
+                        <li><strong>全新功能：</strong> 隆重推出「7. 個人繳交狀況報表」，可勾選指定學生及作業，自動產生精美的個人專屬 PDF 成績報告（含缺交清單、繳交率等統計），方便發放給家長。</li>
+                        <li><strong>介面升級：</strong> 導入 SweetAlert2 與 Toastify，以優雅的彈出氣泡與對話框全面取代傳統、會卡住畫面的瀏覽器警告視窗。</li>
+                        <li><strong>行動版優化：</strong> 頂部頁籤在手機或窄螢幕下會自動收合為漢堡選單 (☰)，大幅釋放相機鏡頭的掃描空間。</li>
+                        <li><strong>作業選單收納：</strong> 各大區塊的作業清單改以「科目」為單位進行群組化與收折 (Accordion)，並加入「全展開 / 全收折」快速按鈕。</li>
+                        <li><strong>過濾器再進化：</strong> 所有的分類過濾按鈕（如：國語、數學、固定、浮動）皆升級為「開關 (Toggle)」模式，點第一下全選，點第二下即可全部取消。</li>
+                        <li><strong>響應式名單排版：</strong> 學生與作業清單全面升級為視窗自適應高度；學生名單更支援自動隨螢幕寬度擴展至最多 5 排，極大化空間利用率並徹底解決網格異常拉伸的問題。</li>
                     </ul>
                 </div>
                 <div class="border-l-4 border-emerald-600 pl-4 py-1 mb-4">
@@ -414,7 +405,7 @@
             <div class="w-full text-center mt-2 md:mt-0">
                 <h1 class="text-2xl md:text-3xl font-bold text-blue-700 flex justify-center items-center gap-2 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.91</span>
+                    QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Ver. 1.95</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
                 </h1>
             </div>
@@ -1173,15 +1164,15 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=1.91"></script>
-    <script src="js/audio.js?v=1.91"></script>
-    <script src="js/db.js?v=1.91"></script>
-    <script src="js/ui.js?v=1.91"></script>
-    <script src="js/scanner.js?v=1.91"></script>
-    <script src="js/export.js?v=1.91"></script>
-    <script src="js/report.js?v=1.91"></script>
-    <script src="js/reminders.js?v=1.91"></script>
-    <script src="js/main.js?v=1.91"></script>
+    <script src="js/alerts.js?v=1.95"></script>
+    <script src="js/audio.js?v=1.95"></script>
+    <script src="js/db.js?v=1.95"></script>
+    <script src="js/ui.js?v=1.95"></script>
+    <script src="js/scanner.js?v=1.95"></script>
+    <script src="js/export.js?v=1.95"></script>
+    <script src="js/report.js?v=1.95"></script>
+    <script src="js/reminders.js?v=1.95"></script>
+    <script src="js/main.js?v=1.95"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
