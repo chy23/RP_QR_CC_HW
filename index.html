@@ -510,7 +510,7 @@
                             備份至雲端
                         </button>
                     </div>
-                    <ul id="student-list" class="mt-2 h-64 overflow-y-auto bg-white border rounded p-2"></ul>
+                    <ul id="student-list" class="mt-2 h-[40vh] min-h-[250px] overflow-y-auto bg-white border rounded p-2"></ul>
                 </div>
 
                 <!-- 作業管理 -->
@@ -536,7 +536,7 @@
                             <button onclick="addTask()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow whitespace-nowrap">新增作業</button>
                         </div>
                     </div>
-                    <ul id="task-list" class="mt-2 h-64 overflow-y-auto bg-white border rounded p-2"></ul>
+                    <ul id="task-list" class="mt-2 h-[40vh] min-h-[250px] overflow-y-auto bg-white border rounded p-2"></ul>
                 </div>
             </div>
             <div class="mt-4 border p-4 rounded bg-blue-50">
@@ -591,7 +591,7 @@
                         <input type="date" id="scan-session-date" class="border p-2 rounded w-full mb-3" />
                         
                         <label class="block mb-1 font-semibold text-sm">2. 選擇作業：</label>
-                        <div id="scan-session-tasks" class="border p-2 rounded w-full mb-3 max-h-64 overflow-y-auto bg-white flex flex-col gap-1"></div>
+                        <div id="scan-session-tasks" class="border p-2 rounded w-full mb-3 max-h-[40vh] min-h-[250px] overflow-y-auto bg-white flex flex-col gap-1"></div>
                         
                         
                         
@@ -780,7 +780,7 @@
                             <button onclick="deselectAllStudents('tab4-student-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全不選</button>
                         </div>
                     </div>
-                    <div id="tab4-student-checkboxes" class="border p-2 rounded w-full h-64 overflow-y-auto bg-white mb-2"></div>
+                    <div id="tab4-student-checkboxes" class="border p-2 rounded w-full h-[40vh] min-h-[250px] overflow-y-auto bg-white mb-2"></div>
                 </div>
                 <div>
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
@@ -794,7 +794,7 @@
                             <button type="button" onclick="selectSubjectTasks('tab4-task-checkboxes', '社會')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium">社會</button>
                         </div>
                     </div>
-                    <div id="tab4-task-checkboxes" class="border p-2 rounded w-full h-64 overflow-y-auto bg-white mb-2"></div>
+                    <div id="tab4-task-checkboxes" class="border p-2 rounded w-full h-[40vh] min-h-[250px] overflow-y-auto bg-white mb-2"></div>
                 </div>
             </div>
 
@@ -1007,7 +1007,7 @@
                             <button class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300" onclick="selectAllReportStudents(false)">全不選</button>
                         </div>
                     </div>
-                    <div id="report-students-container" class="h-80 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm border p-2 bg-white rounded">
+                    <div id="report-students-container" class="h-[50vh] min-h-[300px] overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm border p-2 bg-white rounded">
                         <!-- 動態產生 -->
                     </div>
                 </div>
@@ -1026,7 +1026,7 @@
                             <button onclick="selectSubjectTasksReport('社會')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200">社會</button>
                         </div>
                     </div>
-                    <div id="report-tasks-container" class="h-80 overflow-y-auto bg-white p-2 border rounded text-sm">
+                    <div id="report-tasks-container" class="h-[50vh] min-h-[300px] overflow-y-auto bg-white p-2 border rounded text-sm">
                         <!-- 動態產生 -->
                     </div>
                 </div>
@@ -1147,15 +1147,15 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=1.82"></script>
-    <script src="js/audio.js?v=1.82"></script>
-    <script src="js/db.js?v=1.82"></script>
-    <script src="js/ui.js?v=1.82"></script>
-    <script src="js/scanner.js?v=1.82"></script>
-    <script src="js/export.js?v=1.82"></script>
-    <script src="js/report.js?v=1.82"></script>
-    <script src="js/reminders.js?v=1.82"></script>
-    <script src="js/main.js?v=1.82"></script>
+    <script src="js/alerts.js?v=1.83"></script>
+    <script src="js/audio.js?v=1.83"></script>
+    <script src="js/db.js?v=1.83"></script>
+    <script src="js/ui.js?v=1.83"></script>
+    <script src="js/scanner.js?v=1.83"></script>
+    <script src="js/export.js?v=1.83"></script>
+    <script src="js/report.js?v=1.83"></script>
+    <script src="js/reminders.js?v=1.83"></script>
+    <script src="js/main.js?v=1.83"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
