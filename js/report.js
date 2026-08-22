@@ -69,19 +69,6 @@ function renderReportTasks() {
     container.innerHTML = html;
 }
 
-    let html = '';
-    db.tasks.forEach(t => {
-        const typeStr = t.type === 'fixed' ? '[固]' : '[浮]';
-        html += `
-            <label class="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded cursor-pointer border-b last:border-b-0 border-gray-100">
-                <input type="checkbox" value="${t.id}" class="report-task-cb w-4 h-4 text-amber-600 rounded focus:ring-amber-500" data-subject="${t.subject}" data-type="${t.type}">
-                <span class="text-gray-700">${typeStr} [${t.subject}] ${t.name}</span>
-            </label>
-        `;
-    });
-    container.innerHTML = html;
-}
-
 function selectFixedTasksReport() {
     document.querySelectorAll('.report-task-cb').forEach(cb => {
         if (cb.dataset.type === 'fixed') cb.checked = true;
