@@ -1,6 +1,8 @@
         // UI 工具
         // ==========================================
         function switchTab(tabIndex) {
+            try {
+
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.toggle('active', el.id === 'tab-' + tabIndex);
             });
@@ -25,6 +27,9 @@
             }
             if(tabIndex === 7) {
                 if(typeof renderReportTab === 'function') renderReportTab();
+            }
+            } catch (err) {
+                alert("switchTab Error: " + err.message + "\n" + err.stack);
             }
         }
 

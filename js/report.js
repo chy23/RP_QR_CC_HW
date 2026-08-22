@@ -2,8 +2,12 @@
 
 // 初始化報表頁籤：載入學生清單與作業清單
 function renderReportTab() {
-    renderReportStudents();
-    renderReportTasks();
+    try {
+        renderReportStudents();
+        renderReportTasks();
+    } catch (err) {
+        alert("renderReportTab Error: " + err.message + "\n" + err.stack);
+    }
 }
 
 function renderReportStudents() {
