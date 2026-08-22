@@ -266,9 +266,9 @@ let printHTML = `
                             <th class="text-center">應交</th>
                             <th class="text-center">已交</th>
                             <th class="text-center">遲交</th>
-                            <th class="text-center">缺交</th>
+                            <th class="text-center">缺交/沒帶</th>
                             <th class="text-center">繳交率</th>
-                            <th class="text-left">缺交明細</th>
+                            <th class="text-left">缺交/沒帶明細</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -294,7 +294,7 @@ let printHTML = `
                         <span class="summary-val">${stats.excused}</span>
                     </div>
                     <div class="summary-item">
-                        <span class="summary-label">缺交 / 未交</span>
+                        <span class="summary-label">缺交 / 沒帶</span>
                         <span class="summary-val val-missing">${stats.missing} <span style="font-size:12pt; color:#64748b;">(${stats.total>0 ? Math.round(stats.missing/stats.total*100) : 0}%)</span></span>
                     </div>
                 </div>
