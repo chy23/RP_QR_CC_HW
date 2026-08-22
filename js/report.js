@@ -18,7 +18,7 @@ function renderReportStudents() {
 
     db.students.forEach(s => {
         const label = document.createElement('label');
-        label.className = 'w-1/2 sm:w-1/3 flex items-center gap-2 p-1 hover:bg-gray-100 rounded cursor-pointer';
+        label.className = 'w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 flex items-center gap-2 p-1 hover:bg-gray-100 rounded cursor-pointer';
         label.innerHTML = `
             <input type="checkbox" class="report-student-cb rounded text-amber-600 focus:ring-amber-500" value="${s.id}" checked>
             <span class="truncate">${s.id} ${s.name}</span>
