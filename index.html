@@ -536,6 +536,12 @@
                             <button onclick="addTask()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow whitespace-nowrap">新增作業</button>
                         </div>
                     </div>
+                    <div class="flex justify-end items-center mt-3 mb-1">
+                        <div class="space-x-1">
+                            <button type="button" onclick="toggleAllAccordions('task-list', true)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全展開</button>
+                            <button type="button" onclick="toggleAllAccordions('task-list', false)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全收折</button>
+                        </div>
+                    </div>
                     <ul id="task-list" class="mt-2 h-[40vh] min-h-[250px] overflow-y-auto bg-white border rounded p-2"></ul>
                 </div>
             </div>
@@ -1017,7 +1023,9 @@
                     <div class="flex justify-between items-center mb-2 border-b pb-2">
                         <h3 class="font-bold text-gray-700">選擇作業</h3>
                         <div class="space-x-2">
-                                                        <button onclick="selectAllReportTasks(true)" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">全選</button>
+                                                        <button onclick="toggleAllAccordions('report-tasks-container', true)" class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded hover:bg-amber-200">展開</button>
+                            <button onclick="toggleAllAccordions('report-tasks-container', false)" class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded hover:bg-amber-200">收折</button>
+                            <button onclick="selectAllReportTasks(true)" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">全選</button>
                             <button onclick="selectAllReportTasks(false)" class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300">全不選</button>
                             <button onclick="selectFixedTasksReport()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200">固定</button>
                             <button onclick="selectFloatingTasksReport()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200">浮動</button>
@@ -1147,15 +1155,15 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=1.84"></script>
-    <script src="js/audio.js?v=1.84"></script>
-    <script src="js/db.js?v=1.84"></script>
-    <script src="js/ui.js?v=1.84"></script>
-    <script src="js/scanner.js?v=1.84"></script>
-    <script src="js/export.js?v=1.84"></script>
-    <script src="js/report.js?v=1.84"></script>
-    <script src="js/reminders.js?v=1.84"></script>
-    <script src="js/main.js?v=1.84"></script>
+    <script src="js/alerts.js?v=1.85"></script>
+    <script src="js/audio.js?v=1.85"></script>
+    <script src="js/db.js?v=1.85"></script>
+    <script src="js/ui.js?v=1.85"></script>
+    <script src="js/scanner.js?v=1.85"></script>
+    <script src="js/export.js?v=1.85"></script>
+    <script src="js/report.js?v=1.85"></script>
+    <script src="js/reminders.js?v=1.85"></script>
+    <script src="js/main.js?v=1.85"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
