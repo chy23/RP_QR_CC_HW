@@ -89,34 +89,6 @@ function generateReport() {
         return;
     }
 
-    let selectedTasks = [];
-    selectedTaskVals.forEach(tid => {
-        const t = db.tasks.find(x => x.id === tid);
-        if (!t) return;
-        
-        let noticeNames = [...new Set(db.records.filter(r => r.taskId === tid).map(r => r.noticeName || ''))];
-        // Also check ranges to see if there are instances that have no records yet
-        if (db.ranges) {
-            const rangeNotices = db.ranges.filter(r => r.taskId === tid).map(r => r.noticeName || '');
-            rangeNotices.forEach(rn => {
-                if (!noticeNames.includes(rn)) noticeNames.push(rn);
-            });
-        }
-        
-        if (noticeNames.length === 0) {
-            selectedTasks.push({ taskId: tid, noticeName: '', label: `${t.subject} - ${t.name}` });
-        } else {
-            // Sort noticeNames alphabetically
-            noticeNames.sort();
-            noticeNames.forEach(nn => {
-                let label = `${t.subject} - ${t.name}`;
-                if (nn) label += ` (${nn})`;
-                selectedTasks.push({ taskId: tid, noticeName: nn, label: label });
-            });
-        }
-    });
-
-    const taskLabels = selectedTasks.map(k => k.label);
 
 let printHTML = `
         <html>
@@ -165,78 +137,116 @@ let printHTML = `
         const student = db.students.find(s => s.id === parseInt(sId));
         if (!student) return;
 
-        let stats = { total: selectedTasks.length, submitted: 0, missing: 0, returned: 0, excused: 0 };
+        let stats = { total: 0, submitted: 0, missing: 0, returned: 0, excused: 0, late: 0 };
         let tableRows = '';
 
-        selectedTasks.forEach((k, idx) => {
-            const record = db.records.find(r => r.studentId === parseInt(sId) && r.taskId === k.taskId && (r.noticeName || "") === (k.noticeName || ""));
+        selectedTaskVals.forEach((tid, idx) => {
+            const t = db.tasks.find(x => x.id === tid);
+            if (!t) return;
             
-            // 判斷狀態
-            // 預設為缺交 (因為只要勾選了該作業，表示預期要交)
-            let displayStatus = '缺交';
-            let statusClass = 'status-missing';
-            
-            if (record) {
-                const manual = record.manualStatus;
-                const leaves = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "免交", "請假"];
-                
-                if (!manual || manual === '已交' || manual === 'ontime') {
-                    displayStatus = '已交';
-                    statusClass = 'status-ok';
-                    stats.submitted++;
-                } else if (manual === '遲交' || manual === 'late') {
-                    displayStatus = '遲交';
-                    statusClass = 'status-ok';
-                    stats.submitted++;
-                } else if (manual === '缺交' || manual === '未交' || manual === 'missing') {
-                    displayStatus = '缺交';
-                    statusClass = 'status-missing';
-                    stats.missing++;
-                } else if (manual === '退回') {
-                    displayStatus = '退回';
-                    statusClass = 'status-returned';
-                    stats.returned++;
-                } else if (leaves.includes(manual)) {
-                    displayStatus = manual;
-                    statusClass = 'status-excused';
-                    stats.excused++;
-                } else {
-                    displayStatus = manual || '已交';
-                    statusClass = 'status-ok';
-                    stats.submitted++;
-                }
-            } else {
-                stats.missing++;
+            // Find all noticeNames for this taskId
+            let noticeNames = [...new Set(db.records.filter(r => r.taskId === tid).map(r => r.noticeName || ''))];
+            if (db.ranges) {
+                const rangeNotices = db.ranges.filter(r => r.taskId === tid).map(r => r.noticeName || '');
+                rangeNotices.forEach(rn => {
+                    if (!noticeNames.includes(rn)) noticeNames.push(rn);
+                });
             }
-
+            if (noticeNames.length === 0) noticeNames = [''];
+            
+            noticeNames.sort();
+            
+            let rowTotal = noticeNames.length;
+            let rowSubmitted = 0;
+            let rowLate = 0;
+            let rowMissing = 0;
+            let rowReturned = 0;
+            let rowExcused = 0;
+            let missingDetails = [];
+            
+            noticeNames.forEach(nn => {
+                stats.total++;
+                const record = db.records.find(r => r.studentId === parseInt(sId) && r.taskId === tid && (r.noticeName || "") === nn);
+                
+                let isMissing = true;
+                
+                if (record) {
+                    const manual = record.manualStatus;
+                    const leaves = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "免交", "請假"];
+                    
+                    if (!manual || manual === '已交' || manual === 'ontime') {
+                        rowSubmitted++;
+                        stats.submitted++;
+                        isMissing = false;
+                    } else if (manual === '遲交' || manual === 'late') {
+                        rowLate++;
+                        stats.late++;
+                        isMissing = false;
+                    } else if (manual === '退回') {
+                        rowReturned++;
+                        stats.returned++;
+                        // Not missing, but returned. Some might consider it missing, but we categorize it differently.
+                        isMissing = false; 
+                    } else if (leaves.includes(manual)) {
+                        rowExcused++;
+                        stats.excused++;
+                        isMissing = false;
+                    } else if (manual === '缺交' || manual === '未交' || manual === 'missing') {
+                        rowMissing++;
+                        stats.missing++;
+                    } else {
+                        rowSubmitted++;
+                        stats.submitted++;
+                        isMissing = false;
+                    }
+                } else {
+                    rowMissing++;
+                    stats.missing++;
+                }
+                
+                if (isMissing) {
+                    missingDetails.push(nn || '無範圍');
+                }
+            });
+            
+            const submitRate = rowTotal > 0 ? Math.round(((rowSubmitted + rowLate) / rowTotal) * 100) : 0;
+            const missingRate = rowTotal > 0 ? Math.round((rowMissing / rowTotal) * 100) : 0;
+            
+            const missingText = missingDetails.length > 0 ? missingDetails.join(', ') : '-';
+            
             tableRows += `
                 <tr>
-                    <td style="width: 10%; text-align: center;">${idx + 1}</td>
-                    <td style="width: 60%;">${taskLabels[idx]}</td>
-                    <td style="width: 30%; text-align: center;" class="${statusClass}">${displayStatus}</td>
+                    <td class="text-center">${idx + 1}</td>
+                    <td>${t.subject} - ${t.name}</td>
+                    <td class="text-center">${rowTotal}</td>
+                    <td class="text-center text-green-700 font-bold">${rowSubmitted}</td>
+                    <td class="text-center text-yellow-600">${rowLate}</td>
+                    <td class="text-center text-red-700 font-bold">${rowMissing}</td>
+                    <td class="text-center font-bold">${submitRate}%</td>
+                    <td class="text-red-600 text-sm">${missingText}</td>
                 </tr>
             `;
         });
-
-        // 取得班級資訊
-        const school = db.classInfo?.schoolName || '';
-        const className = db.classInfo?.className || '';
-        const classStr = (school || className) ? `${school} ${className}` : '個人繳交狀況報表';
 
         printHTML += `
             <div class="page">
                 <h1>個人繳交狀況報表</h1>
                 <div class="header-info">
-                    <span>${classStr}</span>
+                    <span>${classConfig.school} ${classConfig.grade}年${classConfig.classNo}班 (${classConfig.term})</span>
                     <span>姓名：${student.id} ${student.name}</span>
                 </div>
                 
-                <table>
+                <table style="text-align: center;">
                     <thead>
                         <tr>
-                            <th>項次</th>
-                            <th>作業名稱</th>
-                            <th style="text-align: center;">繳交狀態</th>
+                            <th class="text-center">項次</th>
+                            <th class="text-center">作業項目</th>
+                            <th class="text-center">應交</th>
+                            <th class="text-center">已交</th>
+                            <th class="text-center">遲交</th>
+                            <th class="text-center">缺交</th>
+                            <th class="text-center">繳交率</th>
+                            <th class="text-left">缺交明細</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -251,7 +261,7 @@ let printHTML = `
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">已交 / 遲交</span>
-                        <span class="summary-val" style="color: #15803d;">${stats.submitted} <span style="font-size:12pt; color:#64748b;">(${stats.total>0 ? Math.round(stats.submitted/stats.total*100) : 0}%)</span></span>
+                        <span class="summary-val" style="color: #15803d;">${stats.submitted + stats.late} <span style="font-size:12pt; color:#64748b;">(${stats.total>0 ? Math.round((stats.submitted+stats.late)/stats.total*100) : 0}%)</span></span>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">退回未補</span>
