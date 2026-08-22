@@ -70,21 +70,24 @@ function renderReportTasks() {
 }
 
 function selectFixedTasksReport() {
-    document.querySelectorAll('.report-task-cb').forEach(cb => {
-        if (cb.dataset.type === 'fixed') cb.checked = true;
-    });
+    const cbs = Array.from(document.querySelectorAll('.report-task-cb')).filter(cb => cb.dataset.type === 'fixed');
+    if(cbs.length === 0) return;
+    const allChecked = cbs.every(cb => cb.checked);
+    cbs.forEach(cb => cb.checked = !allChecked);
 }
 
 function selectFloatingTasksReport() {
-    document.querySelectorAll('.report-task-cb').forEach(cb => {
-        if (cb.dataset.type === 'floating') cb.checked = true;
-    });
+    const cbs = Array.from(document.querySelectorAll('.report-task-cb')).filter(cb => cb.dataset.type === 'floating');
+    if(cbs.length === 0) return;
+    const allChecked = cbs.every(cb => cb.checked);
+    cbs.forEach(cb => cb.checked = !allChecked);
 }
 
 function selectSubjectTasksReport(subject) {
-    document.querySelectorAll('.report-task-cb').forEach(cb => {
-        if (cb.dataset.subject === subject) cb.checked = true;
-    });
+    const cbs = Array.from(document.querySelectorAll('.report-task-cb')).filter(cb => cb.dataset.subject === subject);
+    if(cbs.length === 0) return;
+    const allChecked = cbs.every(cb => cb.checked);
+    cbs.forEach(cb => cb.checked = !allChecked);
 }
 
 function selectAllReportStudents(check) {

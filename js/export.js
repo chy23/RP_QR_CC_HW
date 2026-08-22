@@ -734,20 +734,24 @@
         function selectFixedTasks(containerId) {
             const container = document.getElementById(containerId);
             if(!container) return;
-            container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            const cbs = Array.from(container.querySelectorAll('input[type="checkbox"]')).filter(cb => {
                 const task = db.tasks.find(t => t.id === cb.value);
-                cb.checked = (task && task.type === 'fixed');
+                return task && task.type === 'fixed';
             });
+            if(cbs.length === 0) return;
+            const allChecked = cbs.every(cb => cb.checked);
+            cbs.forEach(cb => cb.checked = !allChecked);
         }
         function selectSubjectTasks(containerId, subject) {
             const container = document.getElementById(containerId);
             if(!container) return;
-            container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            const cbs = Array.from(container.querySelectorAll('input[type="checkbox"]')).filter(cb => {
                 const task = db.tasks.find(t => t.id === cb.value);
-                if (task && task.subject === subject && task.type === 'fixed') {
-                    cb.checked = true;
-                }
+                return task && task.subject === subject;
             });
+            if(cbs.length === 0) return;
+            const allChecked = cbs.every(cb => cb.checked);
+            cbs.forEach(cb => cb.checked = !allChecked);
         }
         function getCheckedStudentIds(containerId) {
             const container = document.getElementById(containerId);
