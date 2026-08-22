@@ -1491,9 +1491,8 @@ let currentTargetRecord = null;
                     return studentIdStr.includes(searchQ) || studentName.includes(searchQ);
                 });
                 
-                const currentTaskDef = db.tasks.find(t=>t.id===taskId);
-                const displayLabel = noticeName ? `${currentTaskDef?.name} (${noticeName})` : currentTaskDef?.name;
-                const createdDate = currentTaskDef?.created || '';
+                const displayLabel = noticeName ? `${taskDef?.name} (${noticeName})` : taskDef?.name;
+                const createdDate = taskDef?.created || '';
                 const taskMatchesSearch = (displayLabel && displayLabel.toLowerCase().includes(searchQ)) || createdDate.includes(searchQ);
                 
                 if (studentsMatchingSearch.length > 0) {
@@ -1516,7 +1515,7 @@ let currentTargetRecord = null;
             filteredStudents.forEach(s => {
                 const record = db.records.find(r => r.studentId === s.id && r.taskId === taskId && r.noticeName === noticeName);
                 
-                let missingText = (currentTaskDef?.subject === '聯絡簿') ? '沒帶' : '缺交';
+                let missingText = (taskDef?.subject === '聯絡簿') ? '沒帶' : '缺交';
                 let statusHTML = `<span class="text-red-700 font-bold bg-red-50 px-2 py-1 rounded border border-red-200 shadow-sm">${missingText}</span>`;
                 let currentStatusType = 'missing';
                 
@@ -1552,7 +1551,7 @@ let currentTargetRecord = null;
                     <td class="p-3 border-b font-semibold text-lg">${s.name}</td>
                     <td class="p-3 border-b">${statusHTML}</td>
                     <td class="p-3 border-b flex gap-2 flex-wrap">
-                        <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'missing')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'missing' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-red-500 hover:bg-red-600 text-white'}" ${currentStatusType === 'missing' ? 'disabled' : ''}>退回 (${currentTaskDef?.subject === '聯絡簿' ? '沒帶' : '缺交'})</button>
+                        <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'missing')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'missing' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-red-500 hover:bg-red-600 text-white'}" ${currentStatusType === 'missing' ? 'disabled' : ''}>退回 (${taskDef?.subject === '聯絡簿' ? '沒帶' : '缺交'})</button>
                         <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'late')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'late' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}" ${currentStatusType === 'late' ? 'disabled' : ''}>改為遲交</button>
                         <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'ontime')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'ontime' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-green-500 hover:bg-green-600 text-white'}" ${currentStatusType === 'ontime' ? 'disabled' : ''}>標為準時</button>
                         <div class="relative">
