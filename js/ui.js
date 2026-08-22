@@ -1,6 +1,8 @@
         // UI 工具
         // ==========================================
         function switchTab(tabIndex) {
+            try {
+
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.toggle('active', el.id === 'tab-' + tabIndex);
             });
@@ -23,6 +25,12 @@
             if(tabIndex === 6) {
                 if(typeof renderReminderStats === 'function') renderReminderStats();
             }
+            if(tabIndex === 7) {
+                if(typeof renderReportTab === 'function') renderReportTab();
+            }
+            } catch (err) {
+                showAlert('提示', "switchTab Error: " + err.message + "\n" + err.stack);
+            }
         }
 
         function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
@@ -42,8 +50,8 @@
             saveData();
             updateHeaderClassInfo();
             // Show toast or alert if clicked button
-            if(e && e.type === 'click') alert('班級資訊已儲存！');
-            else if(typeof event !== 'undefined' && event && event.type === 'click') alert('班級資訊已儲存！');
+            if(e && e.type === 'click') showToast('班級資訊已儲存！', 'success');
+            else if(typeof event !== 'undefined' && event && event.type === 'click') showToast('班級資訊已儲存！', 'success');
         }
 
         function updateHeaderClassInfo() {
@@ -82,7 +90,7 @@
             ].filter(Boolean);
             return parts.length > 0 ? parts.join('_') + "_" : "";
         }
-        function addStudent() {
+        async function addStudent() {
             const idInput = document.getElementById('new-student-id');
             const nameInput = document.getElementById('new-student-name');
             const name = nameInput.value.trim();
@@ -92,14 +100,13 @@
             if (idInput && idInput.value.trim() !== '') {
                 newId = parseInt(idInput.value, 10);
                 if (isNaN(newId) || newId <= 0) {
-                    alert('請輸入有效的座號！');
+                    showAlert('提示', '請輸入有效的座號！');
                     return;
                 }
                 const existingIdx = db.students.findIndex(s => s.id === newId);
                 if (existingIdx !== -1) {
-                    if(!confirm(`座號 ${newId} 已經存在（${db.students[existingIdx].name}），是否要覆蓋該學生資料？`)) {
-                        return;
-                    }
+                    const result = await showConfirm(`座號 ${newId} 已經存在（${db.students[existingIdx].name}）`, "是否要覆蓋該學生資料？", "warning", "覆蓋", "取消");
+                    if (!result.isConfirmed) return;
                     db.students.splice(existingIdx, 1);
                 }
             } else {
@@ -117,7 +124,7 @@
             renderStudents();
             
             setTimeout(() => {
-                alert("新增成功！\n\n若您有設定 Google 雲端同步，請記得點選右方「備份至雲端」按鈕，以確保最新名單同步至試算表中。");
+                showToast("新增成功！\n\n若您有設定 Google 雲端同步，請記得點選右方「備份至雲端」按鈕，以確保最新名單同步至試算表中。", 'success');
             }, 100);
         }
 
@@ -134,9 +141,9 @@
 
 
 
-        function pushStudentsToGas() {
+        async function pushStudentsToGas() {
             if(!gasUrl) {
-                alert('請先到「0. 資料建置」分頁設定並儲存您的 Google Apps Script 網址！');
+                showAlert('提示', '請先到「0. 資料建置」分頁設定並儲存您的 Google Apps Script 網址！');
                 return;
             }
             let elClass = document.getElementById('info-class');
@@ -150,7 +157,8 @@
                     return; // 放棄備份
                 }
             }
-            if(!confirm("確定要將目前的「全系統設定檔與學生名單」備份到 Google 試算表嗎？\n這將覆蓋雲端的舊設定，以便其他裝置匯入。")) return;
+            const result = await showConfirm("確定要備份到雲端嗎？", "這將覆蓋雲端的舊設定，以便其他裝置匯入。");
+            if(!result.isConfirmed) return;
 
             showLoading();
             
@@ -168,36 +176,37 @@
                   .then(data => {
                       hideLoading();
                       if(data.status === 'success') {
-                          alert("成功將全系統設定檔與學生名單備份至 Google 試算表！\n現在您可以在手機上點擊「從雲端匯入」瞬間完成所有設定。");
+                          showToast("成功將全系統設定檔與學生名單備份至 Google 試算表！\n現在您可以在手機上點擊「從雲端匯入」瞬間完成所有設定。", 'success');
                       } else {
-                          alert("備份失敗：" + (data.message || JSON.stringify(data)));
+                          showAlert('提示', "備份失敗：" + (data.message || JSON.stringify(data)));
                       }
                   })
                   .catch(err => {
                       hideLoading();
                       console.error(err);
-                      alert("網路連線錯誤，請確認您的 GAS 網址正確且已發布最新版本！\n" + err);
+                      showAlert('提示', "網路連線錯誤，請確認您的 GAS 網址正確且已發布最新版本！\n" + err);
                   });
             } catch (err) {
                 hideLoading();
                 console.error("Synchronous error during fetch setup:", err);
-                alert("發生未預期的系統錯誤 (例如資料格式異常)：\n" + err.message);
+                showAlert('提示', "發生未預期的系統錯誤 (例如資料格式異常)：\n" + err.message);
             }
         }
 
-        function fetchStudentsFromGas() {
+        async function fetchStudentsFromGas() {
             const gasInput = document.getElementById('gas-url');
             if (!gasUrl && gasInput && gasInput.value.trim()) {
                 saveGasUrl();
             }
             if(!gasUrl) {
-                alert('請先到「0. 資料建置」分頁設定並儲存您的 Google Apps Script 網址！');
+                showAlert('提示', '請先到「0. 資料建置」分頁設定並儲存您的 Google Apps Script 網址！');
                 return;
             }
             
             
 
-            if(!confirm("確定要從雲端還原「全系統設定與學生名單」嗎？\n這將會覆蓋您裝置上目前的班級資訊、作業設定與學生名單。")) return;
+            const result = await showConfirm("確定要從雲端還原嗎？", "這將會覆蓋您裝置上目前的班級資訊、作業設定與學生名單。");
+            if(!result.isConfirmed) return;
 
             showLoading();
             fetch(gasUrl, {
@@ -264,22 +273,22 @@
                       } else {
                           msg += '⚠️ 連線成功，但雲端「學生名單」沒有有效資料。';
                       }
-                      alert(msg);
+                      showAlert('提示', msg);
                   } else {
-                      alert("匯入失敗：" + (data.message || JSON.stringify(data)));
+                      showAlert('提示', "匯入失敗：" + (data.message || JSON.stringify(data)));
                   }
               })
               .catch(err => {
                   hideLoading();
                   console.error(err);
-                  alert("網路連線錯誤，請確認您的 GAS 網址正確且已發布最新版本 (包含 get_students 邏輯)！");
+                  showAlert('提示', "網路連線錯誤，請確認您的 GAS 網址正確且已發布最新版本 (包含 get_students 邏輯)！");
               });
         }
 
 
         async function syncFromGoogleSheets(silent = false) {
             if(!gasUrl) {
-                if(!silent) alert('請先至「0. 資料建置」填寫您的 Google Apps Script 網址，才能進行雲端同步！');
+                if(!silent) showAlert('提示', '請先至「0. 資料建置」填寫您的 Google Apps Script 網址，才能進行雲端同步！');
                 return;
             }
             
@@ -298,13 +307,13 @@
                 
                 if(data.status === 'success' && data.sheetsData) {
                     parseCloudDataToRecords(data.sheetsData, silent);
-                    if(!silent) alert('雲端資料拉取成功！');
+                    if(!silent) showToast('雲端資料拉取成功！', 'success');
                 } else {
-                    if(!silent) alert('拉取失敗：' + (data.message || '未知錯誤'));
+                    if(!silent) showAlert('提示', '拉取失敗：' + (data.message || '未知錯誤'));
                 }
             } catch (err) {
                 console.error(err);
-                if(!silent) alert('網路連線錯誤，請確認您的 GAS 網址正確且已發布最新版本 (包含 pull_sync 邏輯)！');
+                if(!silent) showAlert('提示', '網路連線錯誤，請確認您的 GAS 網址正確且已發布最新版本 (包含 pull_sync 邏輯)！');
             } finally {
                 if(!silent) hideLoading();
             }
@@ -411,7 +420,7 @@
                     const json = XLSX.utils.sheet_to_json(worksheet, {header: 1}); // 轉為 2D 陣列
                     
                     if(json.length === 0) {
-                        alert("檔案內容為空");
+                        showAlert('提示', "檔案內容為空");
                         hideLoading();
                         return;
                     }
@@ -478,10 +487,10 @@
 
                     saveData();
                     renderStudents();
-                    alert(`成功匯入 ${addedCount} 位學生！(系統已自動識別${seatColIndex !== -1 ? '座號與姓名並處理跳號' : '姓名'})`);
+                    showToast(`成功匯入 ${addedCount} 位學生！(系統已自動識別${seatColIndex !== -1 ? '座號與姓名並處理跳號' : '姓名'}, 'success')`);
                 } catch(err) {
                     console.error(err);
-                    alert("讀取檔案失敗，請確定格式正確。");
+                    showAlert('提示', "讀取檔案失敗，請確定格式正確。");
                 }
                 // 清空 input 讓下次選同一個檔案也能觸發
                 event.target.value = '';
@@ -490,8 +499,9 @@
             reader.readAsArrayBuffer(file);
         }
 
-        function removeStudent(id) {
-            if(confirm('確定要刪除這名學生嗎？這也會刪除他所有的繳交紀錄！')) {
+        async function removeStudent(id) {
+            const result = await showConfirm('確定要刪除這名學生嗎？', '這也會刪除他所有的繳交紀錄！', 'warning', '刪除', '取消');
+            if(result.isConfirmed) {
                 saveStateForUndo();
                 db.students = db.students.filter(s => s.id !== id);
                 db.records = db.records.filter(r => r.studentId !== id);
@@ -541,8 +551,9 @@ function addTask() {
             renderTasks();
         }
 
-        function removeTask(id) {
-            if(confirm('確定要刪除這個作業嗎？這也會刪除所有相關的繳交紀錄！')) {
+        async function removeTask(id) {
+            const result = await showConfirm('確定要刪除這個作業嗎？', '這也會刪除所有相關的繳交紀錄！', 'warning', '刪除', '取消');
+            if(result.isConfirmed) {
                 saveStateForUndo();
                 db.tasks = db.tasks.filter(t => t.id !== id);
                 db.records = db.records.filter(r => r.taskId !== id);
@@ -567,26 +578,78 @@ function addTask() {
             }
         }
 
+                
+        window.toggleAllAccordions = function(containerId, expand) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const icons = container.querySelectorAll('svg[id$="-icon"]');
+            icons.forEach(icon => {
+                const accId = icon.id.replace('-icon', '');
+                const el = document.getElementById(accId);
+                if (el) {
+                    if (expand) {
+                        el.classList.remove('hidden');
+                        icon.style.transform = 'rotate(180deg)';
+                    } else {
+                        el.classList.add('hidden');
+                        icon.style.transform = 'rotate(0deg)';
+                    }
+                }
+            });
+        };
+
+        window.toggleAccordion = function(id) {
+            const el = document.getElementById(id);
+            const icon = document.getElementById(id + '-icon');
+            if (el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+                if(icon) icon.style.transform = 'rotate(180deg)';
+            } else {
+                el.classList.add('hidden');
+                if(icon) icon.style.transform = 'rotate(0deg)';
+            }
+        };
+
         function renderTasks() {
             const list = document.getElementById('task-list');
             list.innerHTML = '';
+            
+            const grouped = {};
             db.tasks.forEach(t => {
-                const typeName = t.type === 'fixed' ? '固' : '浮';
-                const li = document.createElement('li');
-                li.className = 'flex justify-between items-center py-1 border-b last:border-0';
-                li.innerHTML = `<span class="text-gray-500 w-16">[${t.subject}]</span>
-                                <span class="flex-grow">${t.name} <span class="text-xs bg-gray-200 px-1 rounded">${typeName}</span></span>
-                                <div>
-                                    <button onclick="editTask('${t.id}')" class="text-blue-500 hover:text-blue-700 text-sm px-2 border-r">改名</button>
-                                    <button onclick="removeTask('${t.id}')" class="text-red-500 hover:text-red-700 text-sm px-2">刪除</button>
-                                </div>`;
-                list.appendChild(li);
+                if (!grouped[t.subject]) grouped[t.subject] = [];
+                grouped[t.subject].push(t);
             });
+            
+            for (const [subject, tasks] of Object.entries(grouped)) {
+                const accId = 'acc-task-' + subject;
+                const html = `
+                    <div class="border rounded mb-2 overflow-hidden">
+                        <button onclick="toggleAccordion('${accId}')" class="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 font-bold text-gray-700 flex justify-between items-center">
+                            <span>${subject} <span class="text-xs font-normal text-gray-500">(${tasks.length})</span></span>
+                            <svg id="${accId}-icon" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="${accId}" class="hidden flex-col">
+                            <ul class="px-4 py-2 bg-white">
+                                ${tasks.map(t => `
+                                    <li class="flex justify-between items-center py-2 border-b last:border-0">
+                                        <span class="flex-grow">${t.name} <span class="text-xs bg-gray-200 px-1 rounded ml-1">${t.type === 'fixed' ? '固' : '浮'}</span></span>
+                                        <div>
+                                            <button onclick="editTask('${t.id}')" class="text-blue-500 hover:text-blue-700 text-sm px-2 border-r">改名</button>
+                                            <button onclick="removeTask('${t.id}')" class="text-red-500 hover:text-red-700 text-sm px-2">刪除</button>
+                                        </div>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                list.innerHTML += html;
+            }
         }
 
 
         async function exportRawCodes() {
-            if(db.students.length === 0) { alert('尚未建立學生名單'); return; }
+            if(db.students.length === 0) { showAlert('提示', '尚未建立學生名單'); return; }
             showLoading();
             setTimeout(async () => {
                 try {
@@ -721,14 +784,15 @@ function addTask() {
                         XLSX.writeFile(wb, "學生防偽代碼與作業條碼清單.xlsx");
                     }
                 } catch(e) {
-                    alert("匯出失敗: " + e.message);
+                    showAlert('提示', "匯出失敗: " + e.message);
                 }
                 hideLoading();
             }, 100);
         }
 
-        function resetData() {
-            if(confirm("警告：這將清除所有學生、作業與掃描紀錄！確定嗎？")) {
+        async function resetData() {
+            const result = await showConfirm('警告：這將清除所有資料！', '包含學生、作業與掃描紀錄。確定嗎？', 'warning', '清除', '取消');
+            if(result.isConfirmed) {
                 db = { students: [], tasks: [...DEFAULT_TASKS], records: [], ranges: [], subjects: [] };
                 saveData();
                 renderStudents();
@@ -748,15 +812,37 @@ function addTask() {
                 const el = document.getElementById(containerId);
                 if (!el) return;
                 const onChangeStr = onChange ? `onchange="${onChange}"` : '';
-                el.innerHTML = tasks.map(t => {
-                    const typeStr = showType ? (t.type === 'fixed' ? '[固] ' : '[浮] ') : '';
-                    return `
-                    <label class="flex items-center space-x-3 py-2 cursor-pointer hover:bg-blue-50 rounded px-2 transition-colors border-b last:border-0 border-gray-100">
-                        <input type="checkbox" value="${t.id}" class="form-checkbox text-blue-600 h-5 w-5 cursor-pointer rounded" ${onChangeStr}>
-                        <span class="text-base font-semibold text-gray-700 select-none">${typeStr}[${t.subject}] ${t.name}</span>
-                    </label>
+                
+                const grouped = {};
+                tasks.forEach(t => {
+                    if (!grouped[t.subject]) grouped[t.subject] = [];
+                    grouped[t.subject].push(t);
+                });
+                
+                let html = '';
+                for (const [subject, subTasks] of Object.entries(grouped)) {
+                    const accId = containerId + '-acc-' + subject;
+                    html += `
+                        <div class="border rounded mb-2 overflow-hidden">
+                            <button type="button" onclick="toggleAccordion('${accId}')" class="w-full text-left px-4 py-2 bg-blue-50 hover:bg-blue-100 font-bold text-blue-800 flex justify-between items-center border-b border-blue-200">
+                                <span>${subject} <span class="text-xs font-normal text-blue-600">(${subTasks.length})</span></span>
+                                <svg id="${accId}-icon" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div id="${accId}" class="hidden flex-col bg-white">
+                                ${subTasks.map(t => {
+                                    const typeStr = showType ? (t.type === 'fixed' ? '[固] ' : '[浮] ') : '';
+                                    return `
+                                    <label class="flex items-center space-x-3 py-2 cursor-pointer hover:bg-gray-50 rounded-none px-4 transition-colors border-b last:border-0 border-gray-100">
+                                        <input type="checkbox" value="${t.id}" class="form-checkbox text-blue-600 h-5 w-5 cursor-pointer rounded" ${onChangeStr}>
+                                        <span class="text-sm font-semibold text-gray-700 select-none">${typeStr}${t.name}</span>
+                                    </label>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
                     `;
-                }).join('');
+                }
+                el.innerHTML = html;
             };
 
             const populateSelect = (selectId, tasks) => {

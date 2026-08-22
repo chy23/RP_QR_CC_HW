@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof syncToCloud === 'function') {
                 syncToCloud();
             } else {
-                alert('雲端同步尚未設定。');
+                showAlert('提示', '雲端同步尚未設定。');
             }
         }
     });
