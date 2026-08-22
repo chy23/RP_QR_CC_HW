@@ -578,7 +578,27 @@ function addTask() {
             }
         }
 
-                window.toggleAccordion = function(id) {
+                
+        window.toggleAllAccordions = function(containerId, expand) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const icons = container.querySelectorAll('svg[id$="-icon"]');
+            icons.forEach(icon => {
+                const accId = icon.id.replace('-icon', '');
+                const el = document.getElementById(accId);
+                if (el) {
+                    if (expand) {
+                        el.classList.remove('hidden');
+                        icon.style.transform = 'rotate(180deg)';
+                    } else {
+                        el.classList.add('hidden');
+                        icon.style.transform = 'rotate(0deg)';
+                    }
+                }
+            });
+        };
+
+        window.toggleAccordion = function(id) {
             const el = document.getElementById(id);
             const icon = document.getElementById(id + '-icon');
             if (el.classList.contains('hidden')) {
