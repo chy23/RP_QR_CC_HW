@@ -169,7 +169,7 @@ let printHTML = `
         let tableRows = '';
 
         selectedTasks.forEach((k, idx) => {
-            const record = db.records.find(r => r.studentId === sId && r.taskId === k.taskId && r.noticeName === k.noticeName);
+            const record = db.records.find(r => r.studentId === parseInt(sId) && r.taskId === k.taskId && (r.noticeName || "") === (k.noticeName || ""));
             
             // 判斷狀態
             // 預設為缺交 (因為只要勾選了該作業，表示預期要交)
@@ -247,7 +247,7 @@ let printHTML = `
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">已交 / 遲交</span>
-                        <span class="summary-val" style="color: #15803d;">${stats.submitted}</span>
+                        <span class="summary-val" style="color: #15803d;">${stats.submitted} <span style="font-size:12pt; color:#64748b;">(${stats.total>0 ? Math.round(stats.submitted/stats.total*100) : 0}%)</span></span>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">退回未補</span>
@@ -259,7 +259,7 @@ let printHTML = `
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">缺交 / 未交</span>
-                        <span class="summary-val val-missing">${stats.missing}</span>
+                        <span class="summary-val val-missing">${stats.missing} <span style="font-size:12pt; color:#64748b;">(${stats.total>0 ? Math.round(stats.missing/stats.total*100) : 0}%)</span></span>
                     </div>
                 </div>
                 
@@ -271,21 +271,28 @@ let printHTML = `
     });
 
     printHTML += `
-        <script>
-            window.onload = function() {
-                window.print();
-            }
-        </script>
         </body>
         </html>
     `;
 
-    // 開啟新視窗
-    const printWindow = window.open('', '_blank');
-    if(printWindow) {
-        printWindow.document.write(printHTML);
-        printWindow.document.close();
-    } else {
-        alert("無法開啟列印視窗，請檢查是否被瀏覽器阻擋彈出視窗。");
+    // 注入 iframe
+    const container = document.getElementById('report-preview-container');
+    const iframe = document.getElementById('report-preview-iframe');
+    const btn = document.getElementById('btn-print-report');
+    
+    if(container && iframe && btn) {
+        container.classList.remove('hidden');
+        btn.classList.remove('hidden');
+        
+        iframe.srcdoc = printHTML;
     }
 }
+
+function printReportIframe() {
+    const iframe = document.getElementById('report-preview-iframe');
+    if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    }
+}
+
