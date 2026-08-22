@@ -806,6 +806,8 @@
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
                         <label class="block text-lg font-bold text-gray-800">2. 選擇作業 (可多選)：</label>
                         <div class="flex gap-2 mb-1 flex-wrap">
+                            <button type="button" onclick="toggleAllAccordions('tab4-task-checkboxes', true)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全展開</button>
+                            <button type="button" onclick="toggleAllAccordions('tab4-task-checkboxes', false)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全收折</button>
                             <button onclick="selectAllStudents('tab4-task-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全選</button>
                             <button onclick="deselectAllStudents('tab4-task-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全不選</button>
                             <button type="button" onclick="selectFixedTasks('tab4-task-checkboxes')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium">固定全選</button>
@@ -1027,8 +1029,10 @@
                             <button class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300" onclick="selectAllReportStudents(false)">全不選</button>
                         </div>
                     </div>
-                    <div id="report-students-container" class="h-[50vh] min-h-[300px] overflow-y-auto content-start grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm border p-2 bg-white rounded">
+                    <div class="h-[50vh] min-h-[300px] overflow-y-auto border p-2 bg-white rounded">
+                        <div id="report-students-container" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
                         <!-- 動態產生 -->
+                        </div>
                     </div>
                 </div>
                 
@@ -1169,15 +1173,15 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=1.86"></script>
-    <script src="js/audio.js?v=1.86"></script>
-    <script src="js/db.js?v=1.86"></script>
-    <script src="js/ui.js?v=1.86"></script>
-    <script src="js/scanner.js?v=1.86"></script>
-    <script src="js/export.js?v=1.86"></script>
-    <script src="js/report.js?v=1.86"></script>
-    <script src="js/reminders.js?v=1.86"></script>
-    <script src="js/main.js?v=1.86"></script>
+    <script src="js/alerts.js?v=1.87"></script>
+    <script src="js/audio.js?v=1.87"></script>
+    <script src="js/db.js?v=1.87"></script>
+    <script src="js/ui.js?v=1.87"></script>
+    <script src="js/scanner.js?v=1.87"></script>
+    <script src="js/export.js?v=1.87"></script>
+    <script src="js/report.js?v=1.87"></script>
+    <script src="js/reminders.js?v=1.87"></script>
+    <script src="js/main.js?v=1.87"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
