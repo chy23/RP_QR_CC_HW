@@ -1292,7 +1292,9 @@
                     const row = [s.name];
                     finalTaskKeys.forEach(k => {
                         const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
-                        let cellValue = '缺交';
+                        const taskDef = db.tasks.find(t => t.id === k.taskId);
+                        const missingText = (taskDef && taskDef.subject === '聯絡簿') ? '沒帶' : '缺交';
+                        let cellValue = missingText;
                         if (record) {
                             cellValue = record.timestamp;
                             if (record.manualStatus && (record.manualStatus.startsWith('leave_') || ['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他', '其他假別'].includes(record.manualStatus))) {
@@ -1302,9 +1304,8 @@
                                 else if (lName.startsWith('leave_')) lName = lName.replace('leave_', '');
                                 cellValue = lName;
                             } else if (record.manualStatus === 'missing') {
-                                cellValue = '缺交';
+                                cellValue = missingText;
                             }
-                            const taskDef = db.tasks.find(t => t.id === k.taskId);
                             if (taskDef && taskDef.deadline) {
                                 let deadlineDate = new Date(taskDef.deadline);
                                 let isLate = false;

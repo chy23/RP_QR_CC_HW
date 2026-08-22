@@ -466,7 +466,7 @@ function openReminderModal(studentId) {
     // 渲染 Checkbox 列表
     const taskListDiv = document.getElementById('reminder-task-list');
     if (currentReminderMissingTasks.length === 0) {
-        taskListDiv.innerHTML = '<div class="text-green-600 p-2 font-bold flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 此學生目前沒有任何缺交作業。</div>';
+        taskListDiv.innerHTML = '<div class="text-green-600 p-2 font-bold flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 此學生目前沒有任何缺交/沒帶作業。</div>';
     } else {
         let html = '';
         currentReminderMissingTasks.forEach((task, idx) => {
