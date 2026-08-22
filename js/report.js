@@ -81,12 +81,37 @@ function renderReportTasks() {
         // 將 taskId 和 noticeName 組合成一個值
         const val = k.taskId + '|||' + k.noticeName;
         // 預設只勾選最近 10 筆，避免一次列印太多
-        const isChecked = index >= uniqueTaskKeys.length - 10 ? 'checked' : '';
+        const isChecked = ''; // Default unselected
         label.innerHTML = \`
             <input type="checkbox" class="report-task-cb rounded text-amber-600 focus:ring-amber-500" value="\${val}" \${isChecked}>
             <span class="truncate" title="\${k.label}">\${k.label}</span>
         \`;
         container.appendChild(label);
+    });
+}
+
+
+function selectFixedTasksReport() {
+    document.querySelectorAll('.report-task-cb').forEach(cb => {
+        const parts = cb.value.split('|||');
+        const task = db.tasks.find(t => t.id === parts[0]);
+        if (task && task.type === 'fixed') cb.checked = true;
+    });
+}
+
+function selectFloatingTasksReport() {
+    document.querySelectorAll('.report-task-cb').forEach(cb => {
+        const parts = cb.value.split('|||');
+        const task = db.tasks.find(t => t.id === parts[0]);
+        if (task && task.type === 'floating') cb.checked = true;
+    });
+}
+
+function selectSubjectTasksReport(subject) {
+    document.querySelectorAll('.report-task-cb').forEach(cb => {
+        const parts = cb.value.split('|||');
+        const task = db.tasks.find(t => t.id === parts[0]);
+        if (task && task.subject === subject) cb.checked = true;
     });
 }
 

@@ -1082,8 +1082,13 @@
                     <div class="flex justify-between items-center mb-2 border-b pb-2">
                         <h3 class="font-bold text-gray-700">選擇作業</h3>
                         <div class="space-x-2">
-                            <button class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200" onclick="selectAllReportTasks(true)">全選</button>
-                            <button class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300" onclick="selectAllReportTasks(false)">全不選</button>
+                                                        <button onclick="selectAllReportTasks(true)" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">全選</button>
+                            <button onclick="selectAllReportTasks(false)" class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300">全不選</button>
+                            <button onclick="selectFixedTasksReport()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200">固定</button>
+                            <button onclick="selectFloatingTasksReport()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200">浮動</button>
+                            <button onclick="selectSubjectTasksReport('國語')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200">國語</button>
+                            <button onclick="selectSubjectTasksReport('數學')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200">數學</button>
+                            <button onclick="selectSubjectTasksReport('社會')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200">社會</button>
                         </div>
                     </div>
                     <div id="report-tasks-container" class="max-h-60 overflow-y-auto flex flex-col gap-2 text-sm">
