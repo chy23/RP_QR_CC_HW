@@ -2,12 +2,8 @@
 
 // 初始化報表頁籤：載入學生清單與作業清單
 function renderReportTab() {
-    try {
-        renderReportStudents();
-        renderReportTasks();
-    } catch (err) {
-        alert("renderReportTab Error: " + err.message + "\n" + err.stack);
-    }
+    renderReportStudents();
+    renderReportTasks();
 }
 
 function renderReportStudents() {
@@ -41,81 +37,34 @@ function renderReportTasks() {
         return;
     }
 
-    // 找出所有獨立的 (taskId, noticeName) 組合
-    let uniqueTaskKeys = [];
+    let html = '';
     db.tasks.forEach(t => {
-        // 檢查 records 或 ranges 中是否有這個 task 的不同 noticeName
-        const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
-        const hasSubRecords = db.records.some(r => r.taskId === t.id && r.noticeName);
-        const hasSubRanges = (db.ranges || []).some(r => r.taskId === t.id && r.noticeName);
-        
-        if (!hasSubRecords && !hasSubRanges) {
-            uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.subject} - ${t.name}` });
-        } else {
-            if (hasBaseRecords) {
-                uniqueTaskKeys.push({ taskId: t.id, noticeName: '', label: `${t.subject} - ${t.name} (無範圍)` });
-            }
-            db.records.filter(r => r.taskId === t.id).forEach(r => {
-                if (r.noticeName) {
-                    const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
-                    if (!exists) {
-                        uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.subject} - ${t.name} (${r.noticeName})` });
-                    }
-                }
-            });
-            (db.ranges || []).filter(r => r.taskId === t.id).forEach(r => {
-                if (r.noticeName) {
-                    const exists = uniqueTaskKeys.find(k => k.taskId === r.taskId && k.noticeName === r.noticeName);
-                    if (!exists) {
-                        uniqueTaskKeys.push({ taskId: t.id, noticeName: r.noticeName, label: `${t.subject} - ${t.name} (${r.noticeName})` });
-                    }
-                }
-            });
-        }
-    });
-
-    if (uniqueTaskKeys.length === 0) {
-        container.innerHTML = '<div class="text-gray-500 p-2">尚無作業紀錄</div>';
-        return;
-    }
-
-    uniqueTaskKeys.forEach((k, index) => {
-        const label = document.createElement('label');
-        label.className = 'flex items-center gap-2 p-1 hover:bg-gray-100 rounded cursor-pointer';
-        // 將 taskId 和 noticeName 組合成一個值
-        const val = k.taskId + '|||' + k.noticeName;
-        // 預設只勾選最近 10 筆，避免一次列印太多
-        const isChecked = ''; // Default unselected
-        label.innerHTML = `
-            <input type="checkbox" class="report-task-cb rounded text-amber-600 focus:ring-amber-500" value="${val}" ${isChecked}>
-            <span class="truncate" title="${k.label}">${k.label}</span>
+        const typeStr = t.type === 'fixed' ? '[固]' : '[浮]';
+        html += `
+            <label class="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded cursor-pointer border-b last:border-b-0 border-gray-100">
+                <input type="checkbox" value="${t.id}" class="report-task-cb w-4 h-4 text-amber-600 rounded focus:ring-amber-500" data-subject="${t.subject}" data-type="${t.type}">
+                <span class="text-gray-700">${typeStr} [${t.subject}] ${t.name}</span>
+            </label>
         `;
-        container.appendChild(label);
     });
+    container.innerHTML = html;
 }
-
 
 function selectFixedTasksReport() {
     document.querySelectorAll('.report-task-cb').forEach(cb => {
-        const parts = cb.value.split('|||');
-        const task = db.tasks.find(t => t.id === parts[0]);
-        if (task && task.type === 'fixed') cb.checked = true;
+        if (cb.dataset.type === 'fixed') cb.checked = true;
     });
 }
 
 function selectFloatingTasksReport() {
     document.querySelectorAll('.report-task-cb').forEach(cb => {
-        const parts = cb.value.split('|||');
-        const task = db.tasks.find(t => t.id === parts[0]);
-        if (task && task.type === 'floating') cb.checked = true;
+        if (cb.dataset.type === 'floating') cb.checked = true;
     });
 }
 
 function selectSubjectTasksReport(subject) {
     document.querySelectorAll('.report-task-cb').forEach(cb => {
-        const parts = cb.value.split('|||');
-        const task = db.tasks.find(t => t.id === parts[0]);
-        if (task && task.subject === subject) cb.checked = true;
+        if (cb.dataset.subject === subject) cb.checked = true;
     });
 }
 
@@ -140,21 +89,36 @@ function generateReport() {
         return;
     }
 
-    const selectedTasks = selectedTaskVals.map(val => {
-        const parts = val.split('|||');
-        return { taskId: parts[0], noticeName: parts[1] };
-    });
-    
-    // 取得作業標籤名稱
-    const taskLabels = selectedTasks.map(k => {
-        const task = db.tasks.find(t => t.id === k.taskId);
-        if(!task) return '未知作業';
-        let label = `${task.subject} - ${task.name}`;
-        if(k.noticeName) label += ` (${k.noticeName})`;
-        return label;
+    let selectedTasks = [];
+    selectedTaskVals.forEach(tid => {
+        const t = db.tasks.find(x => x.id === tid);
+        if (!t) return;
+        
+        let noticeNames = [...new Set(db.records.filter(r => r.taskId === tid).map(r => r.noticeName || ''))];
+        // Also check ranges to see if there are instances that have no records yet
+        if (db.ranges) {
+            const rangeNotices = db.ranges.filter(r => r.taskId === tid).map(r => r.noticeName || '');
+            rangeNotices.forEach(rn => {
+                if (!noticeNames.includes(rn)) noticeNames.push(rn);
+            });
+        }
+        
+        if (noticeNames.length === 0) {
+            selectedTasks.push({ taskId: tid, noticeName: '', label: `${t.subject} - ${t.name}` });
+        } else {
+            // Sort noticeNames alphabetically
+            noticeNames.sort();
+            noticeNames.forEach(nn => {
+                let label = `${t.subject} - ${t.name}`;
+                if (nn) label += ` (${nn})`;
+                selectedTasks.push({ taskId: tid, noticeName: nn, label: label });
+            });
+        }
     });
 
-    let printHTML = `
+    const taskLabels = selectedTasks.map(k => k.label);
+
+let printHTML = `
         <html>
         <head>
             <title>個人繳交狀況報表</title>
@@ -198,7 +162,7 @@ function generateReport() {
     `;
 
     selectedStudentIds.forEach(sId => {
-        const student = db.students.find(s => s.id === sId);
+        const student = db.students.find(s => s.id === parseInt(sId));
         if (!student) return;
 
         let stats = { total: selectedTasks.length, submitted: 0, missing: 0, returned: 0, excused: 0 };
