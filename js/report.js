@@ -37,6 +37,38 @@ function renderReportTasks() {
         return;
     }
 
+    const grouped = {};
+    db.tasks.forEach(t => {
+        if (!grouped[t.subject]) grouped[t.subject] = [];
+        grouped[t.subject].push(t);
+    });
+
+    let html = '';
+    for (const [subject, tasks] of Object.entries(grouped)) {
+        const accId = 'report-acc-' + subject;
+        html += `
+            <div class="border rounded mb-2 overflow-hidden">
+                <button type="button" onclick="toggleAccordion('${accId}')" class="w-full text-left px-4 py-2 bg-amber-50 hover:bg-amber-100 font-bold text-amber-800 flex justify-between items-center border-b border-amber-200">
+                    <span>${subject} <span class="text-xs font-normal text-amber-600">(${tasks.length})</span></span>
+                    <svg id="${accId}-icon" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="${accId}" class="hidden flex-col bg-white">
+                    ${tasks.map(t => {
+                        const typeStr = t.type === 'fixed' ? '[固]' : '[浮]';
+                        return `
+                        <label class="flex items-center space-x-2 px-4 py-2 hover:bg-gray-50 rounded-none cursor-pointer border-b last:border-b-0 border-gray-100">
+                            <input type="checkbox" value="${t.id}" class="report-task-cb w-4 h-4 text-amber-600 rounded focus:ring-amber-500" data-subject="${t.subject}" data-type="${t.type}">
+                            <span class="text-sm text-gray-700">${typeStr} ${t.name}</span>
+                        </label>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
     let html = '';
     db.tasks.forEach(t => {
         const typeStr = t.type === 'fixed' ? '[固]' : '[浮]';
@@ -81,11 +113,11 @@ function generateReport() {
     const selectedTaskVals = Array.from(document.querySelectorAll('.report-task-cb:checked')).map(cb => cb.value);
 
     if (selectedStudentIds.length === 0) {
-        alert("請至少選擇一位學生！");
+        showAlert('提示', "請至少選擇一位學生！");
         return;
     }
     if (selectedTaskVals.length === 0) {
-        alert("請至少選擇一項作業！");
+        showAlert('提示', "請至少選擇一項作業！");
         return;
     }
 

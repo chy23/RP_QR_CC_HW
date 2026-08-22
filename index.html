@@ -25,6 +25,11 @@
     <!-- JSZip -->
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
+    <!-- Toastify & SweetAlert2 -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
         .page-break { page-break-after: always; }
         /* 手機端掃描介面極大化 (RWD) */
@@ -388,8 +393,12 @@
 
     <div class="max-w-7xl mx-auto p-4 relative">
         <div id="main-header" class="flex flex-col md:flex-row justify-between items-center mb-6 relative">
-            <div class="w-full text-center">
-                <h1 class="text-3xl font-bold text-blue-700 flex justify-center items-center gap-3 flex-wrap">
+            <!-- Mobile Hamburger Button -->
+            <button id="mobile-menu-btn" class="md:hidden absolute left-0 top-0 mt-1 ml-2 p-2 text-gray-600 hover:text-blue-600 rounded">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <div class="w-full text-center mt-2 md:mt-0">
+                <h1 class="text-2xl md:text-3xl font-bold text-blue-700 flex justify-center items-center gap-2 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
                     QRcode自動清點作業系統 <span class="text-lg text-red-500 font-bold tracking-wide">Beta Ver. 1.71</span>
                     <span id="header-class-info" class="text-base font-normal text-blue-500 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap"></span>
@@ -408,7 +417,7 @@
         </div>
         
         <!-- Tabs -->
-        <div id="main-tabs" class="flex flex-wrap border-b mb-6 bg-white rounded-t-lg px-2 pt-2">
+        <div id="main-tabs" class="hidden md:flex flex-col md:flex-row md:flex-wrap border-b mb-6 bg-white rounded-t-lg px-2 pt-2 shadow-md md:shadow-none absolute md:relative z-40 w-full left-0 top-16 md:top-auto">
             <button class="tab-btn active px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(0)">0. 建置</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(1)">1. 掃描與統計</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-blue-600 font-bold" onclick="switchTab(2)">2. 雲端總表</button>
@@ -1138,14 +1147,15 @@
         </div>
     </div>
 
-    <script src="js/audio.js?v=1.79"></script>
-    <script src="js/db.js?v=1.79"></script>
-    <script src="js/ui.js?v=1.79"></script>
-    <script src="js/scanner.js?v=1.79"></script>
-    <script src="js/export.js?v=1.79"></script>
-    <script src="js/report.js?v=1.79"></script>
-    <script src="js/reminders.js?v=1.79"></script>
-    <script src="js/main.js?v=1.79"></script>
+    <script src="js/alerts.js?v=1.80"></script>
+    <script src="js/audio.js?v=1.80"></script>
+    <script src="js/db.js?v=1.80"></script>
+    <script src="js/ui.js?v=1.80"></script>
+    <script src="js/scanner.js?v=1.80"></script>
+    <script src="js/export.js?v=1.80"></script>
+    <script src="js/report.js?v=1.80"></script>
+    <script src="js/reminders.js?v=1.80"></script>
+    <script src="js/main.js?v=1.80"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">

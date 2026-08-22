@@ -223,7 +223,7 @@ async function handleTab6Sync() {
         await syncFromGoogleSheets(false);
         renderReminderStats();
     } else {
-        alert('同步模組尚未載入！');
+        showAlert('提示', '同步模組尚未載入！');
     }
 }
 
@@ -611,10 +611,10 @@ function copyReminderText() {
                 if (btn) btn.style.display = 'none';
             }, 10);
         } else {
-            alert('已複製到剪貼簿！');
+            showAlert('提示', '已複製到剪貼簿！');
         }
     }).catch(err => {
         console.error('Failed to copy: ', err);
-        alert('複製失敗，請手動全選複製。');
+        showAlert('提示', '複製失敗，請手動全選複製。');
     });
 }

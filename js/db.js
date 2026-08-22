@@ -211,7 +211,7 @@
                         
                     }, 200); // 5 FPS to balance performance
             } catch (err) {
-                alert("無法啟動相機，請允許權限：" + err);
+                showAlert('提示', "無法啟動相機，請允許權限：" + err);
                 container.classList.add('hidden');
             }
         }
@@ -416,7 +416,8 @@ async function getBackups() {
 }
 
 async function restoreBackup(timestamp) {
-    if(!confirm('警告：還原備份將會覆寫目前的資料！確定要繼續嗎？')) return;
+    const result = await showConfirm('警告：還原備份將會覆寫目前的資料！', '確定要繼續嗎？', 'warning', '還原', '取消');
+    if(!result.isConfirmed) return;
     try {
         const idb = await openBackupDB();
         const tx = idb.transaction(STORE_NAME, 'readonly');
@@ -428,11 +429,11 @@ async function restoreBackup(timestamp) {
                 db = JSON.parse(req.result.data);
                 saveData();
                 renderAll();
-                alert('備份已成功還原！');
+                showToast('備份已成功還原！', 'success');
                 hideBackupModal();
             }
         };
     } catch (err) {
-        alert('還原失敗：' + err.message);
+        showAlert('提示', '還原失敗：' + err.message);
     }
 }

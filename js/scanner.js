@@ -105,7 +105,7 @@
                 saveGasUrl();
             }
             if(!gasUrl) {
-                alert('請先填寫並儲存網址！'); return;
+                showAlert('提示', '請先填寫並儲存網址！'); return;
             }
             document.getElementById('gas-status').innerHTML = '<span class="text-blue-600">測試連線中...</span>';
             fetch(gasUrl, {
@@ -464,7 +464,7 @@
             const checkboxes = document.querySelectorAll('.scan-task-checkbox:checked');
             
             if(!dateVal || checkboxes.length === 0) {
-                alert('請先選擇日期與【至少一項】作業！');
+                showAlert('提示', '請先選擇日期與【至少一項】作業！');
                 return;
             }
             
@@ -529,7 +529,7 @@
                 }
             } catch (err) {
                 console.error("continueStartScanSession Error: ", err);
-                alert("拉取資料發生例外錯誤，但仍將繼續啟動掃描。");
+                showAlert('提示', "拉取資料發生例外錯誤，但仍將繼續啟動掃描。");
             } finally {
                 hideLoading();
             }
@@ -603,9 +603,10 @@
             if(document.body.classList.contains('immersive-active')) toggleImmersiveMode();
         }
 
-        function cancelScanSession() {
+        async function cancelScanSession() {
             if (scanSession.records.length > 0) {
-                if (!confirm('確定要取消本次掃描嗎？已掃描的紀錄將被清空！')) return;
+                const result = await showConfirm('確定要取消本次掃描嗎？', '已掃描的紀錄將被清空！', 'warning', '取消掃描', '返回');
+                if(!result.isConfirmed) return;
             }
             scanSession = { active: false, dateStr: '', tasks: [], records: [] };
             document.getElementById('session-buffer-list').innerHTML = '';
@@ -742,7 +743,7 @@
             document.querySelectorAll('.scan-task-checkbox').forEach(el => el.checked = false);
             document.querySelectorAll('input[id^="range-input-"]').forEach(el => el.style.display = 'none');
             } catch (err) {
-                alert("confirmScanSession Error: " + err.stack);
+                showAlert('提示', "confirmScanSession Error: " + err.stack);
                 console.error(err);
             }
         }
@@ -766,7 +767,7 @@
             if (!student || !task) {
                 console.warn('Scan failed: student or task not found', qrText);
                 playBeep('error');
-                alert("❌ 條碼辨識失敗！\n這張條碼對應的學生或作業在目前的系統中找不到。");
+                showAlert('提示', "❌ 條碼辨識失敗！\n這張條碼對應的學生或作業在目前的系統中找不到。");
                 return;
             }
 
@@ -774,7 +775,7 @@
             if (parsed.salt && student.salt && parsed.salt !== student.salt) {
                 console.warn('Scan failed: invalid salt');
                 playBeep('error');
-                alert('無效的防偽條碼！請確保您印出的條碼是最新的。');
+                showAlert('提示', '無效的防偽條碼！請確保您印出的條碼是最新的。');
                 return;
             }
 
@@ -783,7 +784,7 @@
                 const sessionTask = scanSession.tasks.find(t => t.id === task.id);
                 if (!sessionTask) {
                     playBeep('error');
-                    alert(`錯誤：您現在掃描的是「${task.name}」，但此作業不在您勾選的掃描清單中！`);
+                    showAlert('提示', `錯誤：您現在掃描的是「${task.name}」，但此作業不在您勾選的掃描清單中！`);
                     return;
                 }
                 
@@ -805,7 +806,7 @@
                 renderSessionBuffer();
             } else {
                 playBeep('error');
-                alert('請先選擇日期與作業，點擊「開始掃描」後再進行掃描！');
+                showAlert('提示', '請先選擇日期與作業，點擊「開始掃描」後再進行掃描！');
             }
         }
 
@@ -825,8 +826,9 @@
             }
         }
         
-        function deleteSubject(sub) {
-            if(confirm(`確定要刪除「${sub}」分頁嗎？這會刪除該分頁下的所有作業設定與紀錄！`)) {
+        async function deleteSubject(sub) {
+            const result = await showConfirm(`確定要刪除「${sub}」分頁嗎？`, '這會刪除該分頁下的所有作業設定與紀錄！', 'warning', '刪除', '取消');
+            if(result.isConfirmed) {
                 saveStateForUndo();
                 const tasksToDelete = db.tasks.filter(t => t.subject === sub).map(t => t.id);
                 db.tasks = db.tasks.filter(t => t.subject !== sub);
@@ -860,7 +862,7 @@
                     saveData();
                     renderStatistics();
                 } else {
-                    alert('這個欄位已經存在了！');
+                    showAlert('提示', '這個欄位已經存在了！');
                 }
             }
         }
@@ -892,8 +894,9 @@
         }
 
         
-        function removeSubColumn(taskId, noticeName) {
-            if(!confirm('確定要刪除這個作業欄位及其所有繳交紀錄嗎？')) return;
+        async function removeSubColumn(taskId, noticeName) {
+            const result = await showConfirm('確定要刪除這個作業欄位嗎？', '這會刪除其所有繳交紀錄！', 'warning', '刪除', '取消');
+            if(!result.isConfirmed) return;
             
             saveStateForUndo();
             

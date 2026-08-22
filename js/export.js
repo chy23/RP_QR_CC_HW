@@ -273,12 +273,12 @@
 
         async function generateFloatingPDF() {
             const select = document.getElementById('tab3-task-select');
-            if(!select.value) { alert('請先選擇浮動作/通知單'); return; }
+            if(!select.value) { showAlert('提示', '請先選擇浮動作/通知單'); return; }
             const task = db.tasks.find(t => t.id === select.value);
             let noticeName = document.getElementById('tab3-notice-name').value.trim();
 
             const fileInput = document.getElementById('tab3-pdf-upload');
-            if(fileInput.files.length === 0) { alert('請先上傳底板 PDF'); return; }
+            if(fileInput.files.length === 0) { showAlert('提示', '請先上傳底板 PDF'); return; }
 
             const pagesKeep = document.getElementById('tab3-pages-keep').value.trim();
             const targetPage = document.getElementById('tab3-page') ? document.getElementById('tab3-page').value : 'all';
@@ -349,7 +349,7 @@
                     a.click();
 
                 } catch (e) {
-                    alert('套印失敗: ' + e.message);
+                    showAlert('提示', '套印失敗: ' + e.message);
                 }
                 hideLoading();
             };
@@ -359,8 +359,8 @@
         
         async function previewWord() {
             const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
-            if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
-            if(!db.students || db.students.length === 0) { alert('尚未建立學生名單'); return; }
+            if(taskIds.length === 0) { showAlert('提示', '請至少選擇一項作業'); return; }
+            if(!db.students || db.students.length === 0) { showAlert('提示', '尚未建立學生名單'); return; }
             
             showLoading();
             setTimeout(async () => {
@@ -403,7 +403,7 @@
                     container.classList.remove('hidden');
                     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } catch(e) {
-                    alert("產生預覽失敗: " + e.message);
+                    showAlert('提示', "產生預覽失敗: " + e.message);
                 }
                 hideLoading();
             }, 100);
@@ -411,8 +411,8 @@
 
         async function generateWord() {
             const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
-            if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
-            if(!db.students || db.students.length === 0) { alert('尚未建立學生名單'); return; }
+            if(taskIds.length === 0) { showAlert('提示', '請至少選擇一項作業'); return; }
+            if(!db.students || db.students.length === 0) { showAlert('提示', '尚未建立學生名單'); return; }
             const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id)).filter(Boolean);
 
             showLoading();
@@ -572,7 +572,7 @@
                     a.click();
                     setTimeout(() => URL.revokeObjectURL(url), 1000);
                 } catch(e) {
-                    alert("匯出 Word 失敗: " + e.message);
+                    showAlert('提示', "匯出 Word 失敗: " + e.message);
                 }
                 hideLoading();
             }, 300);
@@ -580,8 +580,8 @@
 
         async function generateExcelBarcodeTable() {
             const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
-            if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
-            if(!db.students || db.students.length === 0) { alert('尚未建立學生名單'); return; }
+            if(taskIds.length === 0) { showAlert('提示', '請至少選擇一項作業'); return; }
+            if(!db.students || db.students.length === 0) { showAlert('提示', '尚未建立學生名單'); return; }
             const selectedTasks = taskIds.map(id => db.tasks.find(t => t.id === id)).filter(Boolean);
 
             showLoading();
@@ -714,7 +714,7 @@
                         setTimeout(() => URL.revokeObjectURL(url), 1000);
                     }
                 } catch(e) {
-                    alert("匯出 Excel 失敗: " + e.message);
+                    showAlert('提示', "匯出 Excel 失敗: " + e.message);
                 }
                 hideLoading();
             }, 100);
@@ -759,8 +759,8 @@
         async function previewBatchPDF() {
             const taskIds = getCheckedTaskIds('tab4-task-checkboxes');
             const studentIds = getCheckedStudentIds('tab4-student-checkboxes');
-            if(taskIds.length === 0) { alert('請至少選擇一項作業'); return; }
-            if(studentIds.length === 0) { alert('請至少選擇一位學生'); return; }
+            if(taskIds.length === 0) { showAlert('提示', '請至少選擇一項作業'); return; }
+            if(studentIds.length === 0) { showAlert('提示', '請至少選擇一位學生'); return; }
             
             const wCm = parseFloat(document.getElementById('tab4-w').value) || 4;
             const hCm = parseFloat(document.getElementById('tab4-h').value) || 2;
@@ -832,7 +832,7 @@
                     document.getElementById('tab4-download-pdf-btn').classList.remove('hidden');
 
                 } catch (e) {
-                    alert('產生 PDF 失敗: ' + e.message);
+                    showAlert('提示', '產生 PDF 失敗: ' + e.message);
                     console.error(e);
                 }
                 hideLoading();
@@ -869,7 +869,7 @@
                     a.download = "全班條碼打包.zip";
                     a.click();
                 } catch(e) {
-                    alert("打包失敗: " + e.message);
+                    showAlert('提示', "打包失敗: " + e.message);
                 }
                 hideLoading();
             }, 500);
@@ -1011,7 +1011,7 @@
                     }
                     updateVisualSize();
                 } catch(e) {
-                    alert("載入 PDF 發生錯誤: " + e.message);
+                    showAlert('提示', "載入 PDF 發生錯誤: " + e.message);
                 }
                 hideLoading();
             };
@@ -1098,14 +1098,14 @@
 
         async function generateVisualFloatingPDF() {
             const select = document.getElementById('tab3-task-select');
-            if(!select.value) { alert('請先選擇浮動作/通知單'); return; }
+            if(!select.value) { showAlert('提示', '請先選擇浮動作/通知單'); return; }
             const task = db.tasks.find(t => t.id === select.value);
             let noticeName = '';
             const noticeInput = document.getElementById('tab3-notice-name');
             if(noticeInput) noticeName = noticeInput.value.trim();
 
             const fileInput = document.getElementById('tab3-pdf-upload');
-            if(!fileInput || fileInput.files.length === 0) { alert('請先上傳底板 PDF'); return; }
+            if(!fileInput || fileInput.files.length === 0) { showAlert('提示', '請先上傳底板 PDF'); return; }
             
             showLoading();
             setTimeout(async () => {
@@ -1159,7 +1159,7 @@
                         }
                         
                         if(keepIndices.length === 0) {
-                            alert('必須至少保留一頁！');
+                            showAlert('提示', '必須至少保留一頁！');
                             hideLoading();
                             return;
                         }
@@ -1203,7 +1203,7 @@
                     a.click();
 
                 } catch (e) {
-                    alert('產生 PDF 失敗: ' + e.message);
+                    showAlert('提示', '產生 PDF 失敗: ' + e.message);
                     console.error(e);
                 }
                 hideLoading();
@@ -1219,7 +1219,7 @@
             const filterLast = document.getElementById('stat-filter-last') && document.getElementById('stat-filter-last').checked;
 
             if (subjects.length === 0) {
-                alert('目前沒有任何作業資料可以匯出');
+                showAlert('提示', '目前沒有任何作業資料可以匯出');
                 return;
             }
 
@@ -1331,7 +1331,7 @@
             });
             
             if (wb.SheetNames.length === 0) {
-                alert('沒有任何資料可匯出！');
+                showAlert('提示', '沒有任何資料可匯出！');
                 return;
             }
             
