@@ -1048,6 +1048,58 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tab 7: 個人繳交狀況報表 -->
+        <div id="tab-7" class="tab-content bg-white p-6 rounded-b shadow" style="display:none;">
+            <div class="flex items-center justify-between border-b pb-2 mb-4">
+                <h2 class="text-2xl font-bold m-0 border-0 pb-0 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    7. 個人繳交狀況報表
+                </h2>
+            </div>
+            
+            <div class="text-sm text-gray-600 mb-6">
+                您可以勾選想要匯出的學生與作業項目，系統將為每位學生產生一份專屬的繳交狀況報告 (A4)，適合列印或另存為 PDF。
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- 學生選擇區 -->
+                <div class="border rounded p-4 bg-gray-50">
+                    <div class="flex justify-between items-center mb-2 border-b pb-2">
+                        <h3 class="font-bold text-gray-700">選擇學生</h3>
+                        <div class="space-x-2">
+                            <button class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200" onclick="selectAllReportStudents(true)">全選</button>
+                            <button class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300" onclick="selectAllReportStudents(false)">全不選</button>
+                        </div>
+                    </div>
+                    <div id="report-students-container" class="max-h-60 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+                        <!-- 動態產生 -->
+                    </div>
+                </div>
+                
+                <!-- 作業選擇區 -->
+                <div class="border rounded p-4 bg-gray-50">
+                    <div class="flex justify-between items-center mb-2 border-b pb-2">
+                        <h3 class="font-bold text-gray-700">選擇作業</h3>
+                        <div class="space-x-2">
+                            <button class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200" onclick="selectAllReportTasks(true)">全選</button>
+                            <button class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300" onclick="selectAllReportTasks(false)">全不選</button>
+                        </div>
+                    </div>
+                    <div id="report-tasks-container" class="max-h-60 overflow-y-auto flex flex-col gap-2 text-sm">
+                        <!-- 動態產生 -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-6">
+                <button onclick="generateReport()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded shadow flex items-center gap-2 text-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    產生報表 (預覽與列印)
+                </button>
+            </div>
+        </div>
+
     </div>
 
     <!-- Backup Modal -->
@@ -1073,6 +1125,7 @@
     <script src="js/ui.js?v=1.50"></script>
     <script src="js/scanner.js?v=1.50"></script>
     <script src="js/export.js?v=1.50"></script>
+    <script src="js/report.js?v=1.50"></script>
     <script src="js/reminders.js?v=1.50"></script>
     <script src="js/main.js?v=1.50"></script>
 
