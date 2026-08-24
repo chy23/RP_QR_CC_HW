@@ -230,11 +230,25 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Ver 1.95 -->
+                <!-- Ver 1.98 -->
                 <div class="border-l-4 border-blue-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
                         <span>Ver. 1.98 (正式發布)</span>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/22</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/08/24</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>新功能 (個人報表)：</strong> 個人報表新增「請假與缺席紀錄」區塊，自動統整聯絡簿中的請假紀錄、假別與日期明細。</li>
+                        <li><strong>UI 優化：</strong> 針對「聯絡簿」，系統內的「缺交」字眼已全面替換為「沒帶」，包含批改按鈕與報表顯示，更符合教學現場情境。</li>
+                        <li><strong>UI 優化：</strong> 版本號自動判斷機制，正式版改為低調灰色，Beta 測試版將自動加上紅色 (Beta) 標籤。</li>
+                        <li><strong>Bug 修復：</strong> 修復在未輸入搜尋條件下，切換至【5. 批改與退回】會產生 ReferenceError 而無法載入名單的問題。</li>
+                    </ul>
+                </div>
+
+                <!-- Ver 1.95 -->
+                <div class="border-l-4 border-gray-400 pl-4 py-1 mb-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Ver. 1.95</span>
+                        <span class="text-xs bg-gray-100 text-gray-800 px-2 py-0.5 rounded font-mono">2026/08/22</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
                         <li><strong>全新功能：</strong> 隆重推出「7. 個人繳交狀況報表」，可勾選指定學生及作業，自動產生精美的個人專屬 PDF 成績報告（含缺交清單、繳交率等統計），方便發放給家長。</li>
