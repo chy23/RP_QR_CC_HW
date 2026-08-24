@@ -251,63 +251,6 @@ let printHTML = `
         });
 
 
-        // 取得請假紀錄 (來自聯絡簿)
-        const isLeave = (status) => {
-            if (!status) return false;
-            if (status.startsWith('leave_')) return true;
-            return ['病假', '事假', '公假', '喪假', '其他假別', '曠課', '遲到', '其他', '請假'].includes(status);
-        };
-        const getLeaveN = (status) => {
-            if (!status) return '';
-            if (status.startsWith('leave_custom_')) return status.replace('leave_custom_', '');
-            if (status.startsWith('leave_')) return status.replace('leave_', '');
-            return status;
-        };
-
-        const contactTask = db.tasks.find(t => t.subject === '聯絡簿' && t.type === 'fixed');
-        let leaveRowsHTML = '';
-        if (contactTask) {
-            const contactRecords = db.records.filter(r => r.studentId === parseInt(sId) && r.taskId === contactTask.id);
-            const leaves = {};
-            contactRecords.forEach(r => {
-                if (isLeave(r.manualStatus)) {
-                    const lName = getLeaveN(r.manualStatus);
-                    if (!leaves[lName]) leaves[lName] = [];
-                    leaves[lName].push(r.noticeName || r.timestamp.split(' ')[0]);
-                }
-            });
-            
-            if (Object.keys(leaves).length > 0) {
-                let leaveDetails = [];
-                for (const [lName, dates] of Object.entries(leaves)) {
-                    dates.sort();
-                    leaveDetails.push(`
-                        <tr>
-                            <td class="text-center font-bold text-blue-700">${lName}</td>
-                            <td class="text-center font-bold">${dates.length}</td>
-                            <td class="text-left text-gray-700">${dates.join(', ')}</td>
-                        </tr>
-                    `);
-                }
-                
-                leaveRowsHTML = `
-                    <h2 style="font-size: 14pt; color: #1e3a8a; margin-top: 30px; margin-bottom: 10px; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px; text-align: left;">請假與缺席紀錄 <span style="font-size: 10pt; color: #64748b; font-weight: normal; margin-left: 10px;">(來源: 聯絡簿紀錄)</span></h2>
-                    <table style="text-align: center; margin-bottom: 10px;">
-                        <thead>
-                            <tr>
-                                <th style="width: 20%;" class="text-center">類別</th>
-                                <th style="width: 20%;" class="text-center">天數/次數</th>
-                                <th class="text-left">日期明細</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${leaveDetails.join('')}
-                        </tbody>
-                    </table>
-                `;
-            }
-        }
-
         printHTML += `
             <div class="page">
                 <h1>個人繳交狀況報表</h1>
@@ -357,7 +300,6 @@ let printHTML = `
                     </div>
                 </div>
                 
-                ${leaveRowsHTML}
                 <div class="footer">
                     報表產出時間：${new Date().toLocaleString('zh-TW')}
                 </div>
