@@ -1113,6 +1113,17 @@ let currentTargetRecord = null;
             if (studentId === null) {
                 currentTargetRecord = { studentId, taskId, noticeName };
                 document.getElementById('status-modal-title').innerText = '整欄批次手動設定';
+                
+                const tDef = db.tasks.find(t => t.id === taskId);
+                const leaveContainer = document.getElementById('status-modal-leave-container');
+                if (leaveContainer) {
+                    if (tDef && tDef.subject === '聯絡簿' && tDef.name === '聯絡簿') {
+                        leaveContainer.style.display = 'block';
+                    } else {
+                        leaveContainer.style.display = 'none';
+                    }
+                }
+                
                 document.getElementById('status-modal').style.display = 'flex';
                 return;
             }
@@ -1239,7 +1250,6 @@ let currentTargetRecord = null;
         async function loadGradingData() {
             await syncFromGoogleSheets(false);
             renderGradingTab();
-            document.getElementById('grading-student-list').innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">已重新載入最新資料，請選擇作業。</td></tr>';
         }
 
                 let activeGradingSubject = null;
@@ -1554,16 +1564,22 @@ let currentTargetRecord = null;
                         <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'missing')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'missing' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-red-500 hover:bg-red-600 text-white'}" ${currentStatusType === 'missing' ? 'disabled' : ''}>${taskDef?.subject === '聯絡簿' ? '沒帶' : '退回 (缺交)'}</button>
                         <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'late')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'late' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}" ${currentStatusType === 'late' ? 'disabled' : ''}>改為遲交</button>
                         <button onclick="updateStudentTaskStatus(${s.id}, '${taskId}', '${noticeName}', 'ontime')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors ${currentStatusType === 'ontime' ? 'bg-gray-200 text-gray-400 cursor-not-allowed border' : 'bg-green-500 hover:bg-green-600 text-white'}" ${currentStatusType === 'ontime' ? 'disabled' : ''}>標為準時</button>
-                        <div class="relative">
-                            <select onchange="handleLeaveSelect(this, ${s.id}, '${taskId}', '${noticeName}')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors text-center cursor-pointer appearance-none outline-none ${isLeaveStatus(currentStatusType) ? 'bg-blue-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}">
-                                <option value="" disabled selected>${isLeaveStatus(currentStatusType) ? '變更假別 ▼' : '設定請假 ▼'}</option>
-                                <option value="病假" class="text-black bg-white">病假</option>
-                                <option value="事假" class="text-black bg-white">事假</option>
-                                <option value="公假" class="text-black bg-white">公假</option>
-                                <option value="喪假" class="text-black bg-white">喪假</option>
-                                <option value="其他假別" class="text-black bg-white">其他假別</option>
-                            </select>
-                        </div>
+                        ${(function(){
+                            const tDef = db.tasks.find(t => t.id === taskId);
+                            if (tDef && tDef.subject === '聯絡簿' && tDef.name === '聯絡簿') {
+                                return `<div class="relative">
+                                    <select onchange="handleLeaveSelect(this, ${s.id}, '${taskId}', '${noticeName}')" class="px-4 py-2 rounded font-bold shadow-sm transition-colors text-center cursor-pointer appearance-none outline-none ${isLeaveStatus(currentStatusType) ? 'bg-blue-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}">
+                                        <option value="" disabled selected>${isLeaveStatus(currentStatusType) ? '變更假別 ▼' : '設定請假 ▼'}</option>
+                                        <option value="病假" class="text-black bg-white">病假</option>
+                                        <option value="事假" class="text-black bg-white">事假</option>
+                                        <option value="公假" class="text-black bg-white">公假</option>
+                                        <option value="喪假" class="text-black bg-white">喪假</option>
+                                        <option value="其他假別" class="text-black bg-white">其他假別</option>
+                                    </select>
+                                </div>`;
+                            }
+                            return '';
+                        })()}
                     </td>
                 </tr>`;
             });

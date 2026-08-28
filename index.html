@@ -137,7 +137,7 @@
                 <button onclick="setManualStatus('ontime')" class="bg-green-500 hover:bg-green-600 text-white py-2 rounded shadow">標記為「準時已交」</button>
                 <button onclick="setManualStatus('late')" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded shadow">標記為「遲交」</button>
                 <button onclick="setManualStatus('missing')" class="bg-red-500 hover:bg-red-600 text-white py-2 rounded shadow">標記為「缺交」(刪除紀錄)</button>
-                <div class="relative w-full">
+                <div class="relative w-full" id="status-modal-leave-container">
                     <select onchange="handleLeaveSelect(this, null, null, null)" class="appearance-none w-full bg-blue-500 hover:bg-blue-600 text-white text-center py-2 rounded shadow cursor-pointer outline-none">
                         <option value="" disabled selected>設定為「請假」 ▼</option>
                         <option value="病假" class="text-gray-800 bg-white">病假</option>
