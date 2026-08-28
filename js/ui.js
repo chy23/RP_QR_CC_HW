@@ -347,6 +347,11 @@
                     if (!taskName || !noticeName) continue;
                     
                     let task = tasksInSub.find(t => t.name === taskName);
+                    if (!task) {
+                        task = { id: 't_fixed_' + Date.now() + '_' + Math.floor(Math.random()*1000), subject: subject, name: taskName, type: 'fixed' };
+                        db.tasks.push(task);
+                        tasksInSub.push(task);
+                    }
                     if (task) {
                         const existingRange = db.ranges.find(rg => rg.taskId === task.id && rg.noticeName === noticeName);
                         if (!existingRange) {
@@ -371,12 +376,17 @@
                         // 在本機尋找對應的 taskId
                         let task = tasksInSub.find(t => t.name === taskName);
                         if (!task) {
-                            // 如果沒找到，或許可以嘗試建立（這邊先忽略，要求老師先自雲端匯入設定）
-                            continue;
+                            task = { id: 't_fixed_' + Date.now() + '_' + Math.floor(Math.random()*1000), subject: subject, name: taskName, type: 'fixed' };
+                            db.tasks.push(task);
+                            tasksInSub.push(task);
                         }
                         
-                        // 忽略缺交與空白
-                        if (!cellValue || cellValue === '缺交') continue;
+                        // 忽略空白
+                        if (!cellValue) continue;
+                        if (cellValue === '缺交') {
+                            // If they typed missing, we don't save a record, so it defaults to missing
+                            continue;
+                        }
                         
                         let record = {
                             studentId: student.id,
@@ -385,15 +395,20 @@
                             timestamp: ''
                         };
                         
-                        const leaves = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他"];
+                        const leaves = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "其他假別"];
                         if (cellValue.startsWith('[遲交]')) {
                             record.manualStatus = 'late';
                             record.timestamp = cellValue.replace('[遲交]', '').trim();
                         } else if (leaves.includes(cellValue)) {
                             record.manualStatus = cellValue;
-                            record.timestamp = '1970-01-01T00:00:00'; // Dummy timestamp for leaves
-                        } else {
+                            record.timestamp = '1970-01-01T00:00:00';
+                        } else if (/^\d{1,2}\/\d{1,2} \d{1,2}:\d{1,2}/.test(cellValue) || /^20\d{2}[-\/]\d{1,2}[-\/]\d{1,2}/.test(cellValue)) {
+                            // Valid timestamp
                             record.timestamp = cellValue;
+                        } else {
+                            // User typed custom string like "沒帶", "生理假"
+                            record.manualStatus = 'leave_custom_' + cellValue;
+                            record.timestamp = '1970-01-01T00:00:00';
                         }
                         
                         db.records.push(record);

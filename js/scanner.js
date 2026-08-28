@@ -269,15 +269,13 @@
                     statHeaders.push(`${prefix}_繳交率`);
                     statHeaders.push(`${prefix}_準時率`);
                     statHeaders.push(`${prefix}_缺交率`);
-                    if (isContactBookDaily) {
-                        statHeaders.push(`${prefix}_事假率`);
-                        statHeaders.push(`${prefix}_病假率`);
-                        statHeaders.push(`${prefix}_公假率`);
-                        statHeaders.push(`${prefix}_喪假率`);
-                        statHeaders.push(`${prefix}_遲到率`);
-                        statHeaders.push(`${prefix}_曠課率`);
-                        statHeaders.push(`${prefix}_其他率`);
-                    }
+                    statHeaders.push(`${prefix}_事假率`);
+                    statHeaders.push(`${prefix}_病假率`);
+                    statHeaders.push(`${prefix}_公假率`);
+                    statHeaders.push(`${prefix}_喪假率`);
+                    statHeaders.push(`${prefix}_遲到率`);
+                    statHeaders.push(`${prefix}_曠課率`);
+                    statHeaders.push(`${prefix}_其他率`);
 
                     statsFuncs.push((studentId) => {
                         const student = db.students.find(s => s.id === studentId);
@@ -322,18 +320,22 @@
 
                             const r = db.records.find(rec => rec.studentId === studentId && rec.taskId === k.taskId && rec.noticeName === k.noticeName);
                             if (r) {
-                                if (leavesToExempt.includes(r.manualStatus)) {
-                                    exemptLeaves++;
-                                    if (isContactBookDaily && leaveCounts[r.manualStatus] !== undefined) {
-                                        leaveCounts[r.manualStatus]++;
+                                if (isLeaveStatus(r.manualStatus) || r.manualStatus === '其他假別' || leavesToExempt.includes(r.manualStatus)) {
+                                    const lName = getLeaveName(r.manualStatus) || r.manualStatus;
+                                    if (leaveCounts[lName] === undefined) leaveCounts[lName] = 0;
+                                    leaveCounts[lName]++;
+                                    
+                                    if (lName !== '遲到' && lName !== '曠課') {
+                                        exemptLeaves++;
+                                    } else if (lName === '遲到') {
+                                        onTime++; // 遲到仍算有交
+                                    } else if (lName === '曠課') {
+                                        missing++;
                                     }
                                 } else if (r.manualStatus === 'late') {
                                     late++;
                                 } else if (r.manualStatus === 'missing') {
                                     missing++;
-                                } else if (r.manualStatus === '遲到') {
-                                    if (isContactBookDaily) leaveCounts['遲到']++;
-                                    onTime++; // 遲到算有交
                                 } else {
                                     const taskDef = db.tasks.find(t => t.id === k.taskId);
                                     const deadlineDate = (taskDef && taskDef.deadline) ? new Date(taskDef.deadline + 'T23:59:59') : null;
@@ -359,15 +361,13 @@
                         
                         const res = [submittedRate, onTimeRate, missingRate];
                         
-                        if (isContactBookDaily) {
-                            res.push(formatPct(leaveCounts['事假'], totalAssigned));
-                            res.push(formatPct(leaveCounts['病假'], totalAssigned));
-                            res.push(formatPct(leaveCounts['公假'], totalAssigned));
-                            res.push(formatPct(leaveCounts['喪假'], totalAssigned));
-                            res.push(formatPct(leaveCounts['遲到'], totalAssigned));
-                            res.push(formatPct(leaveCounts['曠課'], totalAssigned));
-                            res.push(formatPct(leaveCounts['其他'], totalAssigned));
-                        }
+                        res.push(formatPct(leaveCounts['事假'] || 0, totalAssigned));
+                        res.push(formatPct(leaveCounts['病假'] || 0, totalAssigned));
+                        res.push(formatPct(leaveCounts['公假'] || 0, totalAssigned));
+                        res.push(formatPct(leaveCounts['喪假'] || 0, totalAssigned));
+                        res.push(formatPct(leaveCounts['遲到'] || 0, totalAssigned));
+                        res.push(formatPct(leaveCounts['曠課'] || 0, totalAssigned));
+                        res.push(formatPct(leaveCounts['其他'] || 0, totalAssigned));
                         
                         return res;
                     });
