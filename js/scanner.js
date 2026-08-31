@@ -215,8 +215,8 @@
                         let cellValue = loopMissingText;
                         if (record) {
                             cellValue = record.timestamp;
-                            if (['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他'].includes(record.manualStatus)) {
-                                cellValue = record.manualStatus;
+                            if (isLeaveStatus(record.manualStatus) || record.manualStatus === '其他假別' || ['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他'].includes(record.manualStatus)) {
+                                cellValue = getLeaveName(record.manualStatus) || record.manualStatus;
                             } else if (record.manualStatus === 'missing') {
                                 cellValue = loopMissingText;
                             }
