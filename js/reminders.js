@@ -262,7 +262,11 @@ async function handleTab6Sync() {
                 
                 const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
                 const hasBaseRange = (db.ranges || []).some(r => r.taskId === t.id && !r.noticeName);
-                if (hasBaseRecords || hasBaseRange) {
+                const hasSubRecords = db.records.some(r => r.taskId === t.id && r.noticeName);
+                const hasSubRanges = (db.ranges || []).some(r => r.taskId === t.id && r.noticeName);
+                
+                // 如果是基礎作業（且沒有子項目），或者是曾經有紀錄/範圍的基礎作業，就顯示
+                if (hasBaseRecords || hasBaseRange || (!hasSubRecords && !hasSubRanges)) {
                     activeTasks.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
                 }
             });
@@ -330,7 +334,11 @@ async function handleTab6Sync() {
                         shouldSubmit = range.students.includes(student.id);
                     }
                     if (shouldSubmit) {
-                        const isSubmitted = db.records.some(r => r.taskId === task.taskId && r.noticeName === task.noticeName && r.studentId === student.id);
+                        const isSubmitted = db.records.some(r => {
+                            if (r.taskId !== task.taskId || r.noticeName !== task.noticeName || r.studentId !== student.id) return false;
+                            if (r.manualStatus === 'missing' || r.manualStatus === 'leave_custom_沒帶') return false;
+                            return true;
+                        });
                         if (!isSubmitted) missing++;
                     }
                 });
@@ -377,7 +385,11 @@ async function handleTab6Sync() {
             }
             
             if (shouldSubmit) {
-                const isSubmitted = db.records.some(r => r.taskId === task.taskId && r.noticeName === task.noticeName && r.studentId === student.id);
+                const isSubmitted = db.records.some(r => {
+                    if (r.taskId !== task.taskId || r.noticeName !== task.noticeName || r.studentId !== student.id) return false;
+                    if (r.manualStatus === 'missing' || r.manualStatus === 'leave_custom_沒帶') return false;
+                    return true;
+                });
                 if (isSubmitted) {
                     cellHtml += `<td class="px-2 py-2 text-green-600 font-bold border-l border-gray-50">✓</td>`;
                 } else {
@@ -433,7 +445,10 @@ function openReminderModal(studentId) {
     db.tasks.forEach(t => {
         const hasBaseRecords = db.records.some(r => r.taskId === t.id && !r.noticeName);
         const hasBaseRange = (db.ranges || []).some(r => r.taskId === t.id && !r.noticeName);
-        if (hasBaseRecords || hasBaseRange) {
+        const hasSubRecords = db.records.some(r => r.taskId === t.id && r.noticeName);
+        const hasSubRanges = (db.ranges || []).some(r => r.taskId === t.id && r.noticeName);
+        
+        if (hasBaseRecords || hasBaseRange || (!hasSubRecords && !hasSubRanges)) {
             allValidTasks.push({ taskId: t.id, noticeName: '', label: `${t.name}` });
         }
     });
@@ -456,7 +471,11 @@ function openReminderModal(studentId) {
             shouldSubmit = range.students.includes(student.id);
         }
         if (shouldSubmit) {
-            const isSubmitted = db.records.some(r => r.taskId === task.taskId && r.noticeName === task.noticeName && r.studentId === student.id);
+            const isSubmitted = db.records.some(r => {
+                if (r.taskId !== task.taskId || r.noticeName !== task.noticeName || r.studentId !== student.id) return false;
+                if (r.manualStatus === 'missing' || r.manualStatus === 'leave_custom_沒帶') return false;
+                return true;
+            });
             if (!isSubmitted) {
                 currentReminderMissingTasks.push(task);
             }

@@ -383,7 +383,7 @@
                         
                         // 忽略空白
                         if (!cellValue) continue;
-                        if (cellValue === '缺交') {
+                        if (cellValue === '缺交' || cellValue === '沒帶') {
                             // If they typed missing, we don't save a record, so it defaults to missing
                             continue;
                         }
