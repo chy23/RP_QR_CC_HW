@@ -284,6 +284,13 @@ async function handleTab6Sync() {
                 });
             }
 
+            // 過濾掉完全沒有紀錄也沒有設定範圍的作業 (未發布的作業不顯示)
+            activeTasks = activeTasks.filter(k => {
+                const hasRange = (db.ranges || []).some(r => r.taskId === k.taskId && r.noticeName === k.noticeName && (r.range || r.date));
+                const hasRecords = (db.records || []).some(r => r.taskId === k.taskId && r.noticeName === k.noticeName);
+                return hasRange || hasRecords;
+            });
+
             // 預設將最新作業排序在最左邊 (反轉陣列)
             activeTasks.reverse();
 
@@ -462,6 +469,13 @@ function openReminderModal(studentId) {
             }
         });
     }
+
+    // 過濾掉完全沒有紀錄也沒有設定範圍的作業
+    allValidTasks = allValidTasks.filter(k => {
+        const hasRange = (db.ranges || []).some(r => r.taskId === k.taskId && r.noticeName === k.noticeName && (r.range || r.date));
+        const hasRecords = (db.records || []).some(r => r.taskId === k.taskId && r.noticeName === k.noticeName);
+        return hasRange || hasRecords;
+    });
 
     // 過濾缺交
     allValidTasks.forEach(task => {
