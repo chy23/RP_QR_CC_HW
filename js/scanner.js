@@ -445,13 +445,14 @@
             container.innerHTML = '';
             db.tasks.forEach(t => {
                 const row = document.createElement('div');
-                row.className = "flex flex-col md:flex-row md:items-center justify-between hover:bg-blue-50 p-2 rounded w-full border-b last:border-0 transition-colors gap-2";
+                // Always use flex-col because this component is inside a narrow sidebar (col-span-1)
+                row.className = "flex flex-col hover:bg-blue-50 p-2 rounded w-full border-b last:border-0 transition-colors gap-2";
                 row.innerHTML = `
-                    <label class="flex items-center space-x-3 cursor-pointer w-full md:w-1/2">
-                        <input type="checkbox" value="${t.id}" class="scan-task-checkbox h-5 w-5 cursor-pointer rounded text-blue-600" onchange="handleTaskCheckboxChange(this, '${t.id}', '${t.name}', '${t.type}')"> 
-                        <span class="truncate text-base font-semibold text-gray-700 select-none" title="${t.name}">[${t.subject}] ${t.name}</span>
+                    <label class="flex items-center space-x-3 cursor-pointer w-full">
+                        <input type="checkbox" value="${t.id}" class="scan-task-checkbox flex-shrink-0 h-5 w-5 cursor-pointer rounded text-blue-600" onchange="handleTaskCheckboxChange(this, '${t.id}', '${t.name}', '${t.type}')"> 
+                        <span class="text-base font-semibold text-gray-700 select-none leading-tight" title="${t.name}">[${t.subject}] ${t.name}</span>
                     </label>
-                    <input type="text" id="range-input-${t.id}" class="border p-2 rounded text-sm w-full md:w-1/2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="display: none;" placeholder="範圍/備註 (選填)">
+                    <input type="text" id="range-input-${t.id}" class="border p-2 rounded text-sm w-full shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="display: none;" placeholder="範圍/備註 (選填)">
                 `;
                 container.appendChild(row);
             });
