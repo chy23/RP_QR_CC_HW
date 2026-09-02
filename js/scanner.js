@@ -265,17 +265,19 @@
                 });
 
                 // Function to generate stats for a set of keys
-                const addStatColumns = (prefix, targetKeys, isContactBookDaily = false) => {
+                const addStatColumns = (prefix, targetKeys, showLeaveStats = false) => {
                     statHeaders.push(`${prefix}_繳交率`);
                     statHeaders.push(`${prefix}_準時率`);
                     statHeaders.push(`${prefix}_缺交率`);
-                    statHeaders.push(`${prefix}_事假率`);
-                    statHeaders.push(`${prefix}_病假率`);
-                    statHeaders.push(`${prefix}_公假率`);
-                    statHeaders.push(`${prefix}_喪假率`);
-                    statHeaders.push(`${prefix}_遲到率`);
-                    statHeaders.push(`${prefix}_曠課率`);
-                    statHeaders.push(`${prefix}_其他率`);
+                    if (showLeaveStats) {
+                        statHeaders.push(`${prefix}_事假率`);
+                        statHeaders.push(`${prefix}_病假率`);
+                        statHeaders.push(`${prefix}_公假率`);
+                        statHeaders.push(`${prefix}_喪假率`);
+                        statHeaders.push(`${prefix}_遲到率`);
+                        statHeaders.push(`${prefix}_曠課率`);
+                        statHeaders.push(`${prefix}_其他率`);
+                    }
 
                     statsFuncs.push((studentId) => {
                         const student = db.students.find(s => s.id === studentId);
@@ -361,24 +363,26 @@
                         
                         const res = [submittedRate, onTimeRate, missingRate];
                         
-                        res.push(formatPct(leaveCounts['事假'] || 0, totalAssigned));
-                        res.push(formatPct(leaveCounts['病假'] || 0, totalAssigned));
-                        res.push(formatPct(leaveCounts['公假'] || 0, totalAssigned));
-                        res.push(formatPct(leaveCounts['喪假'] || 0, totalAssigned));
-                        res.push(formatPct(leaveCounts['遲到'] || 0, totalAssigned));
-                        res.push(formatPct(leaveCounts['曠課'] || 0, totalAssigned));
-                        res.push(formatPct(leaveCounts['其他'] || 0, totalAssigned));
+                        if (showLeaveStats) {
+                            res.push(formatPct(leaveCounts['事假'] || 0, totalAssigned));
+                            res.push(formatPct(leaveCounts['病假'] || 0, totalAssigned));
+                            res.push(formatPct(leaveCounts['公假'] || 0, totalAssigned));
+                            res.push(formatPct(leaveCounts['喪假'] || 0, totalAssigned));
+                            res.push(formatPct(leaveCounts['遲到'] || 0, totalAssigned));
+                            res.push(formatPct(leaveCounts['曠課'] || 0, totalAssigned));
+                            res.push(formatPct(leaveCounts['其他'] || 0, totalAssigned));
+                        }
                         
                         return res;
                     });
                 };
 
-                addStatColumns(`${sub}整體`, keys, false);
+                const showLeaveStats = (sub === '聯絡簿');
+                addStatColumns(`${sub}整體`, keys, showLeaveStats);
                 
                 for (const tId in tasksGrouped) {
-                    const isContactBookDaily = sub === '聯絡簿' && tasksGrouped[tId].label === '聯絡簿';
-                    if (Object.keys(tasksGrouped).length > 1 || isContactBookDaily) {
-                        addStatColumns(`${sub}_${tasksGrouped[tId].label}`, tasksGrouped[tId].keys, isContactBookDaily);
+                    if (Object.keys(tasksGrouped).length > 1 || showLeaveStats) {
+                        addStatColumns(`${sub}_${tasksGrouped[tId].label}`, tasksGrouped[tId].keys, showLeaveStats);
                     }
                 }
             });
