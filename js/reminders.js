@@ -514,25 +514,69 @@ function openReminderModal(studentId) {
         taskListDiv.innerHTML = html;
     }
 
-        // 預設日期優先抓取缺交作業的日期，若無則為今天
-    let targetDate = new Date();
+    // 預設「截至日期」為今天
+    const today = new Date();
+    const todayStr = `${today.getMonth()+1}/${today.getDate()} (${['日','一','二','三','四','五','六'][today.getDay()]})`;
+    document.getElementById('reminder-date-input').value = todayStr;
+
+    // 預設「作業派發日期」：從 records 或 ranges 抓取
+    let targetDate = null;
     if (currentReminderMissingTasks.length > 0) {
         let maxTime = 0;
-        let foundDate = false;
         currentReminderMissingTasks.forEach(task => {
-            const nn = task.noticeName;
-            if (nn && (nn.match(/^\d{4}\/\d{1,2}\/\d{1,2}$/) || nn.match(/^\d{4}-\d{1,2}-\d{1,2}$/))) {
-                const d = new Date(nn);
+            let taskDateStr = null;
+            
+            // 1. Check db.ranges
+            const range = (db.ranges || []).find(r => r.taskId === task.taskId && r.noticeName === task.noticeName);
+            if (range && range.date) {
+                taskDateStr = range.date; 
+            }
+            
+            // 2. Check db.records if no date in range
+            if (!taskDateStr) {
+                const records = db.records.filter(r => r.taskId === task.taskId && r.noticeName === task.noticeName && r.timestamp);
+                if (records.length > 0) {
+                    let minTime = Infinity;
+                    let minDate = null;
+                    records.forEach(r => {
+                        let scanDate;
+                        if (r.timestamp.includes('T') || r.timestamp.includes('-')) {
+                            scanDate = new Date(r.timestamp);
+                        } else {
+                            const currentYear = new Date().getFullYear();
+                            scanDate = new Date(`${currentYear}/${r.timestamp}`);
+                        }
+                        if (scanDate.getTime() < minTime) {
+                            minTime = scanDate.getTime();
+                            minDate = scanDate;
+                        }
+                    });
+                    if (minDate) {
+                        taskDateStr = `${minDate.getFullYear()}/${(minDate.getMonth()+1).toString().padStart(2, '0')}/${minDate.getDate().toString().padStart(2, '0')}`;
+                    }
+                }
+            }
+            
+            // 3. Fallback to noticeName if it happens to be a date
+            if (!taskDateStr && task.noticeName && (task.noticeName.match(/^\d{4}\/\d{1,2}\/\d{1,2}$/) || task.noticeName.match(/^\d{4}-\d{1,2}-\d{1,2}$/))) {
+                taskDateStr = task.noticeName;
+            }
+
+            if (taskDateStr) {
+                const d = new Date(taskDateStr);
                 if (!isNaN(d.getTime()) && d.getTime() > maxTime) {
                     maxTime = d.getTime();
                     targetDate = d;
-                    foundDate = true;
                 }
             }
         });
     }
-    const dateStr = `${targetDate.getMonth()+1}/${targetDate.getDate()} (${['日','一','二','三','四','五','六'][targetDate.getDay()]})`;
-    document.getElementById('reminder-date-input').value = dateStr;
+    if (targetDate) {
+        const tStr = `${targetDate.getMonth()+1}/${targetDate.getDate()} (${['日','一','二','三','四','五','六'][targetDate.getDay()]})`;
+        document.getElementById('reminder-task-date-input').value = tStr;
+    } else {
+        document.getElementById('reminder-task-date-input').value = "";
+    }
 
     // 預設模組 1，並根據缺交數量自動選擇狀態
     document.getElementById('reminder-module-select').value = "1";
@@ -600,6 +644,8 @@ function generateReminderText(forceRandom = false) {
 
     const taskListStr = selectedTaskLabels.length > 0 ? selectedTaskLabels.join('、') : "(無勾選任何作業)";
     const dateStr = document.getElementById('reminder-date-input').value.trim() || '今天';
+    const taskDateVal = document.getElementById('reminder-task-date-input') ? document.getElementById('reminder-task-date-input').value.trim() : '';
+    const taskDatePhrase = taskDateVal ? ` ${taskDateVal} 派發` : '';
     
     const moduleId = document.getElementById('reminder-module-select').value;
     const stateId = document.getElementById('reminder-state-select').value;
@@ -636,7 +682,7 @@ function generateReminderText(forceRandom = false) {
         }
     }
 
-    const template = `${student.name} 媽媽/爸爸您好，截至 ${dateStr} 為止，${student.name} 的作業：【${taskListStr}】尚未補繳。${sentence}`;
+    const template = `${student.name} 媽媽/爸爸您好，截至 ${dateStr} 為止，${student.name}${taskDatePhrase}的作業：【${taskListStr}】尚未補繳。${sentence}`;
     
     const textarea = document.getElementById('reminder-preview-text');
     textarea.value = template;
