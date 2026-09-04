@@ -514,9 +514,24 @@ function openReminderModal(studentId) {
         taskListDiv.innerHTML = html;
     }
 
-    // 預設日期為今天
-    const today = new Date();
-    const dateStr = `${today.getMonth()+1}/${today.getDate()} (${['日','一','二','三','四','五','六'][today.getDay()]})`;
+        // 預設日期優先抓取缺交作業的日期，若無則為今天
+    let targetDate = new Date();
+    if (currentReminderMissingTasks.length > 0) {
+        let maxTime = 0;
+        let foundDate = false;
+        currentReminderMissingTasks.forEach(task => {
+            const nn = task.noticeName;
+            if (nn && (nn.match(/^\d{4}\/\d{1,2}\/\d{1,2}$/) || nn.match(/^\d{4}-\d{1,2}-\d{1,2}$/))) {
+                const d = new Date(nn);
+                if (!isNaN(d.getTime()) && d.getTime() > maxTime) {
+                    maxTime = d.getTime();
+                    targetDate = d;
+                    foundDate = true;
+                }
+            }
+        });
+    }
+    const dateStr = `${targetDate.getMonth()+1}/${targetDate.getDate()} (${['日','一','二','三','四','五','六'][targetDate.getDay()]})`;
     document.getElementById('reminder-date-input').value = dateStr;
 
     // 預設模組 1，並根據缺交數量自動選擇狀態
