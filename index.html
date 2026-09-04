@@ -1203,8 +1203,12 @@
                     <!-- 日期選擇 -->
                     <div class="mt-3 flex gap-4">
                         <div class="flex-grow">
-                            <label class="block text-sm text-gray-600 mb-1">提醒單日期 (預設今日)</label>
+                            <label class="block text-sm text-gray-600 mb-1">截至日期 (預設今日)</label>
                             <input type="text" id="reminder-date-input" oninput="generateReminderText()" class="w-full border rounded p-2 focus:ring focus:ring-purple-200 outline-none" placeholder="例如：10/24 (四)">
+                        </div>
+                        <div class="flex-grow">
+                            <label class="block text-sm text-gray-600 mb-1">作業派發日期</label>
+                            <input type="text" id="reminder-task-date-input" oninput="generateReminderText()" class="w-full border rounded p-2 focus:ring focus:ring-purple-200 outline-none" placeholder="例如：9/3 (四)">
                         </div>
                         <div class="flex-grow">
                             <label class="block text-sm text-gray-600 mb-1">手動變更句型</label>
