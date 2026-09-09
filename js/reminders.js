@@ -401,7 +401,12 @@ async function handleTab6Sync() {
                     cellHtml += `<td class="px-2 py-2 text-green-600 font-bold border-l border-gray-50">✓</td>`;
                 } else {
                     missingCount++;
-                    cellHtml += `<td class="px-2 py-2 text-red-500 font-bold bg-red-50 border-l border-red-100">缺</td>`;
+                    cellHtml += `<td class="px-2 py-2 text-red-500 font-bold bg-red-50 border-l border-red-100 relative group cursor-pointer hover:bg-red-100 transition-colors" onclick="openReminderStatusMenu(${student.id}, '${task.taskId}', '${task.noticeName}')" title="點擊修改繳交狀態">
+                        <div class="flex items-center justify-center gap-1">
+                            <span>缺</span>
+                            <svg class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity absolute right-1 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </td>`;
                 }
             } else {
                 cellHtml += `<td class="px-2 py-2 text-gray-300 border-l border-gray-50">-</td>`;
@@ -711,4 +716,33 @@ function copyReminderText() {
         console.error('Failed to copy: ', err);
         showAlert('提示', '複製失敗，請手動全選複製。');
     });
+}
+
+async function openReminderStatusMenu(studentId, taskId, noticeName) {
+    const student = db.students.find(s => s.id === studentId);
+    if (!student) return;
+    
+    const { value: statusType } = await Swal.fire({
+        title: `更改 ${student.name} 的狀態`,
+        text: '這項作業目前是缺交，請選擇新的狀態：',
+        input: 'select',
+        inputOptions: {
+            'leave_custom_請假補交': '準時 (請假補交)',
+            'late': '遲交 (今日補交)',
+            'ontime': '準時 (一般補交)'
+        },
+        inputPlaceholder: '請選擇狀態...',
+        showCancelButton: true,
+        confirmButtonText: '確定更改',
+        cancelButtonText: '取消'
+    });
+
+    if (statusType) {
+        if (typeof updateStudentTaskStatus === 'function') {
+            saveStateForUndo(); // 支援復原
+            updateStudentTaskStatus(studentId, taskId, noticeName, statusType);
+            if (typeof renderReminderStats === 'function') renderReminderStats();
+            showUndoToast('狀態已成功更改');
+        }
+    }
 }
