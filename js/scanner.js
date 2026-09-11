@@ -327,12 +327,14 @@
                                     if (leaveCounts[lName] === undefined) leaveCounts[lName] = 0;
                                     leaveCounts[lName]++;
                                     
-                                    if (lName !== '遲到' && lName !== '曠課') {
-                                        exemptLeaves++;
-                                    } else if (lName === '遲到') {
-                                        onTime++; // 遲到仍算有交
+                                    if (lName === '遲到') {
+                                        onTime++; // 遲到算有交
                                     } else if (lName === '曠課') {
                                         missing++;
+                                    } else if (lName.includes('補交') || lName.includes('繳交')) {
+                                        onTime++; // 將補交類 (請假補交、一般補交等) 算在準時繳交中
+                                    } else {
+                                        exemptLeaves++; // 其餘假別 (病假、事假等) 免計入分母
                                     }
                                 } else if (r.manualStatus === 'late') {
                                     late++;
