@@ -727,7 +727,7 @@ async function openReminderStatusMenu(studentId, taskId, noticeName) {
         text: '這項作業目前是缺交，請選擇新的狀態：',
         input: 'select',
         inputOptions: {
-            'ontime': '準時繳交 (一般繳交)',
+            'ontime': '準時 (一般繳交)',
             'leave_custom_一般補交': '準時 (一般補交)',
             'leave_custom_請假補交': '準時 (請假補交)',
             'late': '遲交 (今日補交)'
