@@ -724,18 +724,33 @@ async function openReminderStatusMenu(studentId, taskId, noticeName) {
     
     const { value: statusType } = await Swal.fire({
         title: `更改 ${student.name} 的狀態`,
-        text: '這項作業目前是缺交，請選擇新的狀態：',
-        input: 'select',
-        inputOptions: {
-            'ontime': '準時 (一般繳交)',
-            'leave_custom_一般補交': '準時 (一般補交)',
-            'leave_custom_請假補交': '準時 (請假補交)',
-            'late': '遲交 (今日補交)'
-        },
-        inputPlaceholder: '請選擇狀態...',
+        html: `
+            <div style="text-align: left; margin-top: 10px;">
+                <label style="display: flex; align-items: center; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <input type="radio" name="swal-status-radio" value="ontime" style="margin-right: 12px; transform: scale(1.3);">
+                    <span style="color: #16a34a; font-weight: bold; font-size: 16px;">準時 (一般繳交)</span>
+                </label>
+                <label style="display: flex; align-items: center; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <input type="radio" name="swal-status-radio" value="leave_custom_請假補交" style="margin-right: 12px; transform: scale(1.3);">
+                    <span style="color: #0d9488; font-weight: bold; font-size: 16px;">準時 (請假補交)</span>
+                </label>
+                <label style="display: flex; align-items: center; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <input type="radio" name="swal-status-radio" value="late" style="margin-right: 12px; transform: scale(1.3);">
+                    <span style="color: #d97706; font-weight: bold; font-size: 16px;">遲交 (補交)</span>
+                </label>
+            </div>
+        `,
         showCancelButton: true,
         confirmButtonText: '確定更改',
-        cancelButtonText: '取消'
+        cancelButtonText: '取消',
+        preConfirm: () => {
+            const selected = document.querySelector('input[name="swal-status-radio"]:checked');
+            if (!selected) {
+                Swal.showValidationMessage('請選擇一個狀態');
+                return false;
+            }
+            return selected.value;
+        }
     });
 
     if (statusType) {
