@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRcode自動清點作業系統 (Ver. 2.8)</title>
+    <title>QRcode自動清點作業系統 (Ver. 2.9)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -230,11 +230,22 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Ver 2.8 -->
+                <!-- Ver 2.9 -->
                 <div class="border-l-4 border-blue-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Ver. 2.9</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/09/14</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>新功能：</strong> 在「批改與退回」分頁中，新增了「➕ 新增登記欄位」按鈕。您可以利用此按鈕預先建立明日的聯絡簿欄位，並提前為明日請假的學生登記假別！如果學生明日真的沒來，假別會自動保留；如果明日有來且掃描了作業，系統會自動覆寫回「準時繳交」。</li>
+                    </ul>
+                </div>
+
+                <!-- Ver 2.8 -->
+                <div class="border-l-4 border-gray-400 pl-4 py-1 mb-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
                         <span>Ver. 2.8</span>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/09/11</span>
+                        <span class="text-xs bg-gray-100 text-gray-800 px-2 py-0.5 rounded font-mono">2026/09/11</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
                         <li><strong>統計表優化：</strong> 現在「請假補交」與「一般補交」在報表統計中，會直接被歸類在「準時率」的計算內，不再被視為請假豁免扣除分母，讓您的準時率數據更貼近真實。</li>
@@ -266,7 +277,7 @@
                 <!-- Ver 2.5 -->
                 <div class="border-l-4 border-gray-400 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span>Ver. 2.8</span>
+                        <span>Ver. 2.9</span>
                         <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/09/04</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
@@ -509,7 +520,7 @@
             <div class="w-full text-center mt-2 md:mt-0">
                 <h1 class="text-2xl md:text-3xl font-bold text-blue-700 flex justify-center items-center gap-2 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span id="version-display" class="text-lg font-bold tracking-wide" data-version="2.8">Ver. 2.8</span>
+                    QRcode自動清點作業系統 <span id="version-display" class="text-lg font-bold tracking-wide" data-version="2.9">Ver. 2.9</span>
                     <script>
                         (function() {
                             const isBeta = window.location.pathname.includes('/beta/');
@@ -1287,15 +1298,15 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=2.8"></script>
-    <script src="js/audio.js?v=2.8"></script>
-    <script src="js/db.js?v=2.8"></script>
-    <script src="js/ui.js?v=2.8"></script>
-    <script src="js/scanner.js?v=2.8"></script>
-    <script src="js/export.js?v=2.8"></script>
-    <script src="js/report.js?v=2.8"></script>
-    <script src="js/reminders.js?v=2.8"></script>
-    <script src="js/main.js?v=2.8"></script>
+    <script src="js/alerts.js?v=2.9"></script>
+    <script src="js/audio.js?v=2.9"></script>
+    <script src="js/db.js?v=2.9"></script>
+    <script src="js/ui.js?v=2.9"></script>
+    <script src="js/scanner.js?v=2.9"></script>
+    <script src="js/export.js?v=2.9"></script>
+    <script src="js/report.js?v=2.9"></script>
+    <script src="js/reminders.js?v=2.9"></script>
+    <script src="js/main.js?v=2.9"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">

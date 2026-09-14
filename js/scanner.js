@@ -1472,10 +1472,48 @@ let currentTargetRecord = null;
                 `;
             }
             
+            html += `
+                <button onclick="promptNewGradingRange('${currentTaskId}')" class="ml-2 px-3 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition shadow-sm border border-blue-200" style="white-space: nowrap;">
+                    ➕ 新增登記欄位
+                </button>
+            `;
+            
             html += '</div>';
             container.innerHTML = html;
             
             renderGradingList();
+        }
+
+        function promptNewGradingRange(taskId) {
+            const taskDef = db.tasks.find(t => t.id === taskId);
+            let defaultVal = '';
+            
+            if (taskDef && taskDef.subject === '聯絡簿') {
+                const tmr = new Date();
+                tmr.setDate(tmr.getDate() + 1);
+                defaultVal = `${tmr.getFullYear()}/${(tmr.getMonth()+1).toString().padStart(2,'0')}/${tmr.getDate().toString().padStart(2,'0')}`;
+            }
+
+            const noticeName = prompt(`為「${taskDef ? taskDef.name : ''}」新增一個批改範圍/日期：\n(如為聯絡簿，可直接使用預設的明日日期)`, defaultVal);
+            if (noticeName && noticeName.trim() !== '') {
+                const val = noticeName.trim();
+                if (!db.ranges) db.ranges = [];
+                const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === val);
+                if (!existing) {
+                    // 設定 date 為 val，這樣 buildGradingKeys 才會判定 hasRange = true
+                    db.ranges.push({ taskId: taskId, noticeName: val, range: '', date: val });
+                    saveData();
+                    
+                    activeGradingTaskValue = `${taskId}:::${val}`;
+                    buildGradingKeys(); 
+                    
+                    showUndoToast(`已建立「${val}」，您可以開始預先登記了！`);
+                } else {
+                    showAlert('提示', '這個欄位/日期已經存在囉！');
+                    activeGradingTaskValue = `${taskId}:::${val}`;
+                    renderGradingTasks();
+                }
+            }
         }
 
         function selectGradingTask(val) {
