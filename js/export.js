@@ -1203,7 +1203,7 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `${task.name}_浮動套印.pdf`;
+                    a.download = noticeName ? `${task.name}_${noticeName}.pdf` : `${task.name}_浮動套印.pdf`;
                     a.click();
 
                 } catch (e) {
