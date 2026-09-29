@@ -594,7 +594,11 @@
                 
                 // 加入群組標題
                 if (currentTaskContext !== taskLabel) {
-                    list.innerHTML += `<li class="text-sm font-bold text-blue-700 mt-2 border-b border-blue-200">${taskLabel}</li>`;
+                    const countInTask = scanSession.records.filter(rec => rec.taskId === r.taskId && rec.noticeName === r.noticeName).length;
+                    list.innerHTML += `<li class="text-sm font-bold text-blue-700 mt-2 border-b border-blue-200 pb-1 flex justify-between items-center">
+                        <span>${taskLabel}</span>
+                        <span class="text-xs font-normal bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">${countInTask} 人</span>
+                    </li>`;
                     currentTaskContext = taskLabel;
                 }
                 
