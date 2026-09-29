@@ -1509,7 +1509,7 @@ let currentTargetRecord = null;
                     saveData();
                     
                     activeGradingTaskValue = `${taskId}:::${val}`;
-                    buildGradingKeys(); 
+                    renderGradingTab(); 
                     
                     showUndoToast(`已建立「${val}」，您可以開始預先登記了！`);
                 } else {
