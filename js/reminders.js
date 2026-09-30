@@ -420,7 +420,7 @@ async function handleTab6Sync() {
         const nameClass = missingCount > 0 
             ? "cursor-pointer font-bold text-red-600 hover:text-red-800 hover:bg-red-50 transition sticky left-0 bg-white border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] z-10" 
             : "cursor-pointer font-bold text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition sticky left-0 bg-white border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] z-10";
-        const badge = missingCount > 0 ? `<span class="ml-1 text-[10px] bg-red-500 text-white rounded-full px-1.5 py-0.5">${missingCount}</span>` : '';
+        const badge = missingCount > 0 ? `<span class="ml-1 text-[10px] bg-red-600 text-white rounded-full px-1.5 py-0.5">${missingCount}</span>` : '';
 
         tbodyHtml += `
             <tr class="hover:bg-gray-50 border-b">
