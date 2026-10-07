@@ -1244,10 +1244,8 @@ function doPost(e) {
     var response = UrlFetchApp.fetch(url + "?t=" + timestamp);
     var coreScript = response.getContentText();
     
-    // 將 SpreadsheetApp 的實體從外部傳入，避免 V8 引擎在 eval 中遺失 Prototype
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var coreFunc = eval(coreScript);
-    return coreFunc(e, ss);
+    // 直接將遠端邏輯插入本地執行，避開 V8 proxy 物件遺失的問題
+    return eval(coreScript);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error", 
