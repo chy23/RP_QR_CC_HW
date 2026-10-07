@@ -326,7 +326,7 @@
             sortTasks();
             saveData();
 
-            updateHeaderClassInfo();
+            renderClassManager();
             renderStudents();
             renderTasks();
             initAllSelects();
