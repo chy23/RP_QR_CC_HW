@@ -230,6 +230,19 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
+                                <!-- Ver 2.2 -->
+                <div class="border-l-4 border-blue-600 pl-4 py-1 mb-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span>Ver. 2.2</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/10/07</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>✨ 首創功能：</strong>導入「GAS 雲端自動更新引擎」，未來只需設定一次，系統即可在背景自動同步 GitHub 的最新後端核心邏輯，享受永久免手動更新的快感。</li>
+                        <li><strong>教學翻新：</strong>重新撰寫「Google 試算表自動連線設定教學」，獨立出「手動執行授權」步驟並搭配詳細指引，徹底解決初次設定時容易遇到的權限被擋問題。</li>
+                    </ul>
+                </div>
+
+<!-- Ver 2.13 -->
                 <!-- Ver 2.0 -->
                 <div class="border-l-4 border-blue-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
@@ -418,7 +431,7 @@
             <div class="w-full text-center mt-2 md:mt-0">
                 <h1 class="text-2xl md:text-3xl font-bold text-blue-700 flex justify-center items-center gap-2 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span id="version-display" class="text-lg font-bold tracking-wide" data-version="2.0">Ver. 1.98</span>
+                    QRcode自動清點作業系統 <span id="version-display" class="text-lg font-bold tracking-wide" data-version="2.3">Ver. 2.3</span>
                     <script>
                         (function() {
                             const isBeta = window.location.pathname.includes('/beta/');
@@ -1222,10 +1235,10 @@
                     <li>畫面上會開啟一個新的程式碼編輯器網頁。</li>
                 </ol>
 
-                <h4 class="text-lg font-bold text-blue-700 border-b pb-1 mt-6">第二步：貼上接收資料的程式碼</h4>
-                <p>請將原本編輯器裡面的預設程式碼 <code>function myFunction() { }</code> 全部刪除，並<strong>完全複製貼上</strong>下方這段程式碼：</p>
+                <h4 class="text-lg font-bold text-blue-700 border-b pb-1 mt-6">第二步：貼上「自動更新引擎」程式碼</h4>
+                <p>請將編輯器內的預設程式碼 <code>function myFunction() { }</code> 全部刪除，並<strong>完全複製貼上</strong>下方這段程式碼：</p>
                 
-                <div class="relative bg-gray-100 p-4 rounded border font-mono text-sm overflow-x-auto shadow-inner">
+<div class="relative bg-gray-100 p-4 rounded border font-mono text-sm overflow-x-auto shadow-inner">
                     <button onclick="copyGasCode(this)" class="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs shadow transition-colors">複製程式碼</button>
                     <pre id="gas-code-block" class="whitespace-pre">/**
  * 【自動更新引擎】
@@ -1261,9 +1274,21 @@ function doPost(e) {
   }
 }</pre>
                 </div>
-                <p>貼上後，記得點擊上方的 <strong>「💾 儲存專案」</strong> 按鈕（磁碟片圖示）。</p>
+                <p class="mt-2 text-red-600 font-bold">貼上後，請務必點擊上方的 <strong>「💾 儲存專案」</strong> 按鈕（磁碟片圖示）。</p>
 
-                <h4 class="text-lg font-bold text-blue-700 border-b pb-1 mt-6">第三步：發布並取得專屬網址</h4>
+                <h4 class="text-lg font-bold text-blue-700 border-b pb-1 mt-6">第三步：手動執行授權 <span class="text-red-500 font-bold">(非常重要！)</span></h4>
+                <p class="mb-2">為了讓引擎能自動抓取最新版程式碼，您必須親自授權一次：</p>
+                <ol class="list-decimal list-inside space-y-1 ml-2 mb-4">
+                    <li>在編輯器正上方的「選單」（原本寫著 <code>doPost</code>），請點擊下拉箭頭，切換成 <strong><code>setup</code></strong>。</li>
+                    <li>點擊旁邊的 <strong>「▶ 執行」</strong> 按鈕。</li>
+                    <li>此時 Google 會跳出 <strong>「需要授權」</strong> 的警告視窗。
+                        <div class="text-sm text-gray-700 ml-6 bg-red-50 p-2 rounded border border-red-200 mt-1 mb-2">
+                            👉 請點擊<strong>「審查權限」</strong> &rarr; 選擇您的 Google 帳號 &rarr; 點擊左下角的<strong>「進階」</strong> &rarr; 點擊最下方的<strong>「前往 XXX (不安全)」</strong> &rarr; 點擊<strong>「允許」</strong>。
+                        </div>
+                    </li>
+                </ol>
+
+                <h4 class="text-lg font-bold text-blue-700 border-b pb-1 mt-6">第四步：發布並取得專屬網址</h4>
                 <ol class="list-decimal list-inside space-y-1 ml-2">
                     <li>點擊編輯器右上角的 <strong>「部署」 -> 「新增部署作業」</strong>。</li>
                     <li>點擊左上角的 <strong>「齒輪 ⚙️」圖示</strong>，選擇 <strong>「網頁應用程式 (Web App)」</strong>。</li>
@@ -1272,12 +1297,10 @@ function doPost(e) {
                             <li><strong>說明</strong>：隨便填寫（例如：作業掃描接收器）</li>
                             <li><strong>執行身分</strong>：請務必選擇 <strong>「我 (您自己的 email)」</strong></li>
                             <li><strong>誰可以存取</strong>：請務必選擇 <strong>「所有人 (Anyone)」</strong> 
-                            <span class="text-red-500 font-bold">(注意：如果您選錯了，網頁會出現 CORS 阻擋錯誤而連線失敗)</span></li>
+                            <span class="text-red-500 font-bold">(注意：若選錯，網頁會出現 CORS 阻擋錯誤而連線失敗)</span></li>
                         </ul>
                     </li>
-                    <li>點擊 <strong>「部署」</strong>。
-                        <div class="text-sm text-gray-500 ml-6 bg-gray-50 p-2 rounded border mt-1 mb-2">(若出現安全警告，請點擊「審查權限」-> 選擇帳號 -> 左下角的「進階」->「前往未經安全認證的專案」->「允許」)</div>
-                    </li>
+                    <li>點擊 <strong>「部署」</strong>。</li>
                     <li>成功後，複製畫面上以 <code>https://script.google.com/.../exec</code> 結尾的 <strong>「網頁應用程式網址」</strong>，並貼回本系統儲存即可！</li>
                 </ol>
             </div>
