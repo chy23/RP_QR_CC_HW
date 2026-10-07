@@ -140,7 +140,14 @@ function doPost(e) {
             var ruleRed1 = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("缺交").setFontColor("#ef4444").setBold(true).setRanges([range]).build();
             var ruleRed3 = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("沒帶").setFontColor("#ef4444").setBold(true).setRanges([range]).build();
             var ruleRed2 = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("曠課").setFontColor("#ef4444").setBold(true).setRanges([range]).build();
-            rules.push(ruleRed1, ruleRed2, ruleRed3);
+                        var ruleLowOntime = SpreadsheetApp.newConditionalFormatRule()
+              .whenFormulaSatisfied('=AND(REGEXMATCH(A$1, "準時率"), IFERROR(VALUE(A1), 1) < 0.8, A1<>"")')
+              .setFontColor("#ef4444")
+              .setBold(true)
+              .setRanges([range])
+              .build();
+              
+            rules.push(ruleRed1, ruleRed2, ruleRed3, ruleLowOntime);
             
             var leaves = ["事假", "病假", "公假", "喪假", "其他"];
             leaves.forEach(function(leave) {
