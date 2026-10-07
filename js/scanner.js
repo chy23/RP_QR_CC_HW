@@ -91,13 +91,7 @@
             }
         }
 
-        function saveGasUrl() {
-            const url = document.getElementById('gas-url').value.trim();
-            appConfig.gasUrl = url; saveAppConfig();
-            gasUrl = url;
-            document.getElementById('gas-status').innerHTML = '<span class="text-green-600">✅ 網址已儲存！</span>';
-            setTimeout(() => { document.getElementById('gas-status').innerHTML = ''; }, 3000);
-        }
+        
 
         function testGasUrl() {
             const gasInput = document.getElementById('gas-url');
