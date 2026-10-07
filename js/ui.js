@@ -195,46 +195,6 @@ function deleteClass(id) {
         // Tab 0: 資料建置
         // ==========================================
         
-        ;
-            saveData();
-            renderClassManager();
-            // Show toast or alert if clicked button
-            if(e && e.type === 'click') showToast('班級資訊已儲存！', 'success');
-            else if(typeof event !== 'undefined' && event && event.type === 'click') showToast('班級資訊已儲存！', 'success');
-        }
-
-        學年` : '', 
-                db.classInfo.semester, 
-                db.classInfo.className
-            ].filter(Boolean);
-            
-            const headerEl = document.getElementById('header-class-info');
-            if (headerEl) {
-                if (parts.length > 0) {
-                    headerEl.innerText = parts.join(' | ');
-                    headerEl.style.display = 'inline-block';
-                } else {
-                    headerEl.style.display = 'none';
-                }
-            }
-            
-            // Populate inputs if they exist
-            if(document.getElementById('info-school')) document.getElementById('info-school').value = db.classInfo.schoolName || '';
-            if(document.getElementById('info-year')) document.getElementById('info-year').value = db.classInfo.academicYear || '';
-            if(document.getElementById('info-semester')) document.getElementById('info-semester').value = db.classInfo.semester || '';
-            if(document.getElementById('info-class')) document.getElementById('info-class').value = db.classInfo.className || '';
-        }
-        
-        function getClassPrefix() {
-            if(!db.classInfo) return "";
-            const parts = [
-                db.classInfo.schoolName, 
-                db.classInfo.academicYear, 
-                db.classInfo.semester, 
-                db.classInfo.className
-            ].filter(Boolean);
-            return parts.length > 0 ? parts.join('_') + "_" : "";
-        }
         async function addStudent() {
             const idInput = document.getElementById('new-student-id');
             const nameInput = document.getElementById('new-student-name');
