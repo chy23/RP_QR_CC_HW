@@ -502,32 +502,48 @@
                 </ul>
             </div>
             
-            <!-- 班級資訊 -->
-            <div class="border p-4 rounded bg-gray-50 mb-6">
-                <h3 class="text-xl font-semibold mb-2">班級資訊</h3>
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">學校名稱</label>
-                        <input type="text" id="info-school" placeholder="例如: 快樂國小" class="border p-2 w-full rounded" onchange="saveClassInfo(event)" onblur="saveClassInfo(event)">
+<!-- 雲端引擎與多班級管理 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- 1. GAS 雲端引擎綁定 -->
+                <div class="border p-4 rounded bg-gray-50 shadow-sm flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path></svg>
+                            1. 雲端引擎綁定 (唯一網址)
+                        </h3>
                     </div>
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">學年</label>
-                        <input type="text" id="info-year" placeholder="例如: 112" class="border p-2 w-full rounded" onchange="saveClassInfo(event)" onblur="saveClassInfo(event)">
+                    <p class="text-sm text-gray-600 mb-3">請在此貼上您的 Google Apps Script 網址。這組網址將作為您的個人資料庫中樞，管理底下所有班級。</p>
+                    <div class="flex-grow flex flex-col justify-center">
+                        <input type="text" id="global-gas-url" placeholder="https://script.google.com/macros/s/.../exec" class="border p-3 w-full rounded focus:ring-2 focus:ring-blue-300 outline-none mb-3 font-mono text-sm shadow-inner" onchange="saveGlobalGasUrl()">
+                        <div class="flex gap-2">
+                            <button onclick="saveGlobalGasUrl(true)" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded flex-grow shadow transition-colors">儲存網址並測試連線</button>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">學期</label>
-                        <select id="info-semester" class="border p-2 w-full rounded" onchange="saveClassInfo(event)" onblur="saveClassInfo(event)">
-                            <option value="">請選擇</option>
-                            <option value="上學期">上學期</option>
-                            <option value="下學期">下學期</option>
-                        </select>
+                </div>
+
+                <!-- 2. 班級管理列表 -->
+                <div class="border p-4 rounded bg-blue-50 shadow-sm border-blue-200">
+                    <h3 class="text-xl font-bold text-blue-900 mb-2 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        2. 班級清單管理
+                    </h3>
+                    <p class="text-sm text-blue-700 mb-3">您的所有資料皆備份在雲端。更換設備時，只需在左側貼上網址，此處的班級清單就會自動還原。</p>
+                    
+                    <div class="bg-white rounded border p-2 mb-3 max-h-[150px] overflow-y-auto" id="class-list-container">
+                        <!-- 動態產生 -->
                     </div>
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">班級</label>
-                        <input type="text" id="info-class" placeholder="例如: 三年甲班" class="border p-2 w-full rounded" onchange="saveClassInfo(event)" onblur="saveClassInfo(event)">
-                    </div>
-                    <div>
-                        <button onclick="saveClassInfo(event)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">儲存</button>
+                    
+                    <div class="bg-gray-100 p-3 rounded border">
+                        <h4 class="text-sm font-bold text-gray-700 mb-2">➕ 新增班級</h4>
+                        <div class="flex flex-wrap gap-2">
+                            <input type="text" id="new-class-year" placeholder="學年(如112)" class="border p-1.5 rounded w-20 text-sm">
+                            <select id="new-class-semester" class="border p-1.5 rounded w-24 text-sm">
+                                <option value="上">上學期</option>
+                                <option value="下">下學期</option>
+                            </select>
+                            <input type="text" id="new-class-name" placeholder="班級(如三年甲班)" class="border p-1.5 rounded flex-grow text-sm">
+                            <button onclick="addNewClass()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-bold">新增</button>
+                        </div>
                     </div>
                 </div>
             </div>

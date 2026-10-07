@@ -1,13 +1,71 @@
 
+// ==========================================
+        // 全域設定與多班級管理 (Global App Config)
+        // ==========================================
+        const IS_BETA = window.location.pathname.includes('/beta/');
+        const STORAGE_PREFIX = IS_BETA ? 'BETA_' : '';
+        
+        let appConfig = {
+            gasUrl: '',
+            classes: [], // { id: '...', label: '112上-三年甲班', prefix: '112上-三年甲班' }
+            activeClassId: null
+        };
+
+        function loadAppConfig() {
+            const data = localStorage.getItem(STORAGE_PREFIX + 'app_config');
+            if (data) {
+                appConfig = JSON.parse(data);
+            } else {
+                // 向後相容：從舊版遷移
+                const oldGasUrl = localStorage.getItem(STORAGE_PREFIX + 'rp_qr_gas_url') || '';
+                const oldDbData = localStorage.getItem(STORAGE_PREFIX + 'doc_productivity_db');
+                let oldClassInfo = null;
+                if (oldDbData) {
+                    try {
+                        const parsed = JSON.parse(oldDbData);
+                        if (parsed.classInfo && (parsed.classInfo.academicYear || parsed.classInfo.className)) {
+                            oldClassInfo = parsed.classInfo;
+                        }
+                    } catch(e) {}
+                }
+                
+                appConfig.gasUrl = oldGasUrl;
+                
+                if (oldClassInfo) {
+                    const label = `${oldClassInfo.academicYear || ''}${oldClassInfo.semester || ''}-${oldClassInfo.className || '未命名班級'}`;
+                    // 舊版預設班級的 prefix 保持空白，讓後端存取沒有中括號的舊分頁
+                    appConfig.classes.push({ id: 'default', label: label, prefix: '' });
+                    appConfig.activeClassId = 'default';
+                }
+                saveAppConfig();
+            }
+        }
+
+        function saveAppConfig() {
+            localStorage.setItem(STORAGE_PREFIX + 'app_config', JSON.stringify(appConfig));
+        }
+
+        function getActiveDbKey() {
+            if (!appConfig.activeClassId || appConfig.activeClassId === 'default') {
+                return STORAGE_PREFIX + 'doc_productivity_db';
+            }
+            return STORAGE_PREFIX + 'doc_productivity_db_' + appConfig.activeClassId;
+        }
+
+        function getActiveClassPrefix() {
+            if (!appConfig.activeClassId) return '';
+            const cls = appConfig.classes.find(c => c.id === appConfig.activeClassId);
+            return cls ? cls.prefix : '';
+        }
+
         // ==========================================
         // 系統核心與資料層
         // ==========================================
         let db = { students: [], tasks: [], records: [], ranges: [], subjects: [] };
-        const IS_BETA = window.location.pathname.includes('/beta/');
-        const STORAGE_PREFIX = IS_BETA ? 'BETA_' : '';
-        const STORAGE_KEY = STORAGE_PREFIX + 'doc_productivity_db';
 
         function generateSalt() { return Math.random().toString(36).substring(2, 8); }
+
+        loadAppConfig();
 
         function getQRText(student, task, noticeName = '') {
             // 為了提升掃描速度，取消 Base64 編碼，直接使用純文字組合。
@@ -241,7 +299,7 @@
         }
 
         function loadData() {
-            const data = localStorage.getItem(STORAGE_KEY);
+            const data = localStorage.getItem(getActiveDbKey());
             if (data) {
                 db = JSON.parse(data);
             }
@@ -276,7 +334,7 @@
         }
 
         function saveData(skipUI = false) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+            localStorage.setItem(getActiveDbKey(), JSON.stringify(db));
             backupToIndexedDB(); // 自動備份到 IndexedDB
             if (!skipUI) {
                 initAllSelects();

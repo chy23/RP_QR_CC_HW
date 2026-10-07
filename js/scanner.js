@@ -57,7 +57,7 @@
         }
         
         // --- Google Sheets Sync Logic ---
-        let gasUrl = localStorage.getItem(STORAGE_PREFIX + 'rp_qr_gas_url') || '';
+        let gasUrl = appConfig.gasUrl;
         let sheetUrl = localStorage.getItem(STORAGE_PREFIX + 'rp_qr_sheet_url') || '';
         
         // Wait for DOM
@@ -93,7 +93,7 @@
 
         function saveGasUrl() {
             const url = document.getElementById('gas-url').value.trim();
-            localStorage.setItem(STORAGE_PREFIX + 'rp_qr_gas_url', url);
+            appConfig.gasUrl = url; saveAppConfig();
             gasUrl = url;
             document.getElementById('gas-status').innerHTML = '<span class="text-green-600">✅ 網址已儲存！</span>';
             setTimeout(() => { document.getElementById('gas-status').innerHTML = ''; }, 3000);
@@ -111,7 +111,7 @@
             fetch(gasUrl, {
                 method: 'POST',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: 'ping' })
+                body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'ping' })
             }).then(res => res.json())
               .then(data => {
                   if(data.status === 'success') {
@@ -406,7 +406,7 @@
             fetch(gasUrl, {
                 method: 'POST',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
+                body: JSON.stringify({ classPrefix: getActiveClassPrefix(),
                     action: 'full_sync',
                     records: deltaPayload,
                     sheets: fullSyncData

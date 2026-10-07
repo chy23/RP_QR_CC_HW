@@ -1,5 +1,160 @@
         // UI 工具
         // ==========================================
+// 多班級管理 UI 邏輯
+// ==========================================
+function renderClassManager() {
+    // 渲染設定頁面的 GAS URL
+    const gasInput = document.getElementById('global-gas-url');
+    if (gasInput) gasInput.value = appConfig.gasUrl || '';
+
+    // 渲染設定頁面的班級清單
+    const container = document.getElementById('class-list-container');
+    if (container) {
+        if (appConfig.classes.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500 text-sm py-4">目前還沒有設定任何班級。請在下方新增。</div>';
+        } else {
+            let html = '';
+            appConfig.classes.forEach(c => {
+                const isActive = c.id === appConfig.activeClassId;
+                html += `
+                    <div class="flex justify-between items-center p-2 border-b last:border-b-0 hover:bg-gray-50 transition-colors ${isActive ? 'bg-blue-100' : ''}">
+                        <div class="flex items-center gap-2">
+                            ${isActive ? '<span class="w-2 h-2 rounded-full bg-blue-600"></span>' : '<span class="w-2 h-2 rounded-full bg-gray-300"></span>'}
+                            <span class="font-bold text-gray-700 ${isActive ? 'text-blue-800' : ''}">${c.label}</span>
+                        </div>
+                        <button onclick="deleteClass('${c.id}')" class="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded text-sm transition-colors cursor-pointer" ${isActive ? 'disabled style="opacity: 0.5;" title="無法刪除目前正在瀏覽的班級"' : ''}>
+                            刪除
+                        </button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+    }
+
+    // 渲染上方的下拉選單
+    const globalSelect = document.getElementById('global-class-select');
+    if (globalSelect) {
+        globalSelect.innerHTML = '';
+        if (appConfig.classes.length === 0) {
+            globalSelect.innerHTML = '<option value="">(尚未設定)</option>';
+        } else {
+            appConfig.classes.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.label;
+                if (c.id === appConfig.activeClassId) {
+                    opt.selected = true;
+                }
+                globalSelect.appendChild(opt);
+            });
+        }
+    }
+}
+
+function switchGlobalClass(classId) {
+    if (!classId) return;
+    if (classId === appConfig.activeClassId) return;
+    
+    appConfig.activeClassId = classId;
+    saveAppConfig();
+    
+    // 切換班級時，直接重新載入網頁是最乾淨安全的做法，能確保所有的變數與資料庫實體都被重新初始化
+    showToast('正在切換班級...', 'info');
+    setTimeout(() => {
+        window.location.reload();
+    }, 500);
+}
+
+async function saveGlobalGasUrl(testConnection = false) {
+    const input = document.getElementById('global-gas-url');
+    if (!input) return;
+    const url = input.value.trim();
+    appConfig.gasUrl = url;
+    saveAppConfig();
+    
+    if (testConnection) {
+        if (!url) {
+            showAlert('錯誤', '請先輸入網址！', 'error');
+            return;
+        }
+        showToast('連線測試中...', 'info');
+        try {
+            const timestamp = new Date().getTime();
+            const response = await fetch(url + '?t=' + timestamp, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'ping', classPrefix: getActiveClassPrefix() }),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                showAlert('成功', '連線測試成功！', 'success');
+            } else {
+                showAlert('錯誤', data.message || '連線測試失敗。', 'error');
+            }
+        } catch (err) {
+            showAlert('錯誤', '無法連線：' + err.message, 'error');
+        }
+    } else {
+        showToast('網址已儲存', 'success');
+    }
+}
+
+function addNewClass() {
+    const year = document.getElementById('new-class-year').value.trim();
+    const semester = document.getElementById('new-class-semester').value;
+    const name = document.getElementById('new-class-name').value.trim();
+    
+    if (!name) {
+        showAlert('錯誤', '班級名稱為必填項目！', 'error');
+        return;
+    }
+    
+    const label = `${year}${semester}-${name}`;
+    const id = Date.now().toString(36) + Math.random().toString(36).substring(2);
+    
+    appConfig.classes.push({
+        id: id,
+        label: label,
+        prefix: label
+    });
+    
+    if (!appConfig.activeClassId) {
+        appConfig.activeClassId = id;
+    }
+    
+    saveAppConfig();
+    
+    document.getElementById('new-class-year').value = '';
+    document.getElementById('new-class-name').value = '';
+    
+    renderClassManager();
+    
+    // 如果是第一個新增的班級，自動切換過去
+    if (appConfig.classes.length === 1) {
+        switchGlobalClass(id);
+    } else {
+        // 背景同步全域設定到雲端 (可選，這裡我們可以呼叫 sync_students 順便把 config 寫上去)
+        syncStudentsToGas();
+    }
+}
+
+function deleteClass(id) {
+    if (id === appConfig.activeClassId) {
+        showAlert('錯誤', '無法刪除目前正在瀏覽的班級！請先從上方選單切換到其他班級後再刪除。', 'error');
+        return;
+    }
+    showConfirm('確定要刪除嗎？', '刪除後，您將無法在本地查看該班級資料（但雲端資料仍保留）。', 'warning', '刪除', '取消').then(res => {
+        if (res.isConfirmed) {
+            appConfig.classes = appConfig.classes.filter(c => c.id !== id);
+            saveAppConfig();
+            renderClassManager();
+            syncStudentsToGas(); // 更新雲端 Config
+        }
+    });
+}
+
+// ==========================================
         function switchTab(tabIndex) {
             try {
 
@@ -40,25 +195,15 @@
         // Tab 0: 資料建置
         // ==========================================
         
-        function saveClassInfo(e) {
-            db.classInfo = {
-                schoolName: document.getElementById('info-school').value.trim(),
-                academicYear: document.getElementById('info-year').value.trim(),
-                semester: document.getElementById('info-semester').value,
-                className: document.getElementById('info-class').value.trim()
-            };
+        ;
             saveData();
-            updateHeaderClassInfo();
+            renderClassManager();
             // Show toast or alert if clicked button
             if(e && e.type === 'click') showToast('班級資訊已儲存！', 'success');
             else if(typeof event !== 'undefined' && event && event.type === 'click') showToast('班級資訊已儲存！', 'success');
         }
 
-        function updateHeaderClassInfo() {
-            if(!db.classInfo) return;
-            const parts = [
-                db.classInfo.schoolName, 
-                db.classInfo.academicYear ? `${db.classInfo.academicYear}學年` : '', 
+        學年` : '', 
                 db.classInfo.semester, 
                 db.classInfo.className
             ].filter(Boolean);
@@ -163,15 +308,11 @@
             showLoading();
             
             try {
-                const configPayload = {
-                    classInfo: db.classInfo,
-                    tasks: db.tasks,
-                    sheetUrl: sheetUrl
-                };
+                const configPayload = appConfig;
             fetch(gasUrl, {
                     method: 'POST',
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({ action: 'sync_students', students: db.students, config: configPayload })
+                    body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'sync_students', students: db.students, config: configPayload })
                 }).then(res => res.json())
                   .then(data => {
                       hideLoading();
@@ -212,7 +353,7 @@
             fetch(gasUrl, {
                 method: 'POST',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: 'get_students' })
+                body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'get_students' })
             }).then(res => res.json())
               .then(data => {
                   hideLoading();
@@ -220,17 +361,22 @@
                       let msg = '';
                       // 處理 config 復原
                       if (data.config) {
-                          if (data.config.classInfo) {
+                          if (data.config.classes) {
+                              // 新版多班級架構的設定
+                              appConfig = data.config;
+                              saveAppConfig();
+                              renderClassManager();
+                              
+                              // 若下載下來的資料與目前的 activeClassId 衝突，重整頁面
+                              if (!appConfig.classes.find(c => c.id === appConfig.activeClassId)) {
+                                  appConfig.activeClassId = appConfig.classes[0] ? appConfig.classes[0].id : null;
+                                  saveAppConfig();
+                                  window.location.reload();
+                                  return; // Stop further execution since we are reloading
+                              }
+                          } else if (data.config.classInfo) {
+                              // 舊版單一班級相容
                               db.classInfo = data.config.classInfo;
-                              updateHeaderClassInfo();
-                              const elSchool = document.getElementById('info-school');
-                              const elYear = document.getElementById('info-year');
-                              const elSemester = document.getElementById('info-semester');
-                              const elClass = document.getElementById('info-class');
-                              if(elSchool) elSchool.value = db.classInfo.schoolName || '';
-                              if(elYear) elYear.value = db.classInfo.academicYear || '';
-                              if(elSemester) elSemester.value = db.classInfo.semester || '上';
-                              if(elClass) elClass.value = db.classInfo.className || '';
                           }
                           if (data.config.tasks) {
                               db.tasks = data.config.tasks;
@@ -301,7 +447,7 @@
                 const response = await fetch(gasUrl, {
                     method: 'POST',
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({ action: 'pull_sync' })
+                    body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'pull_sync' })
                 });
                 const data = await response.json();
                 
