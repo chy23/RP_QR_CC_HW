@@ -58,7 +58,7 @@
         
         // --- Google Sheets Sync Logic ---
         let gasUrl = appConfig.gasUrl;
-        let sheetUrl = localStorage.getItem(STORAGE_PREFIX + 'rp_qr_sheet_url') || '';
+        let sheetUrl = appConfig.sheetUrl || '';
         
         // Wait for DOM
         setTimeout(() => {
@@ -74,7 +74,7 @@
             if (url && url.includes('/edit')) {
                 url = url.split('/edit')[0] + '/htmlembed?widget=true&headers=false';
             }
-            localStorage.setItem(STORAGE_PREFIX + 'rp_qr_sheet_url', url);
+            appConfig.sheetUrl = url; saveAppConfig(); syncStudentsToGas();
             sheetUrl = url;
             document.getElementById('sheet-status').innerHTML = '<span class="text-green-600">✅ 網址已儲存！</span>';
             setTimeout(() => { document.getElementById('sheet-status').innerHTML = ''; }, 3000);

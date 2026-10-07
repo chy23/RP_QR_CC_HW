@@ -7,6 +7,7 @@
         
         let appConfig = {
             gasUrl: '',
+            sheetUrl: '',
             classes: [], // { id: '...', label: '112上-三年甲班', prefix: '112上-三年甲班' }
             activeClassId: null
         };
@@ -29,7 +30,12 @@
                     } catch(e) {}
                 }
                 
+                
                 appConfig.gasUrl = oldGasUrl;
+                
+                const oldSheetUrl = localStorage.getItem(STORAGE_PREFIX + 'rp_qr_sheet_url') || '';
+                appConfig.sheetUrl = oldSheetUrl;
+
                 
                 if (oldClassInfo) {
                     const label = `${oldClassInfo.academicYear || ''}${oldClassInfo.semester || ''}-${oldClassInfo.className || '未命名班級'}`;
