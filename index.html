@@ -1227,10 +1227,16 @@
                 
                 <div class="relative bg-gray-100 p-4 rounded border font-mono text-sm overflow-x-auto shadow-inner">
                     <button onclick="copyGasCode(this)" class="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs shadow transition-colors">複製程式碼</button>
-                    <pre id="gas-code-block" class="whitespace-pre">function doPost(e) {
+                    <pre id="gas-code-block" class="whitespace-pre">/**
+ * 【自動更新引擎】
+ * 第一次使用前，請先在上方選單選擇「setup」，並點擊「執行」來完成授權！
+ */
+function setup() {
+  UrlFetchApp.fetch("https://raw.githubusercontent.com/chy23/RP_QR_CC_HW/main/backend/gas_core.js");
+}
+
+function doPost(e) {
   try {
-    // 【自動更新引擎】
-    // 每次執行時，自動從雲端抓取最新的系統後端核心程式碼並執行
     var url = "https://raw.githubusercontent.com/chy23/RP_QR_CC_HW/main/backend/gas_core.js";
     var timestamp = new Date().getTime(); // 避免快取
     var response = UrlFetchApp.fetch(url + "?t=" + timestamp);
