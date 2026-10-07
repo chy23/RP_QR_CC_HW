@@ -6,14 +6,23 @@ function(e, ss, getSheetNames) {
       return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(ContentService.MimeType.JSON);
     }
     
+    // 如果有傳入 classPrefix，就在所有分頁名稱加上前綴，例如 "[112上-三年甲班] "
+    var prefix = "";
+    if (payload.classPrefix) {
+      prefix = "[" + payload.classPrefix + "] ";
+    }
+    
+    var studentSheetName = prefix + "學生名單";
+    var logSheetName = prefix + "所有掃描紀錄";
+
     // 取得設定與學生名單
     if (payload.action === 'get_students') {
-      var studentSheet = ss.getSheetByName("學生名單");
+      var studentSheet = ss.getSheetByName(studentSheetName);
       if (!studentSheet) {
-        return ContentService.createTextOutput(JSON.stringify({status: 'error', message: '找不到名為「學生名單」的分頁'})).setMimeType(ContentService.MimeType.JSON);
+        return ContentService.createTextOutput(JSON.stringify({status: 'error', message: '找不到名為「' + studentSheetName + '」的分頁'})).setMimeType(ContentService.MimeType.JSON);
       }
       
-      // 讀取設定檔
+      // 讀取全域設定檔 (不加前綴)
       var config = null;
       var configSheet = ss.getSheetByName("SystemConfig");
       if (configSheet) {
@@ -56,7 +65,25 @@ function(e, ss, getSheetNames) {
       
       for (var i = 0; i < sheetNames.length; i++) {
         var sheetName = sheetNames[i];
-        if (sheetName === "學生名單" || sheetName === "SystemConfig" || sheetName === "所有掃描紀錄" || sheetName.indexOf("統計") !== -1) {
+        
+        // 過濾邏輯：
+        // 1. 忽略全域的 SystemConfig
+        // 2. 如果有 prefix，只抓取以 prefix 開頭的。如果是向後相容模式 (沒有 prefix)，則排除所有帶有 "[" 開頭的分頁 (代表那些是新制班級)
+        if (sheetName === "SystemConfig") continue;
+        
+        if (prefix !== "") {
+          if (sheetName.indexOf(prefix) !== 0) continue; // 必須是以該班級前綴開頭
+        } else {
+          if (sheetName.indexOf("[") === 0) continue; // 舊模式不抓取新制分頁
+        }
+        
+        // 忽略該班級的學生名單、所有掃描紀錄、統計分頁
+        var baseName = sheetName;
+        if (prefix !== "") {
+           baseName = sheetName.substring(prefix.length);
+        }
+        
+        if (baseName === "學生名單" || baseName === "所有掃描紀錄" || baseName.indexOf("統計") !== -1) {
           continue;
         }
         
@@ -65,7 +92,7 @@ function(e, ss, getSheetNames) {
             var data = targetSheet.getDataRange().getDisplayValues();
             if (data.length >= 4) {
               sheetsData.push({
-                name: sheetName,
+                name: baseName, // 回傳給前端時拔掉前綴，這樣前端才認得
                 data: data
               });
             }
@@ -77,9 +104,9 @@ function(e, ss, getSheetNames) {
 
     // 備份全系統設定與學生名單
     if (payload.action === 'sync_students') {
-      var studentSheet = ss.getSheetByName("學生名單");
+      var studentSheet = ss.getSheetByName(studentSheetName);
       if (!studentSheet) {
-        studentSheet = ss.insertSheet("學生名單");
+        studentSheet = ss.insertSheet(studentSheetName);
       }
       studentSheet.clear();
       
@@ -109,9 +136,9 @@ function(e, ss, getSheetNames) {
     if (payload.action === 'upload_records' || payload.action === 'full_sync') {
       var records = payload.records || [];
       if (records.length > 0) {
-        var logSheet = ss.getSheetByName("所有掃描紀錄");
+        var logSheet = ss.getSheetByName(logSheetName);
         if (!logSheet) {
-          logSheet = ss.insertSheet("所有掃描紀錄");
+          logSheet = ss.insertSheet(logSheetName);
           logSheet.appendRow(["打卡時間", "班級", "科目", "作業名稱", "範圍", "學生姓名", "狀態"]);
           logSheet.setFrozenRows(1);
         }
@@ -122,7 +149,8 @@ function(e, ss, getSheetNames) {
       
       if (payload.action === 'full_sync' && payload.sheets) {
         payload.sheets.forEach(function(sheetObj) {
-          var name = sheetObj.name;
+          // 加上前綴再存進雲端
+          var name = prefix + sheetObj.name;
           var data = sheetObj.data;
           if (data && data.length > 0) {
             var targetSheet = ss.getSheetByName(name);
