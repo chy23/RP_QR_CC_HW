@@ -1,7 +1,6 @@
-function doPost(e) {
+(function(e, ss) {
   try {
     var payload = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
     
     if (payload.action === 'ping') {
       return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(ContentService.MimeType.JSON);
@@ -20,7 +19,7 @@ function doPost(e) {
       if (configSheet) {
         var configStr = configSheet.getRange("A1").getValue();
         if (configStr) {
-          try { config = JSON.parse(configStr); } catch (e) {}
+          try { config = JSON.parse(configStr); } catch (err) {}
         }
       }
 
@@ -34,8 +33,8 @@ function doPost(e) {
       var nameIndex = headers.indexOf("姓名");
       var tokenIndex = headers.indexOf("防偽碼");
       
-      if (idIndex === -1) idIndex = 0; // 找不到預設抓第一欄
-      if (nameIndex === -1) nameIndex = 1; // 找不到預設抓第二欄
+      if (idIndex === -1) idIndex = 0;
+      if (nameIndex === -1) nameIndex = 1;
       
       var students = [];
       for (var i = 1; i < data.length; i++) {
@@ -57,13 +56,11 @@ function doPost(e) {
       
       for (var i = 0; i < allSheets.length; i++) {
         var sheetName = allSheets[i].getName();
-        // 排除非科目分頁
         if (sheetName === "學生名單" || sheetName === "SystemConfig" || sheetName === "所有掃描紀錄" || sheetName.indexOf("統計") !== -1) {
           continue;
         }
         
         var data = allSheets[i].getDataRange().getDisplayValues();
-        // 確保這是一個有效的二維陣列 (至少要有 表頭3列 + 1個學生)
         if (data.length >= 4) {
           sheetsData.push({
             name: sheetName,
@@ -94,12 +91,11 @@ function doPost(e) {
       studentSheet.getRange(1, 1, 1, 3).setFontWeight("bold").setBackground("#f3f4f6");
       studentSheet.setFrozenRows(1);
       
-      // 儲存設定檔
       if (payload.config) {
         var configSheet = ss.getSheetByName("SystemConfig");
         if (!configSheet) {
           configSheet = ss.insertSheet("SystemConfig");
-          configSheet.hideSheet(); // 隱藏起來避免干擾使用者
+          configSheet.hideSheet();
         }
         configSheet.getRange("A1").setValue(JSON.stringify(payload.config));
       }
@@ -140,7 +136,8 @@ function doPost(e) {
             var ruleRed1 = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("缺交").setFontColor("#ef4444").setBold(true).setRanges([range]).build();
             var ruleRed3 = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("沒帶").setFontColor("#ef4444").setBold(true).setRanges([range]).build();
             var ruleRed2 = SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("曠課").setFontColor("#ef4444").setBold(true).setRanges([range]).build();
-                        var ruleLowOntime = SpreadsheetApp.newConditionalFormatRule()
+            
+            var ruleLowOntime = SpreadsheetApp.newConditionalFormatRule()
               .whenFormulaSatisfied('=AND(REGEXMATCH(A$1, "準時率"), IFERROR(VALUE(A1), 1) < 0.8, A1<>"")')
               .setFontColor("#ef4444")
               .setBold(true)
@@ -164,4 +161,4 @@ function doPost(e) {
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.toString()})).setMimeType(ContentService.MimeType.JSON);
   }
-}
+})
