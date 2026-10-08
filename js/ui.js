@@ -14,11 +14,18 @@ function renderClassManager() {
             container.innerHTML = '<div class="text-center text-gray-500 text-sm py-4">目前還沒有設定任何班級。請在下方新增。</div>';
         } else {
             let html = '';
-            appConfig.classes.forEach(c => {
+            appConfig.classes.forEach((c, index) => {
                 const isActive = c.id === appConfig.activeClassId;
+                const upBtn = index > 0 ? `<button onclick="event.stopPropagation(); moveClassUp(${index})" class="text-gray-400 hover:text-blue-600 px-1 font-mono font-bold" title="往上移">↑</button>` : `<span class="px-1 inline-block" style="width: 20px;"></span>`;
+                const downBtn = index < appConfig.classes.length - 1 ? `<button onclick="event.stopPropagation(); moveClassDown(${index})" class="text-gray-400 hover:text-blue-600 px-1 font-mono font-bold" title="往下移">↓</button>` : `<span class="px-1 inline-block" style="width: 20px;"></span>`;
                 html += `
                     <div class="flex justify-between items-center p-2 border-b last:border-b-0 hover:bg-blue-50 transition-colors cursor-pointer ${isActive ? 'bg-blue-100' : ''}" onclick="if(${!isActive}) switchGlobalClass('${c.id}')" title="點擊切換至此班級">
                         <div class="flex items-center gap-2">
+                            <div class="flex flex-col text-xs leading-none bg-white rounded shadow-sm border border-gray-200 p-0.5 mr-1 cursor-default" onclick="event.stopPropagation()">
+                                ${upBtn}
+                                <div class="h-px bg-gray-200 my-0.5"></div>
+                                ${downBtn}
+                            </div>
                             ${isActive ? '<span class="w-2 h-2 rounded-full bg-blue-600"></span>' : '<span class="w-2 h-2 rounded-full bg-gray-300"></span>'}
                             <span class="font-bold text-gray-700 ${isActive ? 'text-blue-800' : ''}">${c.label}</span>
                             ${isActive ? '<span class="text-xs bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded ml-2">目前正在編輯</span>' : '<span class="text-xs text-gray-400 ml-2 hover:text-blue-600">點擊切換 ➔</span>'}
