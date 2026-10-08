@@ -93,6 +93,7 @@ function(e, ss, getSheetNames) {
       var idIndex = headers.indexOf("座號");
       var nameIndex = headers.indexOf("姓名");
       var tokenIndex = headers.indexOf("防偽碼");
+      if (tokenIndex === -1) tokenIndex = headers.indexOf("系統代碼");
       var saltIndex = headers.indexOf("系統暗碼(勿動)");
       
       if (idIndex === -1) idIndex = 0;
@@ -162,7 +163,7 @@ function(e, ss, getSheetNames) {
       studentSheet.clear();
       
       var students = payload.students || [];
-      var dataToPush = [["座號", "姓名", "防偽碼", "系統暗碼(勿動)"]];
+      var dataToPush = [["座號", "姓名", "系統代碼", "系統暗碼(勿動)"]];
       
       students.forEach(function(s) {
         dataToPush.push([s.id, s.name, s.token || '', s.salt || '']);
