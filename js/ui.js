@@ -17,7 +17,7 @@ function renderClassManager() {
             appConfig.classes.forEach(c => {
                 const isActive = c.id === appConfig.activeClassId;
                 html += `
-                    <div class="flex justify-between items-center p-2 border-b last:border-b-0 hover:bg-blue-50 transition-colors cursor-pointer ${isActive ? 'bg-blue-100' : ''}" onclick="if(!'${isActive}') switchGlobalClass('${c.id}')" title="點擊切換至此班級">
+                    <div class="flex justify-between items-center p-2 border-b last:border-b-0 hover:bg-blue-50 transition-colors cursor-pointer ${isActive ? 'bg-blue-100' : ''}" onclick="if(${!isActive}) switchGlobalClass('${c.id}')" title="點擊切換至此班級">
                         <div class="flex items-center gap-2">
                             ${isActive ? '<span class="w-2 h-2 rounded-full bg-blue-600"></span>' : '<span class="w-2 h-2 rounded-full bg-gray-300"></span>'}
                             <span class="font-bold text-gray-700 ${isActive ? 'text-blue-800' : ''}">${c.label}</span>
