@@ -1074,3 +1074,17 @@ async function showBackupModal() {
 function hideBackupModal() {
     document.getElementById('backup-modal').style.display = 'none';
 }
+
+async function clearStudents() {
+    if (db.students.length === 0) {
+        showToast("名單已經是空的了！", "info");
+        return;
+    }
+    const result = await showConfirm("警告：確定要清空學生名單嗎？", "這將會刪除目前班級內的所有學生資料，且無法復原！", "warning", "確定清空", "取消");
+    if (!result.isConfirmed) return;
+    
+    db.students = [];
+    saveData();
+    renderStudents();
+    showToast("名單已清空", "success");
+}
