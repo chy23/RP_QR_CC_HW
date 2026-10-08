@@ -26,6 +26,9 @@ function renderClassManager() {
                         <button onclick="event.stopPropagation(); hideClassTabs('${c.id}', '${c.prefix}')" class="text-gray-500 hover:text-white hover:bg-gray-600 px-2 py-1 rounded text-sm transition-colors cursor-pointer mr-1" title="在 Google 試算表中隱藏此班級的所有分頁">
                             隱藏分頁
                         </button>
+                        <button onclick="event.stopPropagation(); showClassTabs('${c.id}', '${c.prefix}')" class="text-blue-500 hover:text-white hover:bg-blue-500 px-2 py-1 rounded text-sm transition-colors cursor-pointer mr-1" title="在 Google 試算表中顯示此班級的所有分頁">
+                            顯示分頁
+                        </button>
                         <button onclick="event.stopPropagation(); deleteClass('${c.id}')" class="text-red-500 hover:text-white hover:bg-red-500 px-2 py-1 rounded text-sm transition-colors cursor-pointer" ${isActive ? 'disabled style="opacity: 0.5;" title="無法刪除目前正在瀏覽的班級"' : ''}>
                             刪除
                         </button>
@@ -1117,6 +1120,35 @@ async function clearStudents() {
                     showAlert('成功', `已成功在雲端隱藏 ${data.hiddenCount} 個分頁！`, 'success');
                 } else {
                     showAlert('錯誤', data.message || '隱藏分頁失敗。', 'error');
+                }
+            } catch (err) {
+                hideLoading();
+                showAlert('錯誤', '無法連線：' + err.message, 'error');
+            }
+        }
+
+        async function showClassTabs(classId, prefix) {
+            if(!appConfig.gasUrl) {
+                showAlert('提示', '請先設定雲端引擎網址！');
+                return;
+            }
+            if(!prefix) {
+                showToast('此班級無前綴，無法顯示', 'error');
+                return;
+            }
+            showLoading();
+            try {
+                const response = await fetch(appConfig.gasUrl, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'show_class_tabs', classPrefix: prefix })
+                });
+                const data = await response.json();
+                hideLoading();
+                if (data.status === 'success') {
+                    showToast(`已成功在雲端顯示 ${data.shownCount} 個分頁！`, 'success');
+                } else {
+                    showAlert('錯誤', data.message || '顯示分頁失敗。', 'error');
                 }
             } catch (err) {
                 hideLoading();
