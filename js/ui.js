@@ -17,12 +17,13 @@ function renderClassManager() {
             appConfig.classes.forEach(c => {
                 const isActive = c.id === appConfig.activeClassId;
                 html += `
-                    <div class="flex justify-between items-center p-2 border-b last:border-b-0 hover:bg-gray-50 transition-colors ${isActive ? 'bg-blue-100' : ''}">
+                    <div class="flex justify-between items-center p-2 border-b last:border-b-0 hover:bg-blue-50 transition-colors cursor-pointer ${isActive ? 'bg-blue-100' : ''}" onclick="if(!'${isActive}') switchGlobalClass('${c.id}')" title="點擊切換至此班級">
                         <div class="flex items-center gap-2">
                             ${isActive ? '<span class="w-2 h-2 rounded-full bg-blue-600"></span>' : '<span class="w-2 h-2 rounded-full bg-gray-300"></span>'}
                             <span class="font-bold text-gray-700 ${isActive ? 'text-blue-800' : ''}">${c.label}</span>
+                            ${isActive ? '<span class="text-xs bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded ml-2">目前正在編輯</span>' : '<span class="text-xs text-gray-400 ml-2 hover:text-blue-600">點擊切換 ➔</span>'}
                         </div>
-                        <button onclick="deleteClass('${c.id}')" class="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded text-sm transition-colors cursor-pointer" ${isActive ? 'disabled style="opacity: 0.5;" title="無法刪除目前正在瀏覽的班級"' : ''}>
+                        <button onclick="event.stopPropagation(); deleteClass('${c.id}')" class="text-red-500 hover:text-white hover:bg-red-500 px-2 py-1 rounded text-sm transition-colors cursor-pointer" ${isActive ? 'disabled style="opacity: 0.5;" title="無法刪除目前正在瀏覽的班級"' : ''}>
                             刪除
                         </button>
                     </div>
