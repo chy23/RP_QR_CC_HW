@@ -11,6 +11,29 @@ function(e, ss, getSheetNames) {
     if (payload.classPrefix) {
       prefix = "[" + payload.classPrefix + "] ";
     }
+    function getColorForPrefix(p) {
+      if (!p) return null;
+      var colors = ['#ea4335', '#fbbc04', '#34a853', '#4285f4', '#ff6d01', '#46bdc6', '#7baaf7', '#d01884', '#00bfa5', '#9c27b0', '#e91e63', '#673ab7'];
+      var hash = 0;
+      for (var i = 0; i < p.length; i++) {
+        hash = p.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      hash = Math.abs(hash);
+      return colors[hash % colors.length];
+    }
+    
+    function ensureSheetAndColor(sheetName) {
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        sheet = ss.insertSheet(sheetName);
+      }
+      var tabColor = getColorForPrefix(payload.classPrefix || "");
+      if (tabColor) {
+        try { if (sheet.getTabColor() !== tabColor) sheet.setTabColor(tabColor); } catch(err) {}
+      }
+      return sheet;
+    }
+
     
     
     if (payload.action === 'hide_class_tabs') {
