@@ -129,7 +129,10 @@
                 const task = db.tasks.find(t => t.id === r.taskId);
                 return {
                     timestamp: r.timestamp || r.fullTimestamp,
-                    className: db.classInfo ? (db.classInfo.className || '') : '',
+                    className: (() => {
+                        const cls = appConfig.classes.find(c => c.id === appConfig.activeClassId);
+                        return cls ? cls.label : '';
+                    })(),
                     studentName: student ? student.name : '未知學生',
                     subject: task ? task.subject : '',
                     taskName: task ? task.name : '未知作業',
