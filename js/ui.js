@@ -23,6 +23,9 @@ function renderClassManager() {
                             <span class="font-bold text-gray-700 ${isActive ? 'text-blue-800' : ''}">${c.label}</span>
                             ${isActive ? '<span class="text-xs bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded ml-2">目前正在編輯</span>' : '<span class="text-xs text-gray-400 ml-2 hover:text-blue-600">點擊切換 ➔</span>'}
                         </div>
+                        <button onclick="event.stopPropagation(); hideClassTabs('${c.id}', '${c.prefix}')" class="text-gray-500 hover:text-white hover:bg-gray-600 px-2 py-1 rounded text-sm transition-colors cursor-pointer mr-1" title="在 Google 試算表中隱藏此班級的所有分頁">
+                            隱藏分頁
+                        </button>
                         <button onclick="event.stopPropagation(); deleteClass('${c.id}')" class="text-red-500 hover:text-white hover:bg-red-500 px-2 py-1 rounded text-sm transition-colors cursor-pointer" ${isActive ? 'disabled style="opacity: 0.5;" title="無法刪除目前正在瀏覽的班級"' : ''}>
                             刪除
                         </button>
@@ -1088,3 +1091,35 @@ async function clearStudents() {
     renderStudents();
     showToast("名單已清空", "success");
 }
+
+        async function hideClassTabs(classId, prefix) {
+            if(!appConfig.gasUrl) {
+                showAlert('提示', '請先設定雲端引擎網址！');
+                return;
+            }
+            if(!prefix) {
+                showToast('此班級無前綴，無法隱藏', 'error');
+                return;
+            }
+            const result = await showConfirm("確定要在雲端隱藏分頁嗎？", "這會將 Google 試算表中所有該班級的分頁隱藏起來，保持畫面清爽。隨時可以從試算表左下角重新顯示。");
+            if(!result.isConfirmed) return;
+            
+            showLoading();
+            try {
+                const response = await fetch(appConfig.gasUrl, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'hide_class_tabs', classPrefix: prefix })
+                });
+                const data = await response.json();
+                hideLoading();
+                if (data.status === 'success') {
+                    showAlert('成功', `已成功在雲端隱藏 ${data.hiddenCount} 個分頁！`, 'success');
+                } else {
+                    showAlert('錯誤', data.message || '隱藏分頁失敗。', 'error');
+                }
+            } catch (err) {
+                hideLoading();
+                showAlert('錯誤', '無法連線：' + err.message, 'error');
+            }
+        }
