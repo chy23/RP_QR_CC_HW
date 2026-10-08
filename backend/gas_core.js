@@ -12,6 +12,21 @@ function(e, ss, getSheetNames) {
       prefix = "[" + payload.classPrefix + "] ";
     }
     
+    
+    if (payload.action === 'hide_class_tabs') {
+      if (!prefix) return ContentService.createTextOutput(JSON.stringify({status: 'error', message: 'No prefix provided'})).setMimeType(ContentService.MimeType.JSON);
+      var sheets = ss.getSheets();
+      var count = 0;
+      for (var i = 0; i < sheets.length; i++) {
+        var s = sheets[i];
+        if (s.getName().indexOf(prefix) === 0) {
+          s.hideSheet();
+          count++;
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({status: 'success', hiddenCount: count})).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     var studentSheetName = prefix + "學生名單";
     var logSheetName = prefix + "所有掃描紀錄";
 
@@ -106,7 +121,7 @@ function(e, ss, getSheetNames) {
     if (payload.action === 'sync_students') {
       var studentSheet = ss.getSheetByName(studentSheetName);
       if (!studentSheet) {
-        studentSheet = ss.insertSheet(studentSheetName);
+        studentSheet = ensureSheetAndColor(studentSheetName);
       }
       studentSheet.clear();
       
@@ -138,7 +153,7 @@ function(e, ss, getSheetNames) {
       if (records.length > 0) {
         var logSheet = ss.getSheetByName(logSheetName);
         if (!logSheet) {
-          logSheet = ss.insertSheet(logSheetName);
+          logSheet = ensureSheetAndColor(logSheetName);
           logSheet.appendRow(["打卡時間", "班級", "科目", "作業名稱", "範圍", "學生姓名", "狀態"]);
           logSheet.setFrozenRows(1);
         }
@@ -154,7 +169,7 @@ function(e, ss, getSheetNames) {
           var data = sheetObj.data;
           if (data && data.length > 0) {
             var targetSheet = ss.getSheetByName(name);
-            if (!targetSheet) { targetSheet = ss.insertSheet(name); }
+            if (!targetSheet) { targetSheet = ensureSheetAndColor(name); }
             targetSheet.clear();
             targetSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
             
