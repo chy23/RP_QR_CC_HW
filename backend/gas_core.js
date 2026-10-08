@@ -56,6 +56,7 @@ function(e, ss, getSheetNames) {
       var idIndex = headers.indexOf("座號");
       var nameIndex = headers.indexOf("姓名");
       var tokenIndex = headers.indexOf("防偽碼");
+      var saltIndex = headers.indexOf("系統暗碼(勿動)");
       
       if (idIndex === -1) idIndex = 0;
       if (nameIndex === -1) nameIndex = 1;
@@ -66,8 +67,9 @@ function(e, ss, getSheetNames) {
         var id = row[idIndex];
         var name = row[nameIndex];
         var token = (tokenIndex !== -1 && row[tokenIndex]) ? row[tokenIndex].toString().trim() : '';
+        var salt = (saltIndex !== -1 && row[saltIndex]) ? row[saltIndex].toString().trim() : '';
         if (id && name) {
-          students.push({ id: id.toString().trim(), name: name.toString().trim(), token: token });
+          students.push({ id: id.toString().trim(), name: name.toString().trim(), token: token, salt: salt });
         }
       }
       return ContentService.createTextOutput(JSON.stringify({status: 'success', students: students, config: config})).setMimeType(ContentService.MimeType.JSON);
@@ -126,15 +128,16 @@ function(e, ss, getSheetNames) {
       studentSheet.clear();
       
       var students = payload.students || [];
-      var dataToPush = [["座號", "姓名", "防偽碼"]];
+      var dataToPush = [["座號", "姓名", "防偽碼", "系統暗碼(勿動)"]];
       
       students.forEach(function(s) {
-        dataToPush.push([s.id, s.name, s.token || '']);
+        dataToPush.push([s.id, s.name, s.token || '', s.salt || '']);
       });
       
-      studentSheet.getRange(1, 1, dataToPush.length, 3).setValues(dataToPush);
-      studentSheet.getRange(1, 1, 1, 3).setFontWeight("bold").setBackground("#f3f4f6");
+      studentSheet.getRange(1, 1, dataToPush.length, 4).setValues(dataToPush);
+      studentSheet.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#f3f4f6");
       studentSheet.setFrozenRows(1);
+      try { studentSheet.hideColumns(4); } catch(err) {} // 隱藏暗碼欄位，保持畫面清爽
       
       if (payload.config) {
         var configSheet = ss.getSheetByName("SystemConfig");
