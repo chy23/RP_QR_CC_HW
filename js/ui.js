@@ -153,6 +153,27 @@ function addNewClass() {
     }
 }
 
+
+function moveClassUp(index) {
+    if (index <= 0) return;
+    const temp = appConfig.classes[index - 1];
+    appConfig.classes[index - 1] = appConfig.classes[index];
+    appConfig.classes[index] = temp;
+    saveAppConfig();
+    renderClassManager();
+    updateActiveClassName();
+}
+
+function moveClassDown(index) {
+    if (index >= appConfig.classes.length - 1) return;
+    const temp = appConfig.classes[index + 1];
+    appConfig.classes[index + 1] = appConfig.classes[index];
+    appConfig.classes[index] = temp;
+    saveAppConfig();
+    renderClassManager();
+    updateActiveClassName();
+}
+
 function deleteClass(id) {
     if (id === appConfig.activeClassId) {
         showAlert('錯誤', '無法刪除目前正在瀏覽的班級！請先從上方選單切換到其他班級後再刪除。', 'error');
