@@ -135,10 +135,7 @@ function(e, ss, getSheetNames) {
 
     // 備份全系統設定與學生名單
     if (payload.action === 'sync_students') {
-      var studentSheet = ss.getSheetByName(studentSheetName);
-      if (!studentSheet) {
-        studentSheet = ensureSheetAndColor(studentSheetName);
-      }
+      var studentSheet = ensureSheetAndColor(studentSheetName);
       studentSheet.clear();
       
       var students = payload.students || [];
@@ -168,9 +165,8 @@ function(e, ss, getSheetNames) {
     if (payload.action === 'upload_records' || payload.action === 'full_sync') {
       var records = payload.records || [];
       if (records.length > 0) {
-        var logSheet = ss.getSheetByName(logSheetName);
-        if (!logSheet) {
-          logSheet = ensureSheetAndColor(logSheetName);
+        var logSheet = ensureSheetAndColor(logSheetName);
+        if (logSheet.getLastRow() === 0) {
           logSheet.appendRow(["打卡時間", "班級", "科目", "作業名稱", "範圍", "學生姓名", "狀態"]);
           logSheet.setFrozenRows(1);
         }

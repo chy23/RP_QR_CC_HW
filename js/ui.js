@@ -273,7 +273,10 @@ function deleteClass(id) {
             fetch(gasUrl, {
                     method: 'POST',
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'sync_students', students: db.students, config: configPayload })
+                    body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'sync_students', students: db.students.map(s => {
+                    if (!s.salt) s.salt = generateSalt();
+                    return s;
+                }), config: configPayload })
                 }).then(res => res.json())
                   .then(data => {
                       hideLoading();
