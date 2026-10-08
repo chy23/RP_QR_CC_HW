@@ -1255,13 +1255,13 @@
  */
 function setup() {
   // 觸發 Google 權限審查機制 (請勿刪除)
-  UrlFetchApp.fetch("https://raw.githubusercontent.com/chy23/RP_QR_CC_HW/main/backend/gas_core.js");
+  UrlFetchApp.fetch("https://raw.githubusercontent.com/chy23/RP_QR_CC_HW/beta/backend/gas_core.js");
   SpreadsheetApp.getActiveSpreadsheet();
 }
 
 function doPost(e) {
   try {
-    var url = "https://raw.githubusercontent.com/chy23/RP_QR_CC_HW/main/backend/gas_core.js";
+    var url = "https://raw.githubusercontent.com/chy23/RP_QR_CC_HW/beta/backend/gas_core.js";
     var timestamp = new Date().getTime(); // 避免快取
     var response = UrlFetchApp.fetch(url + "?t=" + timestamp);
     var coreScript = response.getContentText();
