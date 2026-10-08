@@ -27,6 +27,20 @@ function(e, ss, getSheetNames) {
       return ContentService.createTextOutput(JSON.stringify({status: 'success', hiddenCount: count})).setMimeType(ContentService.MimeType.JSON);
     }
     
+    if (payload.action === 'show_class_tabs') {
+      if (!prefix) return ContentService.createTextOutput(JSON.stringify({status: 'error', message: 'No prefix provided'})).setMimeType(ContentService.MimeType.JSON);
+      var sheets = ss.getSheets();
+      var count = 0;
+      for (var i = 0; i < sheets.length; i++) {
+        var s = sheets[i];
+        if (s.getName().indexOf(prefix) === 0) {
+          s.showSheet();
+          count++;
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({status: 'success', shownCount: count})).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     var studentSheetName = prefix + "學生名單";
     var logSheetName = prefix + "所有掃描紀錄";
 
