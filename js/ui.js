@@ -251,17 +251,11 @@ function deleteClass(id) {
                 showAlert('提示', '請先到「0. 資料建置」分頁設定並儲存您的 Google Apps Script 網址！');
                 return;
             }
-            let elClass = document.getElementById('info-class');
-            let currentClass = elClass ? elClass.value.trim() : '';
-            if (!currentClass) {
-                currentClass = prompt("⚠️ 您尚未設定「班級名稱」，這將導致掃描紀錄無法分類。\n請先輸入班級名稱 (例如: 三年甲班) :");
-                if (currentClass) {
-                    if(elClass) elClass.value = currentClass;
-                    saveClassInfo();
-                } else {
-                    return; // 放棄備份
-                }
+            if (!appConfig.activeClassId) {
+                showAlert('提示', '請先新增並選擇一個班級！');
+                return;
             }
+            
             const result = await showConfirm("確定要備份到雲端嗎？", "這將覆蓋雲端的舊設定，以便其他裝置匯入。");
             if(!result.isConfirmed) return;
 
