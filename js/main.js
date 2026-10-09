@@ -73,23 +73,20 @@ async function checkForUpdates() {
             Swal.fire({
                 title: '🎉 發現新版本！',
                 html: `
-                    <div style="text-align: left; max-height: 250px; overflow-y: auto; padding: 10px; background: #f8fafc; border-radius: 8px; margin-bottom: 15px;">
+                    <div style="text-align: left; max-height: 350px; overflow-y: auto; padding: 15px; background: #f8fafc; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
                         ${latestChangeHTML}
                     </div>
-                    <div style="text-align: left; font-weight: bold; color: #b91c1c; margin-bottom: 10px; font-size: 14px;">
-                        ⚠️ 請注意：本次更新可能包含 Google Apps Script (GAS) 程式碼變動。您可以直接在此複製最新程式碼，並至您的 Google 試算表重新部署！
-                    </div>
-                    <div style="position: relative; text-align: left;">
-                        <textarea id="swal-gas-code" readonly style="width: 100%; height: 120px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; background: #f1f5f9; outline: none; resize: none;">${newGasCode}</textarea>
-                        <button onclick="navigator.clipboard.writeText(document.getElementById('swal-gas-code').value); this.innerText='已複製！'; setTimeout(()=>this.innerText='複製程式碼', 2000)" style="position: absolute; top: 10px; right: 20px; background: #2563eb; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: all 0.2s;">複製程式碼</button>
+                    <div style="text-align: left; font-weight: bold; color: #047857; font-size: 14px; background: #d1fae5; padding: 12px; border-radius: 6px; border: 1px solid #10b981; display: flex; align-items: center; gap: 8px;">
+                        <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        系統已透過「自動更新引擎」完成後端無縫升級，您無須重新部署任何程式碼！
                     </div>
                 `,
-                icon: 'info',
-                width: '700px',
-                confirmButtonText: '已複製，立即重新載入系統',
+                icon: 'success',
+                width: '650px',
+                confirmButtonText: '立即重新載入網頁',
                 showCancelButton: true,
                 cancelButtonText: '稍後再說',
-                confirmButtonColor: '#3085d6',
+                confirmButtonColor: '#2563eb',
                 cancelButtonColor: '#9ca3af',
                 allowOutsideClick: false
             }).then((result) => {
