@@ -1341,19 +1341,64 @@ window.openReorderModal = function() {
         width: '600px',
         didOpen: () => {
             const listEl = document.getElementById('reorder-class-list');
-            if (listEl && window.Sortable) {
-                // Initialize SortableJS
-                new Sortable(listEl, {
-                    animation: 150,
-                    ghostClass: 'opacity-50',
-                    onEnd: function (evt) {
-                        // 當拖曳結束，重新整理所有數字輸入框的值
-                        const inputs = listEl.querySelectorAll('.order-input');
-                        inputs.forEach((input, i) => {
-                            input.value = i + 1;
-                        });
-                    }
+            
+            const applyOrderChange = (changedInput) => {
+                const newVal = parseInt(changedInput.value, 10);
+                const oldVal = parseInt(changedInput.dataset.oldValue, 10);
+                
+                // 防呆：如果輸入無效或超出範圍，恢復原狀
+                if (isNaN(newVal) || newVal < 1 || newVal > appConfig.classes.length || newVal === oldVal) {
+                    changedInput.value = oldVal;
+                    return;
+                }
+                
+                // 找出被佔用該數字的另一個輸入框，將其改為舊數字 (兩者對調)
+                const inputs = Array.from(listEl.querySelectorAll('.order-input'));
+                const otherInput = inputs.find(inp => inp !== changedInput && parseInt(inp.value, 10) === newVal);
+                
+                if (otherInput) {
+                    otherInput.value = oldVal;
+                }
+                
+                // 依照新的數字順序重新排列畫面的 DOM
+                const items = Array.from(listEl.querySelectorAll('li'));
+                items.sort((a, b) => {
+                    return parseInt(a.querySelector('.order-input').value, 10) - parseInt(b.querySelector('.order-input').value, 10);
                 });
+                
+                items.forEach(item => listEl.appendChild(item));
+                
+                // 更新 oldValue
+                listEl.querySelectorAll('.order-input').forEach(inp => {
+                    inp.dataset.oldValue = inp.value;
+                });
+            };
+            
+            if (listEl) {
+                const inputs = listEl.querySelectorAll('.order-input');
+                inputs.forEach(inp => {
+                    inp.dataset.oldValue = inp.value; // 初始化
+                    inp.addEventListener('focus', function() {
+                        this.dataset.oldValue = this.value;
+                    });
+                    inp.addEventListener('change', function() {
+                        applyOrderChange(this);
+                    });
+                });
+            
+                if (window.Sortable) {
+                    new Sortable(listEl, {
+                        animation: 150,
+                        ghostClass: 'opacity-50',
+                        onEnd: function (evt) {
+                            const allInputs = listEl.querySelectorAll('.order-input');
+                            allInputs.forEach((input, i) => {
+                                input.value = i + 1;
+                                input.dataset.oldValue = i + 1;
+                            });
+                        }
+                    });
+                }
             }
         },
         preConfirm: () => {
