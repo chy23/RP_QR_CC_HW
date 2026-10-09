@@ -1276,3 +1276,35 @@ async function clearStudents() {
                 showAlert('錯誤', '無法連線：' + err.message, 'error');
             }
         }
+
+window.moveSelectedClassUp = function() {
+    const activeIndex = appConfig.classes.findIndex(c => c.id === appConfig.activeClassId);
+    if (activeIndex > 0) moveClassUp(activeIndex);
+};
+
+window.moveSelectedClassDown = function() {
+    const activeIndex = appConfig.classes.findIndex(c => c.id === appConfig.activeClassId);
+    if (activeIndex !== -1 && activeIndex < appConfig.classes.length - 1) moveClassDown(activeIndex);
+};
+
+window.hideSelectedClassTabs = function() {
+    const c = appConfig.classes.find(c => c.id === appConfig.activeClassId);
+    if (c) hideClassTabs(c.id, c.prefix);
+};
+
+window.showSelectedClassTabs = function() {
+    const c = appConfig.classes.find(c => c.id === appConfig.activeClassId);
+    if (c) showClassTabs(c.id, c.prefix);
+};
+
+window.deleteSelectedClass = function() {
+    if (!appConfig.activeClassId) return;
+    showConfirm('刪除確認', '確定要刪除目前的班級嗎？這不會刪除雲端試算表上的資料，但會從本機清單中移除。').then(result => {
+        if (result.isConfirmed) {
+            appConfig.classes = appConfig.classes.filter(c => c.id !== appConfig.activeClassId);
+            appConfig.activeClassId = appConfig.classes.length > 0 ? appConfig.classes[0].id : null;
+            saveAppConfig();
+            window.location.reload();
+        }
+    });
+};
