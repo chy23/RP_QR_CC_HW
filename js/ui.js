@@ -7,42 +7,49 @@ function renderClassManager() {
     const gasInput = document.getElementById('global-gas-url');
     if (gasInput) gasInput.value = appConfig.gasUrl || '';
 
-    // 渲染設定頁面的班級清單
+    // 渲染設定頁面的班級清單 (下拉選單版本)
     const container = document.getElementById('class-list-container');
     if (container) {
         if (appConfig.classes.length === 0) {
             container.innerHTML = '<div class="text-center text-gray-500 text-sm py-4">目前還沒有設定任何班級。請在下方新增。</div>';
         } else {
-            let html = '';
-            appConfig.classes.forEach((c, index) => {
-                const isActive = c.id === appConfig.activeClassId;
-                const upBtn = index > 0 ? `<button onclick="event.stopPropagation(); moveClassUp(${index})" class="text-gray-400 hover:text-blue-600 px-1 font-mono font-bold" title="往上移">↑</button>` : `<span class="px-1 inline-block" style="width: 20px;"></span>`;
-                const downBtn = index < appConfig.classes.length - 1 ? `<button onclick="event.stopPropagation(); moveClassDown(${index})" class="text-gray-400 hover:text-blue-600 px-1 font-mono font-bold" title="往下移">↓</button>` : `<span class="px-1 inline-block" style="width: 20px;"></span>`;
-                html += `
-                    <div class="flex justify-between items-center p-2 border-b last:border-b-0 hover:bg-blue-50 transition-colors cursor-pointer ${isActive ? 'bg-blue-100' : ''}" onclick="if(${!isActive}) switchGlobalClass('${c.id}')" title="點擊切換至此班級">
-                        <div class="flex items-center gap-2">
-                            <div class="flex flex-col text-xs leading-none bg-white rounded shadow-sm border border-gray-200 p-0.5 mr-1 cursor-default" onclick="event.stopPropagation()">
-                                ${upBtn}
-                                <div class="h-px bg-gray-200 my-0.5"></div>
-                                ${downBtn}
-                            </div>
-                            ${isActive ? '<span class="w-2 h-2 rounded-full bg-blue-600"></span>' : '<span class="w-2 h-2 rounded-full bg-gray-300"></span>'}
-                            <span class="font-bold text-gray-700 ${isActive ? 'text-blue-800' : ''}">${c.label}</span>
-                            ${isActive ? '<span class="text-xs bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded ml-2">目前正在編輯</span>' : '<span class="text-xs text-gray-400 ml-2 hover:text-blue-600">點擊切換 ➔</span>'}
-                        </div>
-                        <button onclick="event.stopPropagation(); hideClassTabs('${c.id}', '${c.prefix}')" class="text-gray-500 hover:text-white hover:bg-gray-600 px-2 py-1 rounded text-sm transition-colors cursor-pointer mr-1" title="在 Google 試算表中隱藏此班級的所有分頁">
-                            隱藏分頁
-                        </button>
-                        <button onclick="event.stopPropagation(); showClassTabs('${c.id}', '${c.prefix}')" class="text-blue-500 hover:text-white hover:bg-blue-500 px-2 py-1 rounded text-sm transition-colors cursor-pointer mr-1" title="在 Google 試算表中顯示此班級的所有分頁">
-                            顯示分頁
-                        </button>
-                        <button onclick="event.stopPropagation(); deleteClass('${c.id}')" class="text-red-500 hover:text-white hover:bg-red-500 px-2 py-1 rounded text-sm transition-colors cursor-pointer" ${isActive ? 'disabled style="opacity: 0.5;" title="無法刪除目前正在瀏覽的班級"' : ''}>
-                            刪除
-                        </button>
-                    </div>
-                `;
+            let optionsHtml = '';
+            appConfig.classes.forEach(c => {
+                const selected = c.id === appConfig.activeClassId ? 'selected' : '';
+                optionsHtml += `<option value="${c.id}" ${selected}>${c.label}</option>`;
             });
-            container.innerHTML = html;
+            
+            const activeIndex = appConfig.classes.findIndex(c => c.id === appConfig.activeClassId);
+            const canUp = activeIndex > 0;
+            const canDown = activeIndex < appConfig.classes.length - 1;
+            
+            container.innerHTML = `
+                <div class="flex flex-col gap-3 pb-2">
+                    <div class="flex items-center gap-2">
+                        <select id="class-dropdown" class="border-2 border-blue-400 p-2.5 rounded-lg flex-grow font-bold text-gray-800 bg-blue-50 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-colors" onchange="switchGlobalClass(this.value)">
+                            ${optionsHtml}
+                        </select>
+                        <div class="flex flex-col bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
+                            <button onclick="moveSelectedClassUp()" class="px-3 py-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 font-bold border-b transition-colors" title="往上移" ${canUp ? '' : 'disabled style="opacity:0.3"'}>▲</button>
+                            <button onclick="moveSelectedClassDown()" class="px-3 py-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 font-bold transition-colors" title="往下移" ${canDown ? '' : 'disabled style="opacity:0.3"'}>▼</button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap items-center gap-2 bg-gray-50 p-2.5 rounded-lg border border-gray-200 justify-between shadow-inner">
+                        <div class="flex gap-2">
+                            <button onclick="hideSelectedClassTabs()" class="text-sm bg-gray-600 hover:bg-gray-700 text-white px-3 py-1.5 rounded shadow flex items-center gap-1 transition-colors" title="在雲端試算表中隱藏這個班級的所有分頁">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                                隱藏分頁
+                            </button>
+                            <button onclick="showSelectedClassTabs()" class="text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded shadow flex items-center gap-1 transition-colors" title="在雲端試算表中顯示這個班級的所有分頁">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                顯示分頁
+                            </button>
+                        </div>
+                        <button onclick="deleteSelectedClass()" class="text-sm bg-red-50 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded border border-red-100 transition-colors font-bold shadow-sm">刪除此班</button>
+                    </div>
+                </div>
+            `;
         }
     }
 
