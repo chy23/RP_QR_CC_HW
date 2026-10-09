@@ -205,8 +205,7 @@ function(e, ss, getSheetNames) {
           var name = prefix + sheetObj.name;
           var data = sheetObj.data;
           if (data && data.length > 0) {
-            var targetSheet = ss.getSheetByName(name);
-            if (!targetSheet) { targetSheet = ensureSheetAndColor(name); }
+            var targetSheet = ensureSheetAndColor(name);
             targetSheet.clear();
             targetSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
             
