@@ -354,17 +354,26 @@ function deleteClass(id) {
                       // 處理 config 復原
                       if (data.config) {
                           if (data.config.classes) {
-                              // 新版多班級架構的設定
-                              appConfig = data.config;
+                              // 新版多班級架構的設定 (智慧合併，避免覆寫本地剛建立的新班級)
+                              if (!appConfig.classes) appConfig.classes = [];
+                              data.config.classes.forEach(cloudClass => {
+                                  const localClass = appConfig.classes.find(c => c.id === cloudClass.id);
+                                  if (!localClass) {
+                                      appConfig.classes.push(cloudClass);
+                                  }
+                              });
+                              // 保留本地其他的 appConfig 設定
+                              if (data.config.gasUrl && !appConfig.gasUrl) appConfig.gasUrl = data.config.gasUrl;
+                              if (data.config.sheetUrl && !appConfig.sheetUrl) appConfig.sheetUrl = data.config.sheetUrl;
+                              
                               saveAppConfig();
                               renderClassManager();
                               
-                              // 若下載下來的資料與目前的 activeClassId 衝突，重整頁面
                               if (!appConfig.classes.find(c => c.id === appConfig.activeClassId)) {
                                   appConfig.activeClassId = appConfig.classes[0] ? appConfig.classes[0].id : null;
                                   saveAppConfig();
                                   window.location.reload();
-                                  return; // Stop further execution since we are reloading
+                                  return;
                               }
                           } else if (data.config.classInfo) {
                               // 舊版單一班級相容
