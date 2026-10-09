@@ -212,16 +212,51 @@ function(e, ss, getSheetNames) {
             
             targetSheet.setFrozenColumns(1);
             if (name.indexOf("統計報表") !== -1) {
+              // 確保只有第一行被凍結及加粗
               try { targetSheet.setFrozenRows(1); } catch(err) {}
-              targetSheet.getRange(1, 1, 1, data[0].length).setFontWeight("bold").setBackground("#f3f4f6");
               
               var headers = data[0];
-              for (var c = 1; c < headers.length; c++) {
+              var numRows = data.length;
+              var currentSubject = "";
+              var isGray = false;
+              var colorWhite = "#ffffff";
+              var colorGray = "#f3f4f6";
+              
+              // 標題加粗
+              targetSheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+              
+              for (var c = 0; c < headers.length; c++) {
+                var colIndex = c + 1;
                 var headerName = headers[c];
-                if (headerName.indexOf("_") !== -1 && headerName.indexOf("整體_") === -1) {
-                  try { targetSheet.hideColumns(c + 1); } catch (err) {}
-                } else {
-                  try { targetSheet.showColumns(c + 1); } catch (err) {}
+                
+                // 決定隸屬的大科目
+                var subjectGroup = headerName;
+                if (headerName.indexOf("整體_") !== -1) {
+                    subjectGroup = headerName.split("整體_")[0];
+                } else if (headerName.indexOf("_") !== -1) {
+                    subjectGroup = headerName.split("_")[0];
+                }
+                
+                if (subjectGroup !== currentSubject && c > 0) {
+                    currentSubject = subjectGroup;
+                    isGray = !isGray; // 切換底色
+                    
+                    // 畫左側粗黑線
+                    targetSheet.getRange(1, colIndex, numRows, 1).setBorder(null, true, null, null, null, null, "#000000", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+                } else if (c === 0) {
+                    currentSubject = "姓名";
+                }
+                
+                // 上底色
+                targetSheet.getRange(1, colIndex, numRows, 1).setBackground(isGray ? colorGray : colorWhite);
+                
+                // 隱藏非整體的細項
+                if (c > 0) {
+                    if (headerName.indexOf("_") !== -1 && headerName.indexOf("整體_") === -1) {
+                      try { targetSheet.hideColumns(colIndex); } catch (err) {}
+                    } else {
+                      try { targetSheet.showColumns(colIndex); } catch (err) {}
+                    }
                 }
               }
             } else {
