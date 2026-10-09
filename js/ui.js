@@ -19,20 +19,16 @@ function renderClassManager() {
                 optionsHtml += `<option value="${c.id}" ${selected}>${c.label}</option>`;
             });
             
-            const activeIndex = appConfig.classes.findIndex(c => c.id === appConfig.activeClassId);
-            const canUp = activeIndex > 0;
-            const canDown = activeIndex < appConfig.classes.length - 1;
-            
             container.innerHTML = `
                 <div class="flex flex-col gap-3 pb-2">
                     <div class="flex items-center gap-2">
                         <select id="class-dropdown" class="border-2 border-blue-400 p-2.5 rounded-lg flex-grow font-bold text-gray-800 bg-blue-50 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-colors" onchange="switchGlobalClass(this.value)">
                             ${optionsHtml}
                         </select>
-                        <div class="flex flex-col bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
-                            <button onclick="moveSelectedClassUp()" class="px-3 py-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 font-bold border-b transition-colors" title="往上移" ${canUp ? '' : 'disabled style="opacity:0.3"'}>▲</button>
-                            <button onclick="moveSelectedClassDown()" class="px-3 py-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 font-bold transition-colors" title="往下移" ${canDown ? '' : 'disabled style="opacity:0.3"'}>▼</button>
-                        </div>
+                        <button onclick="openReorderModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded shadow-sm font-bold transition-colors flex items-center gap-1" title="手動調整所有班級的排序">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                            調整順序
+                        </button>
                     </div>
                     
                     <div class="flex flex-wrap items-center gap-2 bg-gray-50 p-2.5 rounded-lg border border-gray-200 justify-between shadow-inner">
@@ -1311,6 +1307,86 @@ window.deleteSelectedClass = function() {
             appConfig.classes = appConfig.classes.filter(c => c.id !== appConfig.activeClassId);
             appConfig.activeClassId = appConfig.classes.length > 0 ? appConfig.classes[0].id : null;
             saveAppConfig();
+            window.location.reload();
+        }
+    });
+};
+
+window.openReorderModal = function() {
+    if (!appConfig.classes || appConfig.classes.length === 0) return;
+    
+    let listHtml = '<ul id="reorder-class-list" class="text-left bg-gray-50 p-2 rounded border">';
+    appConfig.classes.forEach((c, index) => {
+        listHtml += `
+            <li class="flex items-center gap-3 p-3 bg-white border mb-2 rounded shadow-sm cursor-move hover:bg-gray-50 transition-colors" data-id="${c.id}">
+                <svg class="w-5 h-5 text-gray-400 cursor-move" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                <div class="flex flex-col">
+                    <span class="text-xs text-gray-500 font-bold mb-1">自訂順序號碼：</span>
+                    <input type="number" class="w-16 border rounded p-1 text-center font-bold text-gray-700 bg-gray-50 order-input" value="${index + 1}" min="1" max="${appConfig.classes.length}">
+                </div>
+                <span class="font-bold text-gray-800 text-lg flex-grow">${c.label}</span>
+            </li>
+        `;
+    });
+    listHtml += '</ul>';
+    
+    listHtml += '<div class="text-sm text-gray-500 text-left mt-3 bg-blue-50 p-3 rounded">💡 提示：您可以直接<b>拖曳</b>清單上下移動，或者在左側<b>輸入數字</b>來強制指定順序。</div>';
+
+    Swal.fire({
+        title: '修改班級順序',
+        html: listHtml,
+        showCancelButton: true,
+        confirmButtonText: '儲存順序',
+        cancelButtonText: '取消',
+        width: '600px',
+        didOpen: () => {
+            const listEl = document.getElementById('reorder-class-list');
+            if (listEl && window.Sortable) {
+                // Initialize SortableJS
+                new Sortable(listEl, {
+                    animation: 150,
+                    ghostClass: 'opacity-50',
+                    onEnd: function (evt) {
+                        // 當拖曳結束，重新整理所有數字輸入框的值
+                        const inputs = listEl.querySelectorAll('.order-input');
+                        inputs.forEach((input, i) => {
+                            input.value = i + 1;
+                        });
+                    }
+                });
+            }
+        },
+        preConfirm: () => {
+            const listEl = document.getElementById('reorder-class-list');
+            const items = Array.from(listEl.querySelectorAll('li'));
+            
+            // 讀取目前的排列資料
+            let newOrder = items.map(li => {
+                const id = li.getAttribute('data-id');
+                const orderVal = parseInt(li.querySelector('.order-input').value, 10);
+                return { id: id, order: orderVal };
+            });
+            
+            // 依照使用者輸入的數字排序 (穩定排序)
+            newOrder.sort((a, b) => a.order - b.order);
+            
+            // 根據 newOrder 的順序，重新排列 appConfig.classes
+            const classMap = {};
+            appConfig.classes.forEach(c => classMap[c.id] = c);
+            
+            const newClasses = [];
+            newOrder.forEach(item => {
+                if (classMap[item.id]) {
+                    newClasses.push(classMap[item.id]);
+                }
+            });
+            
+            appConfig.classes = newClasses;
+            saveAppConfig();
+            return true;
+        }
+    }).then(result => {
+        if (result.isConfirmed) {
             window.location.reload();
         }
     });
