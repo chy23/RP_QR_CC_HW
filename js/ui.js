@@ -92,28 +92,104 @@ async function saveGlobalGasUrl(testConnection = false) {
             showAlert('錯誤', '請先輸入網址！', 'error');
             return;
         }
-        showToast('連線測試中...', 'info');
-        try {
-            const timestamp = new Date().getTime();
-            const response = await fetch(url + '?t=' + timestamp, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'ping', classPrefix: getActiveClassPrefix() }),
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            });
-            const data = await response.json();
-            if (data.status === 'success') {
-                if (data.sheetUrl) {
-                    appConfig.sheetUrl = data.sheetUrl;
-                    saveAppConfig();
-                    if (typeof loadSheetIframe === 'function') loadSheetIframe();
+        
+        Swal.fire({
+            title: '連線診斷中...',
+            html: '<div id="diag-steps" class="text-left text-sm space-y-2 font-mono bg-gray-50 p-4 rounded h-48 overflow-y-auto border"></div>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: async () => {
+                const addStep = (msg, status = 'loading') => {
+                    const el = document.getElementById('diag-steps');
+                    if(el) {
+                        const icon = status === 'loading' ? '⏳' : status === 'ok' ? '✅' : '❌';
+                        const color = status === 'error' ? 'text-red-600 font-bold' : 'text-gray-700';
+                        el.innerHTML += `<div class="${color}">${icon} ${msg}</div>`;
+                        el.scrollTop = el.scrollHeight;
+                    }
+                };
+                
+                try {
+                    addStep('正在解析 URL 格式...');
+                    if (!url.includes('script.google.com/macros/s/')) {
+                        throw new Error('URL 格式不正確 (ERR-01)');
+                    }
+                    if (!url.endsWith('/exec')) {
+                        throw new Error('URL 必須以 /exec 結尾 (ERR-02)');
+                    }
+                    addStep('URL 格式檢查通過', 'ok');
+                    
+                    addStep('正在發送連線請求 (Ping)...');
+                    const timestamp = new Date().getTime();
+                    let response;
+                    try {
+                        response = await fetch(url + '?t=' + timestamp, {
+                            method: 'POST',
+                            body: JSON.stringify({ action: 'ping', classPrefix: getActiveClassPrefix() }),
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                        });
+                    } catch(netErr) {
+                        throw new Error('網路請求被拒絕，請確認您部署時「誰可以存取」是否有選擇「所有人」 (ERR-03)');
+                    }
+                    addStep('伺服器已成功回應', 'ok');
+                    
+                    addStep('正在解析伺服器回應...');
+                    let data;
+                    try {
+                        const text = await response.text();
+                        try {
+                            data = JSON.parse(text);
+                        } catch(jsonErr) {
+                            console.error("Raw response:", text);
+                            if (text.includes("<html") || text.includes("<body")) {
+                                throw new Error('伺服器回傳了網頁而非資料，權限設定錯誤 (ERR-04)');
+                            } else {
+                                throw new Error('伺服器回傳了無法辨識的格式 (ERR-05)');
+                            }
+                        }
+                    } catch(parseErr) {
+                        throw parseErr;
+                    }
+                    addStep('資料解析成功', 'ok');
+                    
+                    if (data.status === 'success') {
+                        addStep('連線測試成功！', 'ok');
+                        if (data.sheetUrl) {
+                            addStep('已自動取得綁定之試算表...', 'ok');
+                            appConfig.sheetUrl = data.sheetUrl;
+                            saveAppConfig();
+                            if (typeof loadSheetIframe === 'function') loadSheetIframe();
+                        }
+                        
+                        setTimeout(() => {
+                            Swal.fire({
+                                title: '連線成功',
+                                icon: 'success',
+                                text: '系統已成功與您的雲端引擎建立連線，並自動綁定試算表！'
+                            });
+                        }, 500);
+                    } else {
+                        throw new Error(`雲端引擎回報異常狀態: ${data.message || '未知錯誤'} (ERR-06)`);
+                    }
+                } catch (err) {
+                    addStep(err.message, 'error');
+                    setTimeout(() => {
+                        Swal.fire({
+                            title: '連線失敗',
+                            icon: 'error',
+                            html: `<div class="text-left text-sm text-red-600 font-bold mb-4">${err.message}</div>
+                                   <div class="text-xs text-gray-700 text-left bg-gray-100 border border-gray-300 p-3 rounded">
+                                   <strong class="text-blue-700">💡 常見除錯指南：</strong><br><br>
+                                   1. 請確認網址有完整複製，中間不可有空格。<br>
+                                   2. 部署 Apps Script 時，請務必選擇<strong>「新增部署作業」</strong>而非測試部署。<br>
+                                   3. <strong>「誰可以存取」</strong>請務必選擇<strong>「所有人」</strong>，否則會出現 CORS (ERR-03/04) 阻擋。<br>
+                                   4. 修改程式碼後，請再次點擊「新增部署作業」並選擇<strong>「建立新版本」</strong>，舊版本不會自動更新。
+                                   </div>`
+                        });
+                    }, 800);
                 }
-                showAlert('成功', '連線測試成功！\n已自動為您偵測並綁定雲端試算表網址！', 'success');
-            } else {
-                showAlert('錯誤', data.message || '連線測試失敗。', 'error');
             }
-        } catch (err) {
-            showAlert('錯誤', '無法連線：' + err.message, 'error');
-        }
+        });
     } else {
         showToast('網址已儲存', 'success');
     }
