@@ -102,7 +102,12 @@ async function saveGlobalGasUrl(testConnection = false) {
             });
             const data = await response.json();
             if (data.status === 'success') {
-                showAlert('成功', '連線測試成功！', 'success');
+                if (data.sheetUrl) {
+                    appConfig.sheetUrl = data.sheetUrl;
+                    saveAppConfig();
+                    if (typeof loadSheetIframe === 'function') loadSheetIframe();
+                }
+                showAlert('成功', '連線測試成功！\n已自動為您偵測並綁定雲端試算表網址！', 'success');
             } else {
                 showAlert('錯誤', data.message || '連線測試失敗。', 'error');
             }

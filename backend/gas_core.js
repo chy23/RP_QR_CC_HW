@@ -3,7 +3,7 @@ function(e, ss, getSheetNames) {
     var payload = JSON.parse(e.postData.contents);
     
     if (payload.action === 'ping') {
-      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({status: 'success', sheetUrl: ss.getUrl()})).setMimeType(ContentService.MimeType.JSON);
     }
     
     // 如果有傳入 classPrefix，就在所有分頁名稱加上前綴，例如 "[112上-三年甲班] "
