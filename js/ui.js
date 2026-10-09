@@ -689,7 +689,7 @@ function deleteClass(id) {
 
         
         function sortTasks() {
-            const subjectOrder = ['國語', '數學', '社會', '自然', '聯絡簿', '其他'];
+            const subjectOrder = ['國語', '數學', '社會', '自然', '聯絡簿', '學習單', '其他'];
             db.tasks.sort((a, b) => {
                 let idxA = subjectOrder.indexOf(a.subject);
                 let idxB = subjectOrder.indexOf(b.subject);
