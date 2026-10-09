@@ -172,7 +172,7 @@ function(e, ss, getSheetNames) {
       studentSheet.getRange(1, 1, dataToPush.length, 4).setValues(dataToPush);
       studentSheet.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#f3f4f6");
       studentSheet.setFrozenRows(1);
-      try { studentSheet.hideColumns(4); } catch(err) {} // 隱藏暗碼欄位，保持畫面清爽
+      try { studentSheet.showColumns(4); } catch(err) {} // 確保 D 欄不被隱藏
       
       if (payload.config) {
         var configSheet = ss.getSheetByName("SystemConfig");
