@@ -126,6 +126,7 @@
             { id: 't_float_4', subject: '數學', name: '數卷', type: 'floating' },
             { id: 't_float_5', subject: '社會', name: '社卷', type: 'floating' },
             { id: 't_float_6', subject: '聯絡簿', name: '通知單', type: 'floating' },
+            { id: 't_float_7', subject: '聯絡簿', name: '學習單', type: 'floating' },
             { id: 't_fixed_9', subject: '聯絡簿', name: '聯絡簿', type: 'fixed' }
         ];
 
@@ -322,6 +323,9 @@
             }
             if (!db.tasks.find(t => t.id === 't_fixed_9')) {
                 db.tasks.push({ id: 't_fixed_9', subject: '聯絡簿', name: '聯絡簿', type: 'fixed' });
+            }
+            if (!db.tasks.find(t => t.id === 't_float_7')) {
+                db.tasks.push({ id: 't_float_7', subject: '聯絡簿', name: '學習單', type: 'floating' });
             }
             sortTasks();
             saveData();
