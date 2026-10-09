@@ -1360,15 +1360,7 @@ window.openReorderModal = function() {
                     otherInput.value = oldVal;
                 }
                 
-                // 依照新的數字順序重新排列畫面的 DOM
-                const items = Array.from(listEl.querySelectorAll('li'));
-                items.sort((a, b) => {
-                    return parseInt(a.querySelector('.order-input').value, 10) - parseInt(b.querySelector('.order-input').value, 10);
-                });
-                
-                items.forEach(item => listEl.appendChild(item));
-                
-                // 更新 oldValue
+                // 更新 oldValue，但不即時更動畫面的上下順序 (避免使用者視覺錯亂)
                 listEl.querySelectorAll('.order-input').forEach(inp => {
                     inp.dataset.oldValue = inp.value;
                 });
