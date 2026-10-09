@@ -210,9 +210,24 @@ function(e, ss, getSheetNames) {
             targetSheet.clear();
             targetSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
             
-            targetSheet.setFrozenRows(3);
             targetSheet.setFrozenColumns(1);
-            targetSheet.getRange(1, 1, 3, data[0].length).setFontWeight("bold").setBackground("#f3f4f6");
+            if (name.indexOf("統計報表") !== -1) {
+              try { targetSheet.setFrozenRows(1); } catch(err) {}
+              targetSheet.getRange(1, 1, 1, data[0].length).setFontWeight("bold").setBackground("#f3f4f6");
+              
+              var headers = data[0];
+              for (var c = 1; c < headers.length; c++) {
+                var headerName = headers[c];
+                if (headerName.indexOf("_") !== -1 && headerName.indexOf("整體_") === -1) {
+                  try { targetSheet.hideColumns(c + 1); } catch (err) {}
+                } else {
+                  try { targetSheet.showColumns(c + 1); } catch (err) {}
+                }
+              }
+            } else {
+              try { targetSheet.setFrozenRows(3); } catch(err) {}
+              targetSheet.getRange(1, 1, 3, data[0].length).setFontWeight("bold").setBackground("#f3f4f6");
+            }
             
             var rules = [];
             var range = targetSheet.getDataRange();
