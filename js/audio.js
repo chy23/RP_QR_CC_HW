@@ -24,6 +24,7 @@ function playBeep(type) {
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
         oscillator.start(audioCtx.currentTime);
         oscillator.stop(audioCtx.currentTime + 0.2);
+        if ('vibrate' in navigator) navigator.vibrate(50);
     } else if (type === 'error') {
         // 低頻沉悶的「嘟」聲
         oscillator.type = 'square';
@@ -34,6 +35,7 @@ function playBeep(type) {
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
         oscillator.start(audioCtx.currentTime);
         oscillator.stop(audioCtx.currentTime + 0.3);
+        if ('vibrate' in navigator) navigator.vibrate([50, 100, 50]);
     }
 }
 

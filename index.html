@@ -109,8 +109,8 @@
             </div>
             
             <div class="flex justify-end gap-2">
-                <button onclick="closeSessionModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">取消並繼續掃描</button>
-                <button onclick="confirmScanSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow font-bold">確認缺交無誤，存入系統</button>
+                <button onclick="closeSessionModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded transition-all duration-150 active:scale-95 active:opacity-80">取消並繼續掃描</button>
+                <button onclick="confirmScanSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow font-bold transition-all duration-150 active:scale-95 active:opacity-80">確認缺交無誤，存入系統</button>
             </div>
         </div>
     </div>
@@ -124,8 +124,8 @@
                 <!-- dynamic inputs -->
             </div>
             <div class="flex justify-end gap-2 mt-auto">
-                <button onclick="document.getElementById('range-prompt-modal').style.display = 'none'" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded shadow font-bold text-sm">取消</button>
-                <button onclick="confirmRangePrompts()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow font-bold text-sm">確認並開始掃描</button>
+                <button onclick="document.getElementById('range-prompt-modal').style.display = 'none'" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded shadow font-bold text-sm transition-all duration-150 active:scale-95 active:opacity-80">取消</button>
+                <button onclick="confirmRangePrompts()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow font-bold text-sm transition-all duration-150 active:scale-95 active:opacity-80">確認並開始掃描</button>
             </div>
         </div>
     </div>
@@ -135,11 +135,11 @@
         <div class="bg-white p-6 rounded shadow-lg w-80 text-center">
             <h3 id="status-modal-title" class="text-lg font-bold mb-4">手動設定交件狀態</h3>
             <div class="flex flex-col gap-3">
-                <button onclick="setManualStatus('ontime')" class="bg-green-500 hover:bg-green-600 text-white py-2 rounded shadow">標記為「準時已交」</button>
-                <button onclick="setManualStatus('late')" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded shadow">標記為「遲交」</button>
-                <button onclick="setManualStatus('missing')" class="bg-red-500 hover:bg-red-600 text-white py-2 rounded shadow">標記為「缺交」(刪除紀錄)</button>
+                <button onclick="setManualStatus('ontime')" class="bg-green-500 hover:bg-green-600 text-white py-2 rounded shadow transition-all duration-150 active:scale-95 active:opacity-80">標記為「準時已交」</button>
+                <button onclick="setManualStatus('late')" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded shadow transition-all duration-150 active:scale-95 active:opacity-80">標記為「遲交」</button>
+                <button onclick="setManualStatus('missing')" class="bg-red-500 hover:bg-red-600 text-white py-2 rounded shadow transition-all duration-150 active:scale-95 active:opacity-80">標記為「缺交」(刪除紀錄)</button>
                 <div class="relative w-full" id="status-modal-leave-container">
-                    <select onchange="handleLeaveSelect(this, null, null, null)" class="appearance-none w-full bg-blue-500 hover:bg-blue-600 text-white text-center py-2 rounded shadow cursor-pointer outline-none">
+                    <select onchange="handleLeaveSelect(this, null, null, null)" class="appearance-none w-full bg-blue-500 hover:bg-blue-600 text-white text-center py-2 rounded shadow cursor-pointer outline-none transition-all duration-150 active:scale-95 active:opacity-80">
                         <option value="" disabled selected>設定為「請假」 ▼</option>
                         <option value="病假" class="text-gray-800 bg-white">病假</option>
                         <option value="事假" class="text-gray-800 bg-white">事假</option>
@@ -148,7 +148,7 @@
                         <option value="其他假別" class="text-gray-800 bg-white">其他假別</option>
                     </select>
                 </div>
-                <button onclick="closeStatusModal()" class="bg-gray-300 hover:bg-gray-400 py-2 rounded mt-2">取消</button>
+                <button onclick="closeStatusModal()" class="bg-gray-300 hover:bg-gray-400 py-2 rounded mt-2 transition-all duration-150 active:scale-95 active:opacity-80">取消</button>
             </div>
         </div>
     </div>
@@ -159,9 +159,9 @@
             <div class="px-6 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <h3 class="text-2xl font-bold tracking-wide">系統使用教學</h3>
+                    <h3 class="text-2xl font-bold tracking-tight">系統使用教學</h3>
                 </div>
-                <button onclick="closeOnboardingModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors">&times;</button>
+                <button onclick="closeOnboardingModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors active:scale-95 active:opacity-80">&times;</button>
             </div>
             
             <div class="p-6 overflow-y-auto bg-gray-50 flex-grow">
@@ -215,7 +215,7 @@
             </div>
             
             <div class="px-6 py-4 bg-white border-t flex justify-end shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] relative z-10">
-                <button onclick="closeOnboardingModal()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-md transition-all hover:shadow-lg transform hover:-translate-y-0.5">開始使用</button>
+                <button onclick="closeOnboardingModal()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-md transition-all hover:shadow-lg transform hover:-translate-y-0.5 active:scale-95 active:opacity-80">開始使用</button>
             </div>
         </div>
     </div>
@@ -228,7 +228,7 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                     <h3 class="text-xl font-bold">系統更新紀錄 (Changelog)</h3>
                 </div>
-                <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors">&times;</button>
+                <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors active:scale-95 active:opacity-80">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
                                 <!-- Ver 3.0 -->
@@ -439,15 +439,15 @@
     </div>
 
     <div class="max-w-7xl mx-auto p-4 relative">
-        <div id="main-header" class="flex flex-col md:flex-row justify-between items-center mb-6 relative">
+        <div id="main-header" class="flex flex-col md:flex-row justify-between items-center mb-6 relative z-50 bg-white/80 backdrop-blur-md pb-2">
             <!-- Mobile Hamburger Button -->
-            <button id="mobile-menu-btn" class="md:hidden absolute left-0 top-0 mt-1 ml-2 p-2 text-gray-600 hover:text-blue-600 rounded">
+            <button id="mobile-menu-btn" class="md:hidden absolute left-0 top-0 mt-1 ml-2 p-2 text-gray-600 hover:text-blue-600 rounded transition-all duration-150 active:scale-95 active:opacity-80">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div class="w-full text-center mt-2 md:mt-0">
                 <h1 class="text-2xl md:text-3xl font-bold text-blue-700 flex justify-center items-center gap-2 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span id="version-display" class="text-lg font-bold tracking-wide" data-version="3.0">Ver. 2.3</span>
+                    QRcode自動清點作業系統 <span id="version-display" class="text-lg font-bold tracking-tight" data-version="3.0">Ver. 2.3</span>
                     <script>
                         (function() {
                             const isBeta = window.location.pathname.includes('/beta/');
@@ -455,10 +455,10 @@
                             const v = span.getAttribute('data-version');
                             if (isBeta) {
                                 span.textContent = 'Ver. ' + v + ' (Beta)';
-                                span.className = 'text-lg text-red-500 font-bold tracking-wide';
+                                span.className = 'text-lg text-red-500 font-bold tracking-tight';
                             } else {
                                 span.textContent = 'Ver. ' + v;
-                                span.className = 'text-lg text-gray-500 font-bold tracking-wide';
+                                span.className = 'text-lg text-gray-500 font-bold tracking-tight';
                             }
                             document.title = 'QRcode自動清點作業系統 (' + span.textContent + ')';
                         })();
@@ -467,11 +467,11 @@
                 </h1>
             </div>
             <div class="mt-2 md:mt-0 md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2">
-                <button onclick="openOnboardingModal()" class="flex items-center gap-1.5 text-xs md:text-sm bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full shadow-sm transition hover:shadow cursor-pointer font-medium mr-2">
+                <button onclick="openOnboardingModal()" class="flex items-center gap-1.5 text-xs md:text-sm bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full shadow-sm transition hover:shadow cursor-pointer font-medium mr-2 active:scale-95 active:opacity-80">
                     <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     使用教學
                 </button>
-                <button onclick="openChangelogModal()" class="flex items-center gap-1.5 text-xs md:text-sm bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full shadow-sm transition hover:shadow cursor-pointer font-medium">
+                <button onclick="openChangelogModal()" class="flex items-center gap-1.5 text-xs md:text-sm bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full shadow-sm transition hover:shadow cursor-pointer font-medium active:scale-95 active:opacity-80">
                     <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     更新紀錄
                 </button>
@@ -479,15 +479,15 @@
         </div>
         
         <!-- Tabs -->
-        <div id="main-tabs" class="hidden md:flex flex-col md:flex-row md:flex-wrap border-b mb-6 bg-white rounded-t-lg px-2 pt-2 shadow-md md:shadow-none absolute md:relative z-40 w-full left-0 top-16 md:top-auto">
-            <button class="tab-btn active px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(0)">0. 建置</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(1)">1. 掃描與統計</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-blue-600 font-bold" onclick="switchTab(2)">2. 雲端總表</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md" onclick="switchTab(3)">3. 浮動卷單(PDF)</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-emerald-700 font-bold" onclick="switchTab(4)">4. 條碼匯出與列印</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-red-600 font-bold" onclick="switchTab(5)">5. 批改與退回</button>
-            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-purple-600 font-bold" onclick="switchTab(6)">6. 缺交提醒單</button>
-        <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-amber-600 font-bold" onclick="switchTab(7)">7. 個人報表</button>
+        <div id="main-tabs" class="hidden md:flex flex-col md:flex-row md:flex-wrap border-b mb-6 bg-white/80 backdrop-blur-md rounded-t-lg px-2 pt-2 shadow-md md:shadow-none absolute md:relative z-40 w-full left-0 top-16 md:top-auto">
+            <button class="tab-btn active px-4 py-2 hover:bg-gray-100 rounded-t-md transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(0)">0. 建置</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(1)">1. 掃描與統計</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-blue-600 font-bold transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(2)">2. 雲端總表</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(3)">3. 浮動卷單(PDF)</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-emerald-700 font-bold transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(4)">4. 條碼匯出與列印</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-red-600 font-bold transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(5)">5. 批改與退回</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-purple-600 font-bold transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(6)">6. 缺交提醒單</button>
+        <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-amber-600 font-bold transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(7)">7. 個人報表</button>
         </div>
 
         <!-- Tab 0: 前端資料建置 -->
@@ -496,21 +496,21 @@
             <div class="flex items-center justify-between border-b pb-2 mb-4">
                 <h2 class="text-2xl font-bold m-0 border-0 pb-0 flex items-center gap-2">
                     0. 資料建置
-                    <button onclick="showBackupModal()" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded shadow-sm transition">
+                    <button onclick="showBackupModal()" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded shadow-sm transition active:scale-95 active:opacity-80">
                         自動備份還原
                     </button>
                 </h2>
-                <button onclick="document.getElementById('help-tab0').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer ml-2">
+                <button onclick="document.getElementById('help-tab0').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer ml-2 active:scale-95 active:opacity-80">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     使用說明
                 </button>
             </div>
             <div id="help-tab0" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
-                <button onclick="document.getElementById('help-tab0').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                <button onclick="document.getElementById('help-tab0').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-all duration-150 active:scale-95 active:opacity-80">&times;</button>
                 <ul class="list-disc list-outside ml-4 space-y-1.5">
                     <li>
                         建立一個全新的 Google 試算表，部署唯一的 Apps Script 網址，即可在網頁端建立並管理多個班級。更換設備時只需貼上網址即可自動還原所有班級清單。
-                        <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'flex'" class="text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer inline-flex items-center ml-1">
+                        <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'flex'" class="text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer inline-flex items-center ml-1 transition-all duration-150 active:scale-95 active:opacity-80">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             點此查看詳細設定教學與程式碼
                         </button>
@@ -532,7 +532,7 @@
                     <div class="flex-grow flex flex-col justify-center">
                         <input type="text" id="global-gas-url" placeholder="https://script.google.com/macros/s/.../exec" class="border p-3 w-full rounded focus:ring-2 focus:ring-blue-300 outline-none mb-3 font-mono text-sm shadow-inner" onchange="saveGlobalGasUrl()">
                         <div class="flex gap-2">
-                            <button onclick="saveGlobalGasUrl(true)" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded flex-grow shadow transition-colors">儲存網址並測試連線</button>
+                            <button onclick="saveGlobalGasUrl(true)" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded flex-grow shadow transition-colors active:scale-95 active:opacity-80">儲存網址並測試連線</button>
                         </div>
                     </div>
                 </div>
@@ -558,7 +558,7 @@
                                 <option value="下">下學期</option>
                             </select>
                             <input type="text" id="new-class-name" placeholder="班級(如三年甲班)" class="border p-1.5 rounded flex-grow text-sm">
-                            <button onclick="addNewClass()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-bold">新增</button>
+                            <button onclick="addNewClass()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-bold transition-all duration-150 active:scale-95 active:opacity-80">新增</button>
                         </div>
                     </div>
                 </div>
@@ -571,19 +571,19 @@
                     <div class="flex mb-2 gap-2">
                         <input type="number" id="new-student-id" placeholder="座號 (自動)" min="1" class="border p-2 w-28 rounded">
                         <input type="text" id="new-student-name" placeholder="學生姓名" class="border p-2 flex-grow rounded">
-                        <button onclick="addStudent()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow">新增</button>
+                        <button onclick="addStudent()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow transition-all duration-150 active:scale-95 active:opacity-80">新增</button>
                     </div>
                     <div class="flex flex-col md:flex-row gap-2 mb-2">
-                        <button onclick="batchAddStudents()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4">預設新增 25 人</button>
-                        <label class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4 text-center cursor-pointer flex items-center justify-center">
+                        <button onclick="batchAddStudents()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4 transition-all duration-150 active:scale-95 active:opacity-80">預設新增 25 人</button>
+                        <label class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4 text-center cursor-pointer flex items-center justify-center transition-all duration-150 active:scale-95 active:opacity-80">
                             匯入 Excel / CSV
                             <input type="file" id="import-students-file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="hidden" onchange="importStudents(event)">
                         </label>
-                        <button onclick="fetchStudentsFromGas()" class="bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4 text-center cursor-pointer flex items-center justify-center gap-1 font-bold">
+                        <button onclick="fetchStudentsFromGas()" class="bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4 text-center cursor-pointer flex items-center justify-center gap-1 font-bold transition-all duration-150 active:scale-95 active:opacity-80">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             從雲端匯入
                         </button>
-                        <button onclick="pushStudentsToGas()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4 text-center cursor-pointer flex items-center justify-center gap-1 font-bold">
+                        <button onclick="pushStudentsToGas()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 md:py-1 rounded w-full md:w-1/4 text-center cursor-pointer flex items-center justify-center gap-1 font-bold transition-all duration-150 active:scale-95 active:opacity-80">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             備份至雲端
                         </button>
@@ -612,13 +612,13 @@
                         </div>
                         <div class="flex gap-2 items-center">
                             <input type="text" id="new-task-name" placeholder="作業名稱 (如: 數習)" class="border p-2 flex-grow rounded">
-                            <button onclick="addTask()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow whitespace-nowrap">新增作業</button>
+                            <button onclick="addTask()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow whitespace-nowrap transition-all duration-150 active:scale-95 active:opacity-80">新增作業</button>
                         </div>
                     </div>
                     <div class="flex justify-end items-center mt-3 mb-1">
                         <div class="space-x-1">
-                            <button type="button" onclick="toggleAllAccordions('task-list', true)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全展開</button>
-                            <button type="button" onclick="toggleAllAccordions('task-list', false)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全收折</button>
+                            <button type="button" onclick="toggleAllAccordions('task-list', true)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded transition-all duration-150 active:scale-95 active:opacity-80">全展開</button>
+                            <button type="button" onclick="toggleAllAccordions('task-list', false)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded transition-all duration-150 active:scale-95 active:opacity-80">全收折</button>
                         </div>
                     </div>
                     <ul id="task-list" class="mt-2 h-[40vh] min-h-[250px] overflow-y-auto bg-white border rounded p-2"></ul>
@@ -630,7 +630,7 @@
                 <span id="sheet-status" class="ml-2 py-2"></span>
             </div>
             <div class="mt-6 flex justify-end">
-                <button onclick="resetData()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm">清除所有系統資料</button>
+                <button onclick="resetData()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm transition-all duration-150 active:scale-95 active:opacity-80">清除所有系統資料</button>
             </div>
         </div>
 
@@ -639,13 +639,13 @@
             
             <div id="tab-1-header" class="flex items-center justify-between border-b pb-2 mb-4">
                 <h2 class="text-2xl font-bold  m-0 border-0 pb-0">1. 掃描與統計</h2>
-                <button onclick="document.getElementById('help-tab1').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer">
+                <button onclick="document.getElementById('help-tab1').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer active:scale-95 active:opacity-80">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     使用說明
                 </button>
             </div>
             <div id="help-tab1" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
-                <button onclick="document.getElementById('help-tab1').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                <button onclick="document.getElementById('help-tab1').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-all duration-150 active:scale-95 active:opacity-80">&times;</button>
                 
 <ul class="list-disc list-inside space-y-1.5">
     <li><strong>連續掃描</strong>：選擇作業並確認相機正常後，對準學生作業條碼即可快速連續掃描，系統發出「嗶」聲代表登記成功。</li>
@@ -668,7 +668,7 @@
                         
                         
                         
-                        <button onclick="startScanSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded shadow w-full font-bold text-lg">開始掃描</button>
+                        <button onclick="startScanSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded shadow w-full font-bold text-lg transition-all duration-150 active:scale-95 active:opacity-80">開始掃描</button>
                     </div>
 
                     <!-- 掃描進行中區域 -->
@@ -681,7 +681,7 @@
                         <label class="block mb-2 font-semibold">條碼輸入：</label>
                         <input type="text" id="scanner-input" class="border p-2 rounded w-full mb-2" placeholder="使用實體掃描槍..." autofocus onkeydown="if(event.key === 'Enter') { processScan(this.value); this.value = ''; }">
                         <div class="flex gap-2 mb-2">
-                            <button onclick="toggleCameraScanner()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow flex items-center justify-center gap-2 transition-colors">
+                            <button onclick="toggleCameraScanner()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow flex items-center justify-center gap-2 transition-colors active:scale-95 active:opacity-80">
                                 <span>📷</span> 開啟相機
                             </button>
                                                     </div>
@@ -693,7 +693,7 @@
                             <div id="reader" class="hidden" style="width: 100%; max-width: 500px; margin: 0 auto;"></div>
                             <!-- Overlay for drawing boxes -->
                             <canvas id="overlay-canvas" class="absolute top-0 left-0 w-full h-full pointer-events-none" style="display:none;"></canvas>
-                            <button onclick="toggleCameraScanner()" class="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm">關閉鏡頭</button>
+                            <button onclick="toggleCameraScanner()" class="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm transition-all duration-150 active:scale-95 active:opacity-80">關閉鏡頭</button>
                             <div id="scanner-debug" class="text-xs text-left text-gray-500 mt-2 bg-white p-1 rounded overflow-auto h-20">Debug Info...</div>
                         </div>
                         
@@ -704,10 +704,10 @@
                         </div>
                         
                         <div class="flex flex-col gap-2 mt-auto">
-                            <button onclick="endScanSession()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded shadow w-full font-bold text-lg">結束並確認</button>
+                            <button onclick="endScanSession()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded shadow w-full font-bold text-lg transition-all duration-150 active:scale-95 active:opacity-80">結束並確認</button>
                             <div class="flex gap-2">
-                                <button onclick="goBackToScanSetup()" class="bg-gray-500 hover:bg-gray-600 text-white px-2 py-2 rounded shadow w-1/2 font-bold text-sm">補選作業 (保留紀錄)</button>
-                                <button onclick="cancelScanSession()" class="bg-red-500 hover:bg-red-600 text-white px-2 py-2 rounded shadow w-1/2 font-bold text-sm">取消掃描 (清空紀錄)</button>
+                                <button onclick="goBackToScanSetup()" class="bg-gray-500 hover:bg-gray-600 text-white px-2 py-2 rounded shadow w-1/2 font-bold text-sm transition-all duration-150 active:scale-95 active:opacity-80">補選作業 (保留紀錄)</button>
+                                <button onclick="cancelScanSession()" class="bg-red-500 hover:bg-red-600 text-white px-2 py-2 rounded shadow w-1/2 font-bold text-sm transition-all duration-150 active:scale-95 active:opacity-80">取消掃描 (清空紀錄)</button>
                             </div>
                         </div>
                     </div>
@@ -718,7 +718,7 @@
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-xl font-semibold">繳交統計表</h3>
                         <div class="flex gap-2">
-                            <button onclick="exportExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded text-sm shadow">匯出 Excel</button>
+                            <button onclick="exportExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded text-sm shadow transition-all duration-150 active:scale-95 active:opacity-80">匯出 Excel</button>
                         </div>
                     </div>
                     
@@ -729,7 +729,7 @@
 
                     <div id="stat-table-container" class="flex-grow overflow-auto bg-white border rounded hidden">
                         <table class="w-full text-sm text-left">
-                            <thead class="bg-gray-100 sticky top-0" id="stat-thead">
+                            <thead class="bg-gray-100/80 backdrop-blur-md sticky top-0" id="stat-thead">
                                 <!-- 動態生成 -->
                             </thead>
                             <tbody id="stat-tbody">
@@ -748,13 +748,13 @@
             
             <div class="flex items-center justify-between border-b pb-2 mb-4">
                 <h2 class="text-2xl font-bold text-blue-700 m-0 border-0 pb-0">2. 雲端總表 (Google 試算表)</h2>
-                <button onclick="document.getElementById('help-tab2').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer">
+                <button onclick="document.getElementById('help-tab2').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer active:scale-95 active:opacity-80">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     使用說明
                 </button>
             </div>
             <div id="help-tab2" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
-                <button onclick="document.getElementById('help-tab2').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                <button onclick="document.getElementById('help-tab2').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-all duration-150 active:scale-95 active:opacity-80">&times;</button>
                 
 <ul class="list-disc list-inside space-y-1.5">
     <li><strong>自動同步</strong>：若在「0. 資料建置」已設定 Google Apps Script，系統將自動於背景同步您的變更。</li>
@@ -797,12 +797,12 @@
                         <div class="flex gap-2 items-center">
                             寬: <input type="number" id="tab3-visual-w" value="2.5" step="0.1" class="border p-1 rounded w-16 text-center" onchange="updateVisualSize()">
                             高: <input type="number" id="tab3-visual-h" value="3.0" step="0.1" class="border p-1 rounded w-16 text-center" onchange="updateVisualSize()">
-                            <button onclick="updateVisualSize()" class="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded ml-auto">套用全部</button>
+                            <button onclick="updateVisualSize()" class="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded ml-auto transition-all duration-150 active:scale-95 active:opacity-80">套用全部</button>
                         </div>
                     </div>
                     <p class="text-xs text-gray-500 mb-6">提示：您也可以直接拖曳紅色條碼框的右下角，自由調整個別的長寬大小。</p>
 
-                    <button onclick="generateVisualFloatingPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 w-full rounded shadow font-bold text-lg">確認套印並下載</button>
+                    <button onclick="generateVisualFloatingPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 w-full rounded shadow font-bold text-lg transition-all duration-150 active:scale-95 active:opacity-80">確認套印並下載</button>
                 </div>
 
                 <div class="lg:col-span-2 border-2 border-dashed border-gray-300 rounded bg-gray-100 overflow-auto p-4 flex flex-col gap-6" id="visual-pdf-preview" style="height: 700px; display:none; position: relative;">
@@ -810,9 +810,9 @@
                     <div id="pdf-zoom-controls" class="sticky top-0 left-0 z-50 flex justify-end mb-2 gap-2 opacity-90">
                         <div class="bg-white border rounded shadow p-1 flex items-center space-x-2">
                             <span class="text-sm font-bold text-gray-700 ml-2">🔍 預覽縮放：</span>
-                            <button onclick="changePdfZoom(-0.1)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded font-bold">-</button>
+                            <button onclick="changePdfZoom(-0.1)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded font-bold transition-all duration-150 active:scale-95 active:opacity-80">-</button>
                             <span id="pdf-zoom-text" class="text-sm font-mono text-blue-600 font-bold w-12 text-center">100%</span>
-                            <button onclick="changePdfZoom(0.1)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded font-bold">+</button>
+                            <button onclick="changePdfZoom(0.1)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded font-bold transition-all duration-150 active:scale-95 active:opacity-80">+</button>
                         </div>
                     </div>
                     <div id="pdf-zoom-container" style="transform-origin: top left; transition: transform 0.2s ease; display: flex; flex-direction: column; gap: 24px;">
@@ -827,13 +827,13 @@
             
             <div class="flex items-center justify-between border-b pb-2 mb-4">
                 <h2 class="text-2xl font-bold  m-0 border-0 pb-0">4. 條碼匯出與列印 (Word/Excel/PDF)</h2>
-                <button onclick="document.getElementById('help-tab4').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer">
+                <button onclick="document.getElementById('help-tab4').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer active:scale-95 active:opacity-80">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     使用說明
                 </button>
             </div>
             <div id="help-tab4" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative hidden">
-                <button onclick="document.getElementById('help-tab4').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                <button onclick="document.getElementById('help-tab4').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-all duration-150 active:scale-95 active:opacity-80">&times;</button>
                 <ul class="list-disc list-inside space-y-1.5">
                     <li><strong>表格總表</strong>：一列一個學生，適合老師留存的對照表。</li>
                     <li><strong>連續標籤</strong>：緊密排列的省紙貼紙，適合剪下貼在作業簿上。</li>
@@ -846,8 +846,8 @@
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-lg font-bold text-gray-800">1. 選擇學生 (可多選)：</label>
                         <div class="flex gap-2 mb-1">
-                            <button onclick="selectAllStudents('tab4-student-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全班全選</button>
-                            <button onclick="deselectAllStudents('tab4-student-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全不選</button>
+                            <button onclick="selectAllStudents('tab4-student-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded transition-all duration-150 active:scale-95 active:opacity-80">全班全選</button>
+                            <button onclick="deselectAllStudents('tab4-student-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded transition-all duration-150 active:scale-95 active:opacity-80">全不選</button>
                         </div>
                     </div>
                     <div id="tab4-student-checkboxes" class="border p-2 rounded w-full h-[40vh] min-h-[250px] overflow-y-auto bg-white mb-2"></div>
@@ -856,14 +856,14 @@
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
                         <label class="block text-lg font-bold text-gray-800">2. 選擇作業 (可多選)：</label>
                         <div class="flex gap-2 mb-1 flex-wrap">
-                            <button type="button" onclick="toggleAllAccordions('tab4-task-checkboxes', true)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全展開</button>
-                            <button type="button" onclick="toggleAllAccordions('tab4-task-checkboxes', false)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全收折</button>
-                            <button onclick="selectAllStudents('tab4-task-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全選</button>
-                            <button onclick="deselectAllStudents('tab4-task-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">全不選</button>
-                            <button type="button" onclick="selectFixedTasks('tab4-task-checkboxes')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium">固定全選</button>
-                            <button type="button" onclick="selectSubjectTasks('tab4-task-checkboxes', '國語')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium">國語</button>
-                            <button type="button" onclick="selectSubjectTasks('tab4-task-checkboxes', '數學')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium">數學</button>
-                            <button type="button" onclick="selectSubjectTasks('tab4-task-checkboxes', '社會')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium">社會</button>
+                            <button type="button" onclick="toggleAllAccordions('tab4-task-checkboxes', true)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded transition-all duration-150 active:scale-95 active:opacity-80">全展開</button>
+                            <button type="button" onclick="toggleAllAccordions('tab4-task-checkboxes', false)" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded transition-all duration-150 active:scale-95 active:opacity-80">全收折</button>
+                            <button onclick="selectAllStudents('tab4-task-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded transition-all duration-150 active:scale-95 active:opacity-80">全選</button>
+                            <button onclick="deselectAllStudents('tab4-task-checkboxes')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded transition-all duration-150 active:scale-95 active:opacity-80">全不選</button>
+                            <button type="button" onclick="selectFixedTasks('tab4-task-checkboxes')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium transition-all duration-150 active:scale-95 active:opacity-80">固定全選</button>
+                            <button type="button" onclick="selectSubjectTasks('tab4-task-checkboxes', '國語')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium transition-all duration-150 active:scale-95 active:opacity-80">國語</button>
+                            <button type="button" onclick="selectSubjectTasks('tab4-task-checkboxes', '數學')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium transition-all duration-150 active:scale-95 active:opacity-80">數學</button>
+                            <button type="button" onclick="selectSubjectTasks('tab4-task-checkboxes', '社會')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-blue-700 font-medium transition-all duration-150 active:scale-95 active:opacity-80">社會</button>
                         </div>
                     </div>
                     <div id="tab4-task-checkboxes" class="border p-2 rounded w-full h-[40vh] min-h-[250px] overflow-y-auto bg-white mb-2"></div>
@@ -886,35 +886,35 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                  <!-- 表格對照表匯出區 -->
-                 <div class="border rounded-xl p-5 bg-white shadow-sm hover:shadow transition border-indigo-100">
+                 <div class="border rounded-xl p-5 bg-white shadow-sm hover:shadow transition border-indigo-100 active:scale-95 active:opacity-80">
                      <h3 class="font-bold mb-4 text-indigo-800 text-lg flex items-center gap-2">
                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                          A. 學生條碼對照總表
                      </h3>
                      <p class="text-sm text-gray-500 mb-4 h-10">一列一個學生，右側附帶作業條碼。適合印出作為留存或備用條碼表。</p>
                      <div class="flex flex-col gap-2.5">
-                         <button onclick="previewWord()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-lg font-bold transition flex items-center justify-center gap-2">預覽條碼對照表</button>
-                         <button onclick="generateWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg shadow font-bold transition flex items-center justify-center gap-2">下載 Word 檔 (.docx)</button>
-                         <button onclick="generateExcelBarcodeTable()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg shadow font-bold transition flex items-center justify-center gap-2">下載 Excel 檔</button>
+                         <button onclick="previewWord()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-lg font-bold transition flex items-center justify-center gap-2 active:scale-95 active:opacity-80">預覽條碼對照表</button>
+                         <button onclick="generateWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg shadow font-bold transition flex items-center justify-center gap-2 active:scale-95 active:opacity-80">下載 Word 檔 (.docx)</button>
+                         <button onclick="generateExcelBarcodeTable()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg shadow font-bold transition flex items-center justify-center gap-2 active:scale-95 active:opacity-80">下載 Excel 檔</button>
                      </div>
                  </div>
                  
                  <!-- 連續標籤匯出區 -->
-                 <div class="border rounded-xl p-5 bg-white shadow-sm hover:shadow transition border-orange-100">
+                 <div class="border rounded-xl p-5 bg-white shadow-sm hover:shadow transition border-orange-100 active:scale-95 active:opacity-80">
                      <h3 class="font-bold mb-4 text-orange-800 text-lg flex items-center gap-2">
                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
                          B. 連續標籤貼紙 (PDF)
                      </h3>
                      <p class="text-sm text-gray-500 mb-4 h-10">緊密排列的連續標籤，省紙環保，最適合剪下來貼在學生實體作業上。</p>
                      <div class="flex flex-col gap-2.5">
-                         <button onclick="previewBatchPDF()" class="bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 px-4 py-2.5 rounded-lg font-bold transition flex items-center justify-center gap-2">預覽連續標籤排版 (PDF)</button>
-                         <button id="tab4-download-pdf-btn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-lg shadow font-bold transition hidden flex items-center justify-center gap-2" onclick="downloadBatchPDF()">下載 PDF 貼紙檔</button>
+                         <button onclick="previewBatchPDF()" class="bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 px-4 py-2.5 rounded-lg font-bold transition flex items-center justify-center gap-2 active:scale-95 active:opacity-80">預覽連續標籤排版 (PDF)</button>
+                         <button id="tab4-download-pdf-btn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-lg shadow font-bold transition hidden flex items-center justify-center gap-2 active:scale-95 active:opacity-80" onclick="downloadBatchPDF()">下載 PDF 貼紙檔</button>
                      </div>
                  </div>
             </div>
             
             <div class="flex justify-end gap-2 mb-6 pb-4 border-b">
-                 <button onclick="exportRawCodes()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition">匯出純文字代碼及QRcode清單 (CSV)</button>
+                 <button onclick="exportRawCodes()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 active:opacity-80">匯出純文字代碼及QRcode清單 (CSV)</button>
             </div>
 
             <div id="tab4-pdf-preview" class="mt-4 border rounded bg-gray-100 p-2 overflow-auto text-center hidden" style="height: 600px;"></div>
@@ -938,11 +938,11 @@
                       5. 批改與退回
                 </h2>
                 <div class="flex items-center gap-2">
-                    <button onclick="document.getElementById('help-tab5').classList.toggle('hidden')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-full font-medium transition cursor-pointer flex items-center gap-1.5 text-sm">
+                    <button onclick="document.getElementById('help-tab5').classList.toggle('hidden')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-full font-medium transition cursor-pointer flex items-center gap-1.5 text-sm active:scale-95 active:opacity-80">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         使用說明
                     </button>
-                    <button onclick="loadGradingData()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-1 font-bold">
+                    <button onclick="loadGradingData()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-1 font-bold transition-all duration-150 active:scale-95 active:opacity-80">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                         重整雲端資料
                     </button>
@@ -950,7 +950,7 @@
             </div>
             
             <div id="help-tab5" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6 text-gray-700 text-sm shadow-inner relative">
-                <button onclick="document.getElementById('help-tab5').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">&times;</button>
+                <button onclick="document.getElementById('help-tab5').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-all duration-150 active:scale-95 active:opacity-80">&times;</button>
                 <ul class="list-disc list-inside space-y-1.5">
                     <li><strong>用途</strong>：當批改完作業後，可在此處快速瀏覽全班各項作業的繳交狀態。</li>
                     <li><strong>批改退回</strong>：若發現學生作業需要訂正重寫，可點擊該名學生的狀態標籤，將其改為「退回(需訂正)」。</li>
@@ -1002,11 +1002,11 @@
                     6. 缺交提醒單建立
                 </h2>
                 <div class="flex items-center gap-2">
-                    <button onclick="handleTab6Sync()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full shadow text-sm font-medium flex items-center gap-1 transition cursor-pointer">
+                    <button onclick="handleTab6Sync()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full shadow text-sm font-medium flex items-center gap-1 transition cursor-pointer active:scale-95 active:opacity-80">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                         雲端同步
                     </button>
-                    <button onclick="document.getElementById('help-tab6').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer ml-2">
+                    <button onclick="document.getElementById('help-tab6').classList.toggle('hidden')" class="flex items-center gap-1.5 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium transition cursor-pointer ml-2 active:scale-95 active:opacity-80">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         使用說明
                     </button>
@@ -1075,8 +1075,8 @@
                     <div class="flex justify-between items-center mb-2 border-b pb-2">
                         <h3 class="font-bold text-gray-700">選擇學生</h3>
                         <div class="space-x-2">
-                            <button class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200" onclick="selectAllReportStudents(true)">全選</button>
-                            <button class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300" onclick="selectAllReportStudents(false)">全不選</button>
+                            <button class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-all duration-150 active:scale-95 active:opacity-80" onclick="selectAllReportStudents(true)">全選</button>
+                            <button class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300 transition-all duration-150 active:scale-95 active:opacity-80" onclick="selectAllReportStudents(false)">全不選</button>
                         </div>
                     </div>
                     <div class="h-[50vh] min-h-[300px] overflow-y-auto border p-2 bg-white rounded">
@@ -1091,15 +1091,15 @@
                     <div class="flex justify-between items-center mb-2 border-b pb-2">
                         <h3 class="font-bold text-gray-700">選擇作業</h3>
                         <div class="space-x-2">
-                                                        <button onclick="toggleAllAccordions('report-tasks-container', true)" class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded hover:bg-amber-200">展開</button>
-                            <button onclick="toggleAllAccordions('report-tasks-container', false)" class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded hover:bg-amber-200">收折</button>
-                            <button onclick="selectAllReportTasks(true)" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">全選</button>
-                            <button onclick="selectAllReportTasks(false)" class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300">全不選</button>
-                            <button onclick="selectFixedTasksReport()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200">固定</button>
-                            <button onclick="selectFloatingTasksReport()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200">浮動</button>
-                            <button onclick="selectSubjectTasksReport('國語')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200">國語</button>
-                            <button onclick="selectSubjectTasksReport('數學')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200">數學</button>
-                            <button onclick="selectSubjectTasksReport('社會')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200">社會</button>
+                                                        <button onclick="toggleAllAccordions('report-tasks-container', true)" class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded hover:bg-amber-200 transition-all duration-150 active:scale-95 active:opacity-80">展開</button>
+                            <button onclick="toggleAllAccordions('report-tasks-container', false)" class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded hover:bg-amber-200 transition-all duration-150 active:scale-95 active:opacity-80">收折</button>
+                            <button onclick="selectAllReportTasks(true)" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-all duration-150 active:scale-95 active:opacity-80">全選</button>
+                            <button onclick="selectAllReportTasks(false)" class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300 transition-all duration-150 active:scale-95 active:opacity-80">全不選</button>
+                            <button onclick="selectFixedTasksReport()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200 transition-all duration-150 active:scale-95 active:opacity-80">固定</button>
+                            <button onclick="selectFloatingTasksReport()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200 transition-all duration-150 active:scale-95 active:opacity-80">浮動</button>
+                            <button onclick="selectSubjectTasksReport('國語')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition-all duration-150 active:scale-95 active:opacity-80">國語</button>
+                            <button onclick="selectSubjectTasksReport('數學')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition-all duration-150 active:scale-95 active:opacity-80">數學</button>
+                            <button onclick="selectSubjectTasksReport('社會')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition-all duration-150 active:scale-95 active:opacity-80">社會</button>
                         </div>
                     </div>
                     <div id="report-tasks-container" class="h-[50vh] min-h-[300px] overflow-y-auto bg-white p-2 border rounded text-sm">
@@ -1110,11 +1110,11 @@
 
 
             <div class="flex justify-center mt-6 gap-4">
-                <button onclick="generateReport()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded shadow flex items-center gap-2 text-lg">
+                <button onclick="generateReport()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded shadow flex items-center gap-2 text-lg transition-all duration-150 active:scale-95 active:opacity-80">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                     網頁預覽報表
                 </button>
-                <button onclick="printReportIframe()" id="btn-print-report" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded shadow flex items-center gap-2 text-lg hidden">
+                <button onclick="printReportIframe()" id="btn-print-report" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded shadow flex items-center gap-2 text-lg hidden transition-all duration-150 active:scale-95 active:opacity-80">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                     列印 / 下載 PDF
                 </button>
@@ -1135,7 +1135,7 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                     產生缺交提醒單 - <span id="reminder-student-name" class="text-purple-600 font-extrabold"></span>
                 </h3>
-                <button onclick="closeReminderModal()" class="text-gray-500 hover:text-gray-800 focus:outline-none cursor-pointer">
+                <button onclick="closeReminderModal()" class="text-gray-500 hover:text-gray-800 focus:outline-none cursor-pointer transition-all duration-150 active:scale-95 active:opacity-80">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
@@ -1181,7 +1181,7 @@
                         </div>
                         <div class="flex-grow">
                             <label class="block text-sm text-gray-600 mb-1">手動變更句型</label>
-                            <button onclick="generateReminderText(true)" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 border rounded p-2 transition cursor-pointer">
+                            <button onclick="generateReminderText(true)" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 border rounded p-2 transition cursor-pointer active:scale-95 active:opacity-80">
                                 換句話說 (隨機抽換)
                             </button>
                         </div>
@@ -1192,7 +1192,7 @@
                 <div class="bg-white p-4 rounded border shadow-sm flex flex-col flex-shrink-0">
                     <div class="flex justify-between items-end mb-2 border-b pb-1">
                         <h4 class="font-bold text-gray-700">3. 預覽與修改</h4>
-                        <button onclick="copyReminderText()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded shadow text-sm font-bold flex items-center gap-1 transition cursor-pointer">
+                        <button onclick="copyReminderText()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded shadow text-sm font-bold flex items-center gap-1 transition cursor-pointer active:scale-95 active:opacity-80">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
                             一鍵複製
                         </button>
@@ -1210,7 +1210,7 @@
         <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
             <div class="p-6 border-b flex justify-between items-center">
                 <h3 class="text-xl font-bold text-gray-800">本地自動備份還原 (IndexedDB)</h3>
-                <button onclick="hideBackupModal()" class="text-gray-500 hover:text-gray-800 focus:outline-none cursor-pointer">
+                <button onclick="hideBackupModal()" class="text-gray-500 hover:text-gray-800 focus:outline-none cursor-pointer transition-all duration-150 active:scale-95 active:opacity-80">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
@@ -1223,22 +1223,22 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=1791556641"></script>
-    <script src="js/audio.js?v=1791556641"></script>
-    <script src="js/db.js?v=1791556641"></script>
-    <script src="js/ui.js?v=1791556641"></script>
-    <script src="js/scanner.js?v=1791556641"></script>
-    <script src="js/export.js?v=1791556641"></script>
-    <script src="js/report.js?v=1791556641"></script>
-    <script src="js/reminders.js?v=1791556641"></script>
-    <script src="js/main.js?v=1791556641"></script>
+    <script src="js/alerts.js?v=1791644357"></script>
+    <script src="js/audio.js?v=1791644357"></script>
+    <script src="js/db.js?v=1791644357"></script>
+    <script src="js/ui.js?v=1791644357"></script>
+    <script src="js/scanner.js?v=1791644357"></script>
+    <script src="js/export.js?v=1791644357"></script>
+    <script src="js/report.js?v=1791644357"></script>
+    <script src="js/reminders.js?v=1791644357"></script>
+    <script src="js/main.js?v=1791644357"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center p-4 border-b">
                 <h3 class="text-xl font-bold text-gray-800">🚀 Google 試算表自動連線設定教學</h3>
-                <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'none'" class="text-gray-500 hover:bg-gray-100 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors">&times;</button>
+                <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'none'" class="text-gray-500 hover:bg-gray-100 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors active:scale-95 active:opacity-80">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto flex-grow text-gray-800 space-y-4">
                 <div class="bg-blue-50 border-l-4 border-blue-400 p-3 rounded text-blue-800 font-medium text-sm mb-4">
@@ -1257,7 +1257,7 @@
                 <p>請將編輯器內的預設程式碼 <code>function myFunction() { }</code> 全部刪除，並<strong>完全複製貼上</strong>下方這段程式碼：</p>
                 
 <div class="relative bg-gray-100 p-4 rounded border font-mono text-sm overflow-x-auto shadow-inner">
-                    <button onclick="copyGasCode(this)" class="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs shadow transition-colors">複製程式碼</button>
+                    <button onclick="copyGasCode(this)" class="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs shadow transition-colors active:scale-95 active:opacity-80">複製程式碼</button>
                     <pre id="gas-code-block" class="whitespace-pre">/**
  * 【自動更新引擎】
  * 第一次使用前，請先在上方選單選擇「setup」，並點擊「執行」來完成授權！
@@ -1323,7 +1323,7 @@ function doPost(e) {
                 </ol>
             </div>
             <div class="p-4 border-t flex justify-end bg-gray-50 rounded-b-lg">
-                <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'none'" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded shadow font-bold">我了解了，關閉視窗</button>
+                <button onclick="document.getElementById('gas-tutorial-modal').style.display = 'none'" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded shadow font-bold transition-all duration-150 active:scale-95 active:opacity-80">我了解了，關閉視窗</button>
             </div>
         </div>
     </div>
