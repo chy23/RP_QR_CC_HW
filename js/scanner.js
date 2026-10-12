@@ -434,13 +434,174 @@
             if (cb.checked) {
                 input.style.display = 'block';
                 updateContactBookRange();
-                
-
             } else {
                 input.style.display = 'none';
                 updateContactBookRange();
             }
+            updateSelectedTasksPreviewUI();
         }
+
+        // ==========================================
+        // 待掃描作業預覽小對話框與即時統計模組
+        // ==========================================
+        function getSelectedTasksList() {
+            const checkboxes = document.querySelectorAll('.scan-task-checkbox:checked');
+            return Array.from(checkboxes).map(cb => {
+                const taskDef = db.tasks.find(t => t.id === cb.value);
+                const rangeInput = document.getElementById(`range-input-${cb.value}`);
+                const rangeVal = rangeInput ? rangeInput.value.trim() : '';
+                return {
+                    id: cb.value,
+                    name: taskDef ? taskDef.name : cb.value,
+                    subject: taskDef ? taskDef.subject : '作業',
+                    type: taskDef ? taskDef.type : 'custom',
+                    range: rangeVal
+                };
+            });
+        }
+
+        function updateSelectedTasksPreviewUI() {
+            const selected = getSelectedTasksList();
+            const count = selected.length;
+            
+            // 1. 更新標題旁的徽章按鈕
+            const countBadge = document.getElementById('selected-tasks-count-badge');
+            if (countBadge) countBadge.innerText = count;
+            
+            const btnPreview = document.getElementById('btn-preview-selected-tasks');
+            if (btnPreview) {
+                if (count > 0) {
+                    btnPreview.className = "text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-0.5 rounded-full shadow-sm transition-all duration-150 active:scale-95 flex items-center gap-1 cursor-pointer";
+                } else {
+                    btnPreview.className = "text-xs bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-700 font-bold px-2 py-0.5 rounded-full border border-gray-200 hover:border-blue-300 transition-all duration-150 active:scale-95 flex items-center gap-1 shadow-2xs cursor-pointer";
+                }
+            }
+            
+            // 2. 更新列表底部的即時膠囊預覽列
+            const previewBox = document.getElementById('selected-tasks-quick-preview');
+            const countPill = document.getElementById('selected-tasks-count-pill');
+            const chipsContainer = document.getElementById('selected-tasks-chips');
+            
+            if (previewBox && chipsContainer) {
+                if (count > 0) {
+                    previewBox.classList.remove('hidden');
+                    if (countPill) countPill.innerText = count;
+                    
+                    chipsContainer.innerHTML = selected.map(t => {
+                        const rangeText = t.range ? ` <span class="text-blue-700 font-bold">(${t.range})</span>` : '';
+                        return `
+                            <span class="inline-flex items-center gap-1 bg-white text-gray-800 border border-blue-200 px-2 py-0.5 rounded-full text-xs shadow-2xs">
+                                <span class="text-[10px] font-bold px-1 py-0.2 bg-blue-100 text-blue-800 rounded">${t.subject}</span>
+                                <span class="font-medium">${t.name}</span>
+                                ${rangeText}
+                                <button type="button" onclick="uncheckScanTask('${t.id}')" class="text-gray-400 hover:text-red-500 font-bold ml-0.5 leading-none cursor-pointer transition-all duration-150 active:scale-95" title="取消勾選">&times;</button>
+                            </span>
+                        `;
+                    }).join('');
+                } else {
+                    previewBox.classList.add('hidden');
+                    chipsContainer.innerHTML = '';
+                }
+            }
+        }
+
+        function openSelectedTasksModal() {
+            renderSelectedTasksModalContent();
+            const modal = document.getElementById('selected-tasks-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
+        function closeSelectedTasksModal() {
+            const modal = document.getElementById('selected-tasks-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function renderSelectedTasksModalContent() {
+            const selected = getSelectedTasksList();
+            const countEl = document.getElementById('modal-selected-tasks-count');
+            if (countEl) countEl.innerText = selected.length;
+            
+            const listContainer = document.getElementById('modal-selected-tasks-list');
+            if (!listContainer) return;
+            
+            if (selected.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="py-8 text-center text-gray-400">
+                        <div class="text-4xl mb-2">📋</div>
+                        <p class="font-semibold text-gray-700 text-sm">目前尚未勾選任何待掃描作業</p>
+                        <p class="text-xs text-gray-400 mt-1">請在作業清單中勾選要掃描的項目後再開啟檢視。</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            listContainer.innerHTML = selected.map((t, idx) => {
+                return `
+                    <div class="flex items-center justify-between p-2.5 bg-gray-50 hover:bg-blue-50/40 rounded-lg border border-gray-200 transition-colors">
+                        <div class="flex flex-col flex-grow min-w-0 mr-2">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="text-xs font-bold text-gray-400 font-mono">#${idx + 1}</span>
+                                <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">${t.subject}</span>
+                                <span class="font-bold text-gray-800 text-sm truncate">${t.name}</span>
+                            </div>
+                            <div class="text-xs text-gray-600 mt-1 flex items-center gap-1.5">
+                                <span class="text-gray-400">範圍/備註：</span>
+                                ${t.range ? `<span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-medium">${t.range}</span>` : `<span class="text-gray-400 italic">無 (選填)</span>`}
+                            </div>
+                        </div>
+                        <button type="button" onclick="uncheckScanTask('${t.id}')" class="text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-all duration-150 active:scale-95 cursor-pointer flex-shrink-0" title="取消此項勾選">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function uncheckScanTask(taskId) {
+            const cb = document.querySelector(`.scan-task-checkbox[value="${taskId}"]`);
+            if (cb) {
+                cb.checked = false;
+                handleTaskCheckboxChange(cb, taskId);
+            }
+            updateSelectedTasksPreviewUI();
+            const modal = document.getElementById('selected-tasks-modal');
+            if (modal && modal.style.display !== 'none') {
+                renderSelectedTasksModalContent();
+            }
+        }
+
+        function clearAllSelectedScanTasks() {
+            const checkboxes = document.querySelectorAll('.scan-task-checkbox:checked');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                handleTaskCheckboxChange(cb, cb.value);
+            });
+            updateSelectedTasksPreviewUI();
+            renderSelectedTasksModalContent();
+            if (typeof showToast === 'function') {
+                showToast('已清空所有勾選作業', 'info');
+            }
+        }
+
+        window.getSelectedTasksList = getSelectedTasksList;
+        window.updateSelectedTasksPreviewUI = updateSelectedTasksPreviewUI;
+        window.openSelectedTasksModal = openSelectedTasksModal;
+        window.closeSelectedTasksModal = closeSelectedTasksModal;
+        window.uncheckScanTask = uncheckScanTask;
+        window.clearAllSelectedScanTasks = clearAllSelectedScanTasks;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('selected-tasks-modal');
+                if (modal && modal.style.display !== 'none') {
+                    closeSelectedTasksModal();
+                }
+            }
+        });
 
         function initScanSessionDropdown() {
             const container = document.getElementById('scan-session-tasks');
@@ -455,7 +616,7 @@
                         <input type="checkbox" value="${t.id}" class="scan-task-checkbox flex-shrink-0 h-5 w-5 cursor-pointer rounded text-blue-600" onchange="handleTaskCheckboxChange(this, '${t.id}', '${t.name}', '${t.type}')"> 
                         <span class="text-base font-semibold text-gray-700 select-none leading-tight" title="${t.name}">[${t.subject}] ${t.name}</span>
                     </label>
-                    <input type="text" id="range-input-${t.id}" class="border p-2 rounded text-sm w-full shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="display: none;" placeholder="範圍/備註 (選填)">
+                    <input type="text" id="range-input-${t.id}" class="border p-2 rounded text-sm w-full shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="display: none;" placeholder="範圍/備註 (選填)" oninput="updateSelectedTasksPreviewUI()">
                 `;
                 container.appendChild(row);
             });
@@ -464,6 +625,7 @@
                 const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
                 dateInput.value = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
             }
+            updateSelectedTasksPreviewUI();
         }
 
         async function startScanSession() {
@@ -753,6 +915,7 @@
             document.querySelectorAll('input[id^="range-input-"]').forEach(el => el.value = '');
             document.querySelectorAll('.scan-task-checkbox').forEach(el => el.checked = false);
             document.querySelectorAll('input[id^="range-input-"]').forEach(el => el.style.display = 'none');
+            updateSelectedTasksPreviewUI();
             } catch (err) {
                 showAlert('提示', "confirmScanSession Error: " + err.stack);
                 console.error(err);
