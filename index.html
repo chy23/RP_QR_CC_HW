@@ -283,11 +283,14 @@
                 <!-- Ver 3.2 -->
                 <div class="border-l-4 border-blue-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span class="text-blue-700">Ver. 3.2 (待選作業預覽版)</span>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/10/12</span>
+                        <span class="text-blue-700">Ver. 3.2 (待選作業預覽與即時同步版)</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/10/13</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
                         <li><strong>📋 待掃描作業側邊懸浮小視窗：</strong>勾選作業時，畫面右側自動懸浮展開待掃描清單（不須手動點開），方便對照已選項目；並支援在小視窗內<strong>直接修改「範圍/備註」</strong>、快速取消單項勾選或一鍵開始掃描！</li>
+                        <li><strong>📊 掃描時呈現個別作業掃描人次：</strong>進行多項作業同時掃描時，除了顯示掃描總人次統計外，即時清單會自動依作業種類分組，並清楚呈現<strong>各項個別作業的累計已掃描人數</strong>（如：國語習作 25 人），即時掌握每一份作業的清點進度。</li>
+                        <li><strong>⚡ 雲端 GAS 網址即時雙向動態綁定：</strong>全面重構雲端網址同步邏輯，改採即時動態響應綁定。解決在「0. 資料建置」填入或更換 Google Apps Script 網址後，需重新整理網頁才能執行「備份至雲端」或「從雲端匯入」的問題，現在填寫完畢即可無縫即時備份與同步。</li>
+                        <li><strong>🛠️ 作業登記欄位功能穩定性優化：</strong>修正作業管理中新增自訂登記欄位時的響應問題，確保任何時候都能順暢新增登記自訂欄位。</li>
                     </ul>
                 </div>
 
@@ -1300,15 +1303,15 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=1791645362"></script>
-    <script src="js/audio.js?v=1791645362"></script>
-    <script src="js/db.js?v=1791645362"></script>
-    <script src="js/ui.js?v=1791645362"></script>
-    <script src="js/scanner.js?v=1791645362"></script>
-    <script src="js/export.js?v=1791645362"></script>
-    <script src="js/report.js?v=1791645362"></script>
-    <script src="js/reminders.js?v=1791645362"></script>
-    <script src="js/main.js?v=1791645362"></script>
+    <script src="js/alerts.js?v=1791875889"></script>
+    <script src="js/audio.js?v=1791875889"></script>
+    <script src="js/db.js?v=1791875889"></script>
+    <script src="js/ui.js?v=1791875889"></script>
+    <script src="js/scanner.js?v=1791875889"></script>
+    <script src="js/export.js?v=1791875889"></script>
+    <script src="js/report.js?v=1791875889"></script>
+    <script src="js/reminders.js?v=1791875889"></script>
+    <script src="js/main.js?v=1791875889"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
