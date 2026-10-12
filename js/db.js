@@ -64,6 +64,79 @@
             return cls ? cls.prefix : '';
         }
 
+        function getGasUrl() {
+            if (window.appConfig && window.appConfig.gasUrl && window.appConfig.gasUrl.trim()) {
+                return window.appConfig.gasUrl.trim();
+            }
+            const input = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+            if (input && input.value && input.value.trim()) {
+                const val = input.value.trim();
+                if (window.appConfig) {
+                    window.appConfig.gasUrl = val;
+                    saveAppConfig();
+                }
+                return val;
+            }
+            return '';
+        }
+
+        function getSheetUrl() {
+            if (window.appConfig && window.appConfig.sheetUrl && window.appConfig.sheetUrl.trim()) {
+                return window.appConfig.sheetUrl.trim();
+            }
+            const input = document.getElementById('sheet-url');
+            if (input && input.value && input.value.trim()) {
+                const val = input.value.trim();
+                if (window.appConfig) {
+                    window.appConfig.sheetUrl = val;
+                    saveAppConfig();
+                }
+                return val;
+            }
+            return '';
+        }
+
+        window.getGasUrl = getGasUrl;
+        window.getSheetUrl = getSheetUrl;
+
+        try {
+            Object.defineProperty(window, 'gasUrl', {
+                get: function() { return getGasUrl(); },
+                set: function(val) {
+                    const trimmed = (val || '').trim();
+                    if (window.appConfig) {
+                        window.appConfig.gasUrl = trimmed;
+                        saveAppConfig();
+                    }
+                    const input = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+                    if (input && input.value !== trimmed) {
+                        input.value = trimmed;
+                    }
+                },
+                configurable: true,
+                enumerable: true
+            });
+
+            Object.defineProperty(window, 'sheetUrl', {
+                get: function() { return getSheetUrl(); },
+                set: function(val) {
+                    const trimmed = (val || '').trim();
+                    if (window.appConfig) {
+                        window.appConfig.sheetUrl = trimmed;
+                        saveAppConfig();
+                    }
+                    const elSheet = document.getElementById('sheet-url');
+                    if (elSheet && elSheet.value !== trimmed) {
+                        elSheet.value = trimmed;
+                    }
+                },
+                configurable: true,
+                enumerable: true
+            });
+        } catch (e) {
+            console.warn('Property definition error on window for gasUrl/sheetUrl:', e);
+        }
+
         // ==========================================
         // 系統核心與資料層
         // ==========================================

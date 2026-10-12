@@ -57,15 +57,14 @@
         }
         
         // --- Google Sheets Sync Logic ---
-        let gasUrl = appConfig.gasUrl;
-        let sheetUrl = appConfig.sheetUrl || '';
+        // (gasUrl and sheetUrl are dynamically managed via db.js window accessors)
         
         // Wait for DOM
         setTimeout(() => {
-            const el = document.getElementById('gas-url');
-            if(el) el.value = gasUrl;
+            const el = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+            if(el && !el.value) el.value = window.gasUrl || '';
             const elSheet = document.getElementById('sheet-url');
-            if(elSheet) elSheet.value = sheetUrl;
+            if(elSheet && !elSheet.value) elSheet.value = window.sheetUrl || '';
         }, 500);
 
         
@@ -94,9 +93,9 @@
         
 
         function testGasUrl() {
-            const gasInput = document.getElementById('gas-url');
+            const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
             if (!gasUrl && gasInput && gasInput.value.trim()) {
-                saveGasUrl();
+                window.gasUrl = gasInput.value.trim();
             }
             if(!gasUrl) {
                 showAlert('提示', '請先填寫並儲存網址！'); return;
@@ -119,8 +118,8 @@
         }
 
         function syncToGoogleSheets(newRecordsArray) {
-            const gasInput = document.getElementById('gas-url');
-            if (!gasUrl && gasInput && gasInput.value.trim()) saveGasUrl();
+            const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+            if (!gasUrl && gasInput && gasInput.value.trim()) window.gasUrl = gasInput.value.trim();
             if(!gasUrl) return;
             
             // 1. Prepare delta records

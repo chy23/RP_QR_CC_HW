@@ -83,12 +83,18 @@ function switchGlobalClass(classId) {
     }, 500);
 }
 
+function saveGasUrl() {
+    return saveGlobalGasUrl(false);
+}
+window.saveGasUrl = saveGasUrl;
+
 async function saveGlobalGasUrl(testConnection = false) {
-    const input = document.getElementById('global-gas-url');
+    const input = document.getElementById('global-gas-url') || document.getElementById('gas-url');
     if (!input) return;
     const url = input.value.trim();
     appConfig.gasUrl = url;
     saveAppConfig();
+    window.gasUrl = url;
     
     if (testConnection) {
         if (!url) {
@@ -369,6 +375,10 @@ function deleteClass(id) {
 
 
         async function pushStudentsToGas() {
+            const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+            if (!gasUrl && gasInput && gasInput.value.trim()) {
+                window.gasUrl = gasInput.value.trim();
+            }
             if(!gasUrl) {
                 showAlert('提示', '請先到「0. 資料建置」分頁設定並儲存您的 Google Apps Script 網址！');
                 return;
@@ -414,9 +424,9 @@ function deleteClass(id) {
         }
 
         async function fetchStudentsFromGas() {
-            const gasInput = document.getElementById('gas-url');
+            const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
             if (!gasUrl && gasInput && gasInput.value.trim()) {
-                saveGasUrl();
+                window.gasUrl = gasInput.value.trim();
             }
             if(!gasUrl) {
                 showAlert('提示', '請先到「0. 資料建置」分頁設定並儲存您的 Google Apps Script 網址！');
@@ -521,6 +531,10 @@ function deleteClass(id) {
 
 
         async function syncFromGoogleSheets(silent = false) {
+            const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+            if (!gasUrl && gasInput && gasInput.value.trim()) {
+                window.gasUrl = gasInput.value.trim();
+            }
             if(!gasUrl) {
                 if(!silent) showAlert('提示', '請先至「0. 資料建置」填寫您的 Google Apps Script 網址，才能進行雲端同步！');
                 return;
@@ -1223,7 +1237,9 @@ async function clearStudents() {
 }
 
         async function hideClassTabs(classId, prefix) {
-            if(!appConfig.gasUrl) {
+            const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+            if (!gasUrl && gasInput && gasInput.value.trim()) window.gasUrl = gasInput.value.trim();
+            if(!gasUrl) {
                 showAlert('提示', '請先設定雲端引擎網址！');
                 return;
             }
@@ -1236,7 +1252,7 @@ async function clearStudents() {
             
             showLoading();
             try {
-                const response = await fetch(appConfig.gasUrl, {
+                const response = await fetch(gasUrl, {
                     method: 'POST',
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({ action: 'hide_class_tabs', classPrefix: prefix })
@@ -1255,7 +1271,9 @@ async function clearStudents() {
         }
 
         async function showClassTabs(classId, prefix) {
-            if(!appConfig.gasUrl) {
+            const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+            if (!gasUrl && gasInput && gasInput.value.trim()) window.gasUrl = gasInput.value.trim();
+            if(!gasUrl) {
                 showAlert('提示', '請先設定雲端引擎網址！');
                 return;
             }
@@ -1265,7 +1283,7 @@ async function clearStudents() {
             }
             showLoading();
             try {
-                const response = await fetch(appConfig.gasUrl, {
+                const response = await fetch(gasUrl, {
                     method: 'POST',
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({ action: 'show_class_tabs', classPrefix: prefix })
