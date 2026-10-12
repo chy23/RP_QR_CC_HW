@@ -73,12 +73,8 @@ async function checkForUpdates() {
             Swal.fire({
                 title: '🎉 發現新版本！',
                 html: `
-                    <div style="text-align: left; max-height: 350px; overflow-y: auto; padding: 15px; background: #f8fafc; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                    <div style="text-align: left; max-height: 350px; overflow-y: auto; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
                         ${latestChangeHTML}
-                    </div>
-                    <div style="text-align: left; font-weight: bold; color: #047857; font-size: 14px; background: #d1fae5; padding: 12px; border-radius: 6px; border: 1px solid #10b981; display: flex; align-items: center; gap: 8px;">
-                        <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        系統已透過「自動更新引擎」完成後端無縫升級，您無須重新部署任何程式碼！
                     </div>
                 `,
                 icon: 'success',
