@@ -302,6 +302,9 @@ function deleteClass(id) {
             if(tabIndex === 7) {
                 if(typeof renderReportTab === 'function') renderReportTab();
             }
+            if(typeof updateSelectedTasksPreviewUI === 'function') {
+                updateSelectedTasksPreviewUI();
+            }
             } catch (err) {
                 showAlert('提示', "switchTab Error: " + err.message + "\n" + err.stack);
             }

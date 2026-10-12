@@ -153,38 +153,54 @@
         </div>
     </div>
 
-    <!-- 待掃描作業預覽小對話框 -->
-    <div id="selected-tasks-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex-col items-center justify-center text-gray-800" style="display: none;" onclick="if(event.target === this) closeSelectedTasksModal()">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 max-w-md p-5 flex flex-col max-h-[85vh] animate-fade-in">
-            <div class="flex justify-between items-center mb-2 border-b pb-2">
-                <h3 class="text-lg font-bold text-blue-700 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                    待掃描作業清單 (<span id="modal-selected-tasks-count">0</span> 項)
-                </h3>
-                <button type="button" onclick="closeSelectedTasksModal()" class="text-gray-400 hover:text-gray-600 font-bold text-2xl leading-none cursor-pointer transition-all duration-150 active:scale-95">&times;</button>
-            </div>
-            
-            <p class="text-xs text-gray-500 mb-3">以下為目前已勾選、準備進行掃描的作業與範圍：</p>
-            
-            <div id="modal-selected-tasks-list" class="flex-grow overflow-y-auto space-y-2 pr-1 max-h-[50vh]">
-                <!-- 動態呈現已勾選項目 -->
-            </div>
-            
-            <div class="flex justify-between items-center gap-2 mt-4 pt-3 border-t">
-                <button type="button" onclick="clearAllSelectedScanTasks()" class="text-xs text-red-600 hover:text-red-800 hover:underline cursor-pointer font-medium transition-all duration-150 active:scale-95">
-                    清空全部勾選
-                </button>
-                <div class="flex gap-2">
-                    <button type="button" onclick="closeSelectedTasksModal()" class="border border-gray-300 hover:bg-gray-50 text-gray-700 px-3.5 py-1.5 rounded text-sm font-medium transition-all duration-150 active:scale-95 active:opacity-80">
-                        關閉
-                    </button>
-                    <button type="button" onclick="closeSelectedTasksModal(); startScanSession();" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded shadow text-sm font-bold flex items-center gap-1 cursor-pointer transition-all duration-150 active:scale-95 active:opacity-80">
-                        <span>🚀 開始掃描</span>
-                    </button>
+    <!-- 待掃描作業懸浮小視窗 (Float Side Card) -->
+    <div id="floating-selected-tasks" class="hidden fixed z-40 transition-all duration-300 ease-out
+        bottom-4 left-3 right-3 md:left-auto md:bottom-auto md:top-36 md:right-8 md:w-96
+        bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-blue-200/90 p-4 max-h-[80vh] flex flex-col">
+        
+        <!-- 頂部標題與收合按鈕 -->
+        <div class="flex justify-between items-center pb-2 mb-2 border-b border-gray-100 flex-shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
+                    📋
                 </div>
+                <h3 class="text-base font-bold text-gray-800">
+                    待掃描作業清單 (<span id="floating-selected-count" class="text-blue-600 font-bold">0</span> 項)
+                </h3>
+            </div>
+            <div class="flex items-center gap-1">
+                <button type="button" onclick="minimizeFloatingTasks()" class="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 text-sm transition-colors cursor-pointer" title="收合小視窗">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
             </div>
         </div>
+        
+        <!-- 說明文字 -->
+        <p class="text-xs text-gray-500 mb-2.5 flex-shrink-0">
+            以下為目前已勾選作業，可直接在下方修改備註/範圍：
+        </p>
+        
+        <!-- 作業清單滾動區 (含直接修改備註/範圍之輸入框) -->
+        <div id="floating-selected-list" class="flex-grow overflow-y-auto space-y-2 pr-1 max-h-[46vh] mb-3">
+            <!-- 動態填入各項作業與範圍輸入框 -->
+        </div>
+        
+        <!-- 底部操作列 -->
+        <div class="flex justify-between items-center pt-2.5 border-t border-gray-100 flex-shrink-0">
+            <button type="button" onclick="clearAllSelectedScanTasks()" class="text-xs text-red-600 hover:text-red-700 font-medium hover:underline cursor-pointer transition-all duration-150 active:scale-95">
+                清空全部勾選
+            </button>
+            <button type="button" onclick="startScanSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all duration-150 active:scale-95 cursor-pointer">
+                <span>🚀 開始掃描</span>
+            </button>
+        </div>
     </div>
+
+    <!-- 收合狀態下的浮動小膠囊按鈕 (點擊可展開) -->
+    <button type="button" id="floating-selected-minimized-pill" onclick="expandFloatingTasks()" class="hidden fixed bottom-4 right-4 md:bottom-auto md:top-36 md:right-8 z-40 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+        <span>📋 待掃描作業 (<span id="minimized-selected-count">0</span>)</span>
+        <span class="text-blue-200 font-bold">◀ 展開</span>
+    </button>
 
     <!-- Onboarding Modal -->
     <div id="onboarding-modal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4">
@@ -271,8 +287,7 @@
                         <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/10/12</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li><strong>📋 待掃描作業預覽小對話框：</strong>在「選擇作業」標題旁新增「查看已勾選」專屬小對話框！勾選多項作業時，無須來回上下滾動尋找，即可隨時彈出檢視、核對範圍或快速取消勾選。</li>
-                        <li><strong>📌 即時膠囊提示列：</strong>勾選作業時，列表下方會自動浮現動態膠囊標籤，一目瞭然目前已挑選哪些科目與作業，操作更放心。</li>
+                        <li><strong>📋 待掃描作業側邊懸浮小視窗：</strong>勾選作業時，畫面右側自動懸浮展開待掃描清單（不須手動點開），方便對照已選項目；並支援在小視窗內<strong>直接修改「範圍/備註」</strong>、快速取消單項勾選或一鍵開始掃描！</li>
                     </ul>
                 </div>
 
@@ -724,25 +739,11 @@
                         
                         <div class="flex items-center justify-between mb-1">
                             <label class="font-semibold text-sm text-gray-800">2. 選擇作業：</label>
-                            <button type="button" id="btn-preview-selected-tasks" onclick="openSelectedTasksModal()" class="text-xs bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-700 font-bold px-2 py-0.5 rounded-full border border-gray-200 hover:border-blue-300 transition-all duration-150 active:scale-95 flex items-center gap-1 shadow-2xs cursor-pointer" title="點擊開啟小對話框檢視已勾選的作業清單">
-                                <span>📋 查看已勾選 (<span id="selected-tasks-count-badge">0</span>)</span>
+                            <button type="button" id="btn-preview-selected-tasks" onclick="toggleFloatingTasks()" class="text-xs bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-700 font-bold px-2 py-0.5 rounded-full border border-gray-200 hover:border-blue-300 transition-all duration-150 active:scale-95 flex items-center gap-1 shadow-2xs cursor-pointer" title="點擊切換懸浮清單顯示">
+                                <span>📋 待選清單 (<span id="selected-tasks-count-badge">0</span>)</span>
                             </button>
                         </div>
                         <div id="scan-session-tasks" class="border p-2 rounded w-full mb-3 max-h-[40vh] min-h-[250px] overflow-y-auto bg-white flex flex-col gap-1"></div>
-                        
-                        <!-- 已勾選待掃描作業即時提示列 -->
-                        <div id="selected-tasks-quick-preview" class="hidden mb-3 p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs transition-all">
-                            <div class="flex items-center justify-between mb-1.5">
-                                <span class="font-bold text-blue-900 flex items-center gap-1">
-                                    <span>📌</span> 待掃描清單 (<span id="selected-tasks-count-pill">0</span> 項)
-                                </span>
-                                <button type="button" onclick="openSelectedTasksModal()" class="text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer flex items-center gap-0.5 transition-all duration-150 active:scale-95">
-                                    <span>展開對話框</span>
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                                </button>
-                            </div>
-                            <div id="selected-tasks-chips" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1"></div>
-                        </div>
                         
                         <button onclick="startScanSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded shadow w-full font-bold text-lg transition-all duration-150 active:scale-95 active:opacity-80">開始掃描</button>
                     </div>

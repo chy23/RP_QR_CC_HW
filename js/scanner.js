@@ -425,6 +425,8 @@
                 const cb = document.querySelector(`.scan-task-checkbox[value="${contactTask.id}"]`);
                 if (input && cb && cb.checked) {
                     input.value = dateVal.replace(/-/g, '/');
+                    const floatingInput = document.getElementById(`floating-range-input-${contactTask.id}`);
+                    if (floatingInput) floatingInput.value = input.value;
                 }
             }
         }
@@ -460,6 +462,38 @@
             });
         }
 
+        let isFloatingTasksMinimized = false;
+        let lastRenderedTaskIds = '';
+
+        function onFloatingRangeInput(taskId, val) {
+            const mainInput = document.getElementById(`range-input-${taskId}`);
+            if (mainInput) {
+                mainInput.value = val;
+            }
+        }
+
+        function onMainRangeInput(taskId, val) {
+            const floatingInput = document.getElementById(`floating-range-input-${taskId}`);
+            if (floatingInput && floatingInput !== document.activeElement) {
+                floatingInput.value = val;
+            }
+        }
+
+        function minimizeFloatingTasks() {
+            isFloatingTasksMinimized = true;
+            updateSelectedTasksPreviewUI();
+        }
+
+        function expandFloatingTasks() {
+            isFloatingTasksMinimized = false;
+            updateSelectedTasksPreviewUI();
+        }
+
+        function toggleFloatingTasks() {
+            isFloatingTasksMinimized = !isFloatingTasksMinimized;
+            updateSelectedTasksPreviewUI();
+        }
+
         function updateSelectedTasksPreviewUI() {
             const selected = getSelectedTasksList();
             const count = selected.length;
@@ -477,88 +511,77 @@
                 }
             }
             
-            // 2. 更新列表底部的即時膠囊預覽列
-            const previewBox = document.getElementById('selected-tasks-quick-preview');
-            const countPill = document.getElementById('selected-tasks-count-pill');
-            const chipsContainer = document.getElementById('selected-tasks-chips');
+            // 2. 懸浮視窗 (自動懸浮在旁邊，不需點開，可即時修改備註)
+            const floatingPanel = document.getElementById('floating-selected-tasks');
+            const minimizedPill = document.getElementById('floating-selected-minimized-pill');
+            const floatingCount = document.getElementById('floating-selected-count');
+            const minCount = document.getElementById('minimized-selected-count');
             
-            if (previewBox && chipsContainer) {
-                if (count > 0) {
-                    previewBox.classList.remove('hidden');
-                    if (countPill) countPill.innerText = count;
-                    
-                    chipsContainer.innerHTML = selected.map(t => {
-                        const rangeText = t.range ? ` <span class="text-blue-700 font-bold">(${t.range})</span>` : '';
-                        return `
-                            <span class="inline-flex items-center gap-1 bg-white text-gray-800 border border-blue-200 px-2 py-0.5 rounded-full text-xs shadow-2xs">
-                                <span class="text-[10px] font-bold px-1 py-0.2 bg-blue-100 text-blue-800 rounded">${t.subject}</span>
-                                <span class="font-medium">${t.name}</span>
-                                ${rangeText}
-                                <button type="button" onclick="uncheckScanTask('${t.id}')" class="text-gray-400 hover:text-red-500 font-bold ml-0.5 leading-none cursor-pointer transition-all duration-150 active:scale-95" title="取消勾選">&times;</button>
-                            </span>
-                        `;
-                    }).join('');
+            if (floatingCount) floatingCount.innerText = count;
+            if (minCount) minCount.innerText = count;
+
+            const tab1 = document.getElementById('tab-1');
+            const scanSetupArea = document.getElementById('scan-setup-area');
+            const isTab1Active = tab1 && tab1.classList.contains('active');
+            const isSetupVisible = scanSetupArea && !scanSetupArea.classList.contains('hidden');
+
+            if (count > 0 && isTab1Active && isSetupVisible) {
+                if (isFloatingTasksMinimized) {
+                    if (floatingPanel) floatingPanel.classList.add('hidden');
+                    if (minimizedPill) minimizedPill.classList.remove('hidden');
                 } else {
-                    previewBox.classList.add('hidden');
-                    chipsContainer.innerHTML = '';
+                    if (floatingPanel) floatingPanel.classList.remove('hidden');
+                    if (minimizedPill) minimizedPill.classList.add('hidden');
                 }
+                renderFloatingSelectedTasksList(selected);
+            } else {
+                if (floatingPanel) floatingPanel.classList.add('hidden');
+                if (minimizedPill) minimizedPill.classList.add('hidden');
+                lastRenderedTaskIds = '';
             }
         }
 
-        function openSelectedTasksModal() {
-            renderSelectedTasksModalContent();
-            const modal = document.getElementById('selected-tasks-modal');
-            if (modal) {
-                modal.style.display = 'flex';
-            }
-        }
-
-        function closeSelectedTasksModal() {
-            const modal = document.getElementById('selected-tasks-modal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        function renderSelectedTasksModalContent() {
-            const selected = getSelectedTasksList();
-            const countEl = document.getElementById('modal-selected-tasks-count');
-            if (countEl) countEl.innerText = selected.length;
-            
-            const listContainer = document.getElementById('modal-selected-tasks-list');
+        function renderFloatingSelectedTasksList(selected) {
+            const currentTaskIds = selected.map(t => t.id).join(',');
+            const listContainer = document.getElementById('floating-selected-list');
             if (!listContainer) return;
-            
-            if (selected.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="py-8 text-center text-gray-400">
-                        <div class="text-4xl mb-2">📋</div>
-                        <p class="font-semibold text-gray-700 text-sm">目前尚未勾選任何待掃描作業</p>
-                        <p class="text-xs text-gray-400 mt-1">請在作業清單中勾選要掃描的項目後再開啟檢視。</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            listContainer.innerHTML = selected.map((t, idx) => {
-                return `
-                    <div class="flex items-center justify-between p-2.5 bg-gray-50 hover:bg-blue-50/40 rounded-lg border border-gray-200 transition-colors">
-                        <div class="flex flex-col flex-grow min-w-0 mr-2">
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="text-xs font-bold text-gray-400 font-mono">#${idx + 1}</span>
-                                <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">${t.subject}</span>
-                                <span class="font-bold text-gray-800 text-sm truncate">${t.name}</span>
+
+            if (currentTaskIds !== lastRenderedTaskIds) {
+                lastRenderedTaskIds = currentTaskIds;
+                listContainer.innerHTML = selected.map((t, idx) => {
+                    const escapedRange = (t.range || '').replace(/"/g, '&quot;');
+                    return `
+                        <div class="bg-gray-50/90 hover:bg-blue-50/40 rounded-xl p-2.5 border border-gray-200 transition-colors shadow-2xs" data-task-id="${t.id}">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                                    <span class="text-[11px] font-bold text-gray-400 font-mono">#${idx + 1}</span>
+                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">${t.subject}</span>
+                                    <span class="font-bold text-gray-800 text-sm truncate">${t.name}</span>
+                                </div>
+                                <button type="button" onclick="uncheckScanTask('${t.id}')" class="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-all duration-150 active:scale-95 cursor-pointer flex-shrink-0" title="取消此作業勾選">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
                             </div>
-                            <div class="text-xs text-gray-600 mt-1 flex items-center gap-1.5">
-                                <span class="text-gray-400">範圍/備註：</span>
-                                ${t.range ? `<span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-medium">${t.range}</span>` : `<span class="text-gray-400 italic">無 (選填)</span>`}
+                            <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-gray-500 whitespace-nowrap font-medium flex-shrink-0">範圍/備註：</label>
+                                <input type="text"
+                                       id="floating-range-input-${t.id}"
+                                       value="${escapedRange}"
+                                       oninput="onFloatingRangeInput('${t.id}', this.value)"
+                                       placeholder="例如：第一課 (選填)"
+                                       class="flex-grow bg-white border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-2.5 py-1 text-xs text-gray-800 shadow-2xs outline-none transition-all">
                             </div>
                         </div>
-                        <button type="button" onclick="uncheckScanTask('${t.id}')" class="text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-all duration-150 active:scale-95 cursor-pointer flex-shrink-0" title="取消此項勾選">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </button>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            } else {
+                selected.forEach(t => {
+                    const input = document.getElementById(`floating-range-input-${t.id}`);
+                    if (input && input !== document.activeElement) {
+                        input.value = t.range || '';
+                    }
+                });
+            }
         }
 
         function uncheckScanTask(taskId) {
@@ -568,10 +591,6 @@
                 handleTaskCheckboxChange(cb, taskId);
             }
             updateSelectedTasksPreviewUI();
-            const modal = document.getElementById('selected-tasks-modal');
-            if (modal && modal.style.display !== 'none') {
-                renderSelectedTasksModalContent();
-            }
         }
 
         function clearAllSelectedScanTasks() {
@@ -581,7 +600,6 @@
                 handleTaskCheckboxChange(cb, cb.value);
             });
             updateSelectedTasksPreviewUI();
-            renderSelectedTasksModalContent();
             if (typeof showToast === 'function') {
                 showToast('已清空所有勾選作業', 'info');
             }
@@ -589,19 +607,13 @@
 
         window.getSelectedTasksList = getSelectedTasksList;
         window.updateSelectedTasksPreviewUI = updateSelectedTasksPreviewUI;
-        window.openSelectedTasksModal = openSelectedTasksModal;
-        window.closeSelectedTasksModal = closeSelectedTasksModal;
+        window.onFloatingRangeInput = onFloatingRangeInput;
+        window.onMainRangeInput = onMainRangeInput;
+        window.minimizeFloatingTasks = minimizeFloatingTasks;
+        window.expandFloatingTasks = expandFloatingTasks;
+        window.toggleFloatingTasks = toggleFloatingTasks;
         window.uncheckScanTask = uncheckScanTask;
         window.clearAllSelectedScanTasks = clearAllSelectedScanTasks;
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const modal = document.getElementById('selected-tasks-modal');
-                if (modal && modal.style.display !== 'none') {
-                    closeSelectedTasksModal();
-                }
-            }
-        });
 
         function initScanSessionDropdown() {
             const container = document.getElementById('scan-session-tasks');
@@ -616,7 +628,7 @@
                         <input type="checkbox" value="${t.id}" class="scan-task-checkbox flex-shrink-0 h-5 w-5 cursor-pointer rounded text-blue-600" onchange="handleTaskCheckboxChange(this, '${t.id}', '${t.name}', '${t.type}')"> 
                         <span class="text-base font-semibold text-gray-700 select-none leading-tight" title="${t.name}">[${t.subject}] ${t.name}</span>
                     </label>
-                    <input type="text" id="range-input-${t.id}" class="border p-2 rounded text-sm w-full shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="display: none;" placeholder="範圍/備註 (選填)" oninput="updateSelectedTasksPreviewUI()">
+                    <input type="text" id="range-input-${t.id}" class="border p-2 rounded text-sm w-full shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="display: none;" placeholder="範圍/備註 (選填)" oninput="onMainRangeInput('${t.id}', this.value)">
                 `;
                 container.appendChild(row);
             });
@@ -718,6 +730,7 @@
             document.getElementById('scan-setup-area').classList.add('hidden');
             document.getElementById('scan-active-area').classList.remove('hidden');
             document.getElementById('scan-active-area').classList.add('flex');
+            updateSelectedTasksPreviewUI();
             
             const taskNames = selectedTasks.map(t => `${t.name}${t.range ? '('+t.range+')' : ''}`).join(', ');
             let info = `日期：${dateVal}<br>作業：${taskNames}`;
@@ -774,6 +787,7 @@
             document.getElementById('scan-active-area').classList.remove('flex');
             document.getElementById('scan-setup-area').classList.remove('hidden');
             if(document.body.classList.contains('immersive-active')) toggleImmersiveMode();
+            updateSelectedTasksPreviewUI();
         }
 
         async function cancelScanSession() {
@@ -790,6 +804,7 @@
             document.getElementById('scan-active-area').classList.remove('flex');
             document.getElementById('scan-setup-area').classList.remove('hidden');
             if(document.body.classList.contains('immersive-active')) toggleImmersiveMode();
+            updateSelectedTasksPreviewUI();
         }
 
         function endScanSession() {
