@@ -113,6 +113,136 @@ function(e, ss, getSheetNames) {
       return ContentService.createTextOutput(JSON.stringify({status: 'success', students: students, config: config})).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 家長端專屬查詢 (僅回傳該學生的資料，保護同班同學隱私)
+    if (payload.action === 'parent_query') {
+      var queryToken = (payload.token || '').toString().trim().toUpperCase();
+      var queryName = (payload.studentName || '').toString().trim();
+      
+      if (!queryToken && !queryName) {
+        return ContentService.createTextOutput(JSON.stringify({status: 'error', message: '請提供查詢代碼或學生姓名'})).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      var allSheets = ss.getSheets();
+      var targetStudent = null;
+      var matchedPrefix = prefix;
+      
+      // 1. 尋找學生 (若有指定班級前綴先查該班，否則搜尋所有學生名單分頁)
+      for (var i = 0; i < allSheets.length; i++) {
+        var sName = allSheets[i].getName();
+        if (sName.indexOf("學生名單") !== -1) {
+          if (prefix && sName.indexOf(prefix) !== 0) continue;
+          
+          var sData = allSheets[i].getDataRange().getDisplayValues();
+          if (sData.length > 1) {
+            var h = sData[0];
+            var idIdx = h.indexOf("座號") !== -1 ? h.indexOf("座號") : 0;
+            var nameIdx = h.indexOf("姓名") !== -1 ? h.indexOf("姓名") : 1;
+            var tokIdx = h.indexOf("防偽碼") !== -1 ? h.indexOf("防偽碼") : h.indexOf("系統代碼");
+            
+            for (var r = 1; r < sData.length; r++) {
+              var row = sData[r];
+              var rId = row[idIdx].toString().trim();
+              var rName = row[nameIdx].toString().trim();
+              var rTok = (tokIdx !== -1 && row[tokIdx]) ? row[tokIdx].toString().trim().toUpperCase() : '';
+              
+              var isMatch = false;
+              if (queryToken && rTok && rTok === queryToken) isMatch = true;
+              else if (queryToken && !rTok && ('STU' + ('00' + rId).slice(-3)).toUpperCase() === queryToken) isMatch = true;
+              else if (queryName && rName === queryName) isMatch = true;
+              
+              if (isMatch) {
+                targetStudent = { id: rId, name: rName, token: rTok || ('STU' + ('00' + rId).slice(-3)) };
+                matchedPrefix = sName.replace("學生名單", "");
+                break;
+              }
+            }
+          }
+          if (targetStudent) break;
+        }
+      }
+      
+      if (!targetStudent) {
+        return ContentService.createTextOutput(JSON.stringify({status: 'error', message: '查無此代碼或學生，請確認代碼是否正確。'})).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // 2. 取得班級資訊
+      var classLabel = matchedPrefix ? matchedPrefix.replace(/\[|\]/g, '').trim() : '目前班級';
+      
+      // 3. 讀取該班級的各科目分頁資料 (抓取該學生的作業紀錄)
+      var studentTasks = [];
+      for (var j = 0; j < allSheets.length; j++) {
+        var sheet = allSheets[j];
+        var sName2 = sheet.getName();
+        if (matchedPrefix && sName2.indexOf(matchedPrefix) !== 0) continue;
+        if (!matchedPrefix && sName2.indexOf("[") === 0) continue;
+        
+        var baseName = matchedPrefix ? sName2.substring(matchedPrefix.length) : sName2;
+        if (baseName === "學生名單" || baseName === "所有掃描紀錄" || baseName.indexOf("統計") !== -1 || baseName === "SystemConfig") continue;
+        
+        var sheetValues = sheet.getDataRange().getDisplayValues();
+        if (sheetValues.length >= 4) {
+          var headerTaskNames = sheetValues[0];
+          var headerRanges = sheetValues[1];
+          var headerDates = sheetValues[2];
+          
+          var studentRowValues = null;
+          for (var rIdx = 3; rIdx < sheetValues.length; rIdx++) {
+            if (sheetValues[rIdx][0].toString().trim() === targetStudent.name) {
+              studentRowValues = sheetValues[rIdx];
+              break;
+            }
+          }
+          
+          if (studentRowValues) {
+            for (var col = 1; col < headerTaskNames.length; col++) {
+              var tName = headerTaskNames[col] || baseName;
+              var tRange = headerRanges[col] || '';
+              var tDate = headerDates[col] || '';
+              var tStatus = studentRowValues[col] || '';
+              if (!tStatus) tStatus = '缺交';
+              
+              studentTasks.push({
+                subject: baseName,
+                taskName: tName,
+                range: tRange,
+                date: tDate,
+                status: tStatus
+              });
+            }
+          }
+        }
+      }
+      
+      // 4. 讀取該學生的近期打卡紀錄 (所有掃描紀錄)
+      var logSheetName = matchedPrefix + "所有掃描紀錄";
+      var logSheet = ss.getSheetByName(logSheetName);
+      var recentLogs = [];
+      if (logSheet && logSheet.getLastRow() > 1) {
+        var logValues = logSheet.getDataRange().getDisplayValues();
+        for (var l = logValues.length - 1; l >= 1; l--) {
+          var lRow = logValues[l];
+          if (lRow[5] && lRow[5].toString().trim() === targetStudent.name) {
+            recentLogs.push({
+              timestamp: lRow[0],
+              subject: lRow[2],
+              taskName: lRow[3],
+              range: lRow[4],
+              status: lRow[6]
+            });
+            if (recentLogs.length >= 25) break;
+          }
+        }
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        student: targetStudent,
+        className: classLabel,
+        tasks: studentTasks,
+        recentLogs: recentLogs
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 從雲端拉取所有繳交紀錄
     if (payload.action === 'pull_sync') {
       var sheetNames = getSheetNames(ss);

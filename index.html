@@ -80,6 +80,57 @@
             box-shadow: none !important;
             min-height: 100vh;
         }
+
+        /* ===== A4 小卡列印與預覽樣式 ===== */
+        .a4-print-sheet {
+            background: white;
+            width: 100%;
+            max-width: 820px;
+            min-height: 1100px;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            padding: 24px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            header, nav, #main-tabs, .tab-content, .no-print, #header-container, footer, #main-header {
+                display: none !important;
+            }
+            #parent-cards-modal {
+                position: static !important;
+                display: block !important;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+            }
+            #parent-cards-modal > div {
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .a4-print-sheet {
+                page-break-after: always;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: 100vh !important;
+                margin: 0 auto !important;
+                padding: 1cm 0.8cm !important;
+                box-sizing: border-box !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -280,6 +331,21 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors active:scale-95 active:opacity-80">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
+                <!-- Ver 3.3 (Beta) -->
+                <div class="border-l-4 border-emerald-600 pl-4 py-1 mb-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span class="text-emerald-700">Ver. 3.3-beta (家長端手札與查詢小卡版)</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/10/16 (Beta)</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>👨‍👩‍👧 獨立家長端查詢手札 (parent.html)：</strong>比照 MPScore 雙端設計，家長掃描小卡 QR Code 免密碼直達孩子專屬手札，即時掌握作業繳交進度。</li>
+                        <li><strong>📊 各科目習慣橫向長條圖與展開明細：</strong>以直觀彩色長條圖呈現各科準時率，<strong>點擊各科目卡片可向下展開</strong>該科各項具體作業簿冊（如國習、甲本、乙本）的詳細繳交比率與次數。</li>
+                        <li><strong>⚠️ 常遲到作業警示排行：</strong>自動統計本學期孩子最常遲交、拖延的作業 Top 3，精準抓出弱點作業與拖延瓶頸，方便親師即時引導。</li>
+                        <li><strong>🚨 今晚即時待辦清單：</strong>首頁醒目列出當前處於「缺交」、「聯絡簿沒帶」或「退回待訂正」之具體作業名稱與頁碼範圍；全數交齊則顯示綠色嘉獎徽章。</li>
+                        <li><strong>🖨️ 教師端 A4 家長查詢小卡一鍵列印：</strong>在【4. 條碼匯出】新增專屬小卡列印中心，支援每頁 4 / 6 / 8 張 A4 排版列印，附專屬 QR Code、防偽代碼與裁切虛線，發放親師交流零負擔。</li>
+                    </ul>
+                </div>
+
                 <!-- Ver 3.2 -->
                 <div class="border-l-4 border-blue-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
@@ -524,7 +590,7 @@
             <div class="w-full text-center mt-2 md:mt-0">
                 <h1 class="text-2xl md:text-3xl font-bold text-blue-700 flex justify-center items-center gap-2 flex-wrap">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    QRcode自動清點作業系統 <span id="version-display" class="text-lg font-bold tracking-tight" data-version="3.2">Ver. 3.2</span>
+                    QRcode自動清點作業系統 <span id="version-display" class="text-lg font-bold tracking-tight" data-version="3.3">Ver. 3.3</span>
                     <script>
                         (function() {
                             const isBeta = window.location.pathname.includes('/beta/');
@@ -991,6 +1057,36 @@
                          <button id="tab4-download-pdf-btn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-lg shadow font-bold transition hidden flex items-center justify-center gap-2 active:scale-95 active:opacity-80" onclick="downloadBatchPDF()">下載 PDF 貼紙檔</button>
                      </div>
                  </div>
+                  <!-- 家長專屬查詢小卡 (QR Code) 匯出區 -->
+                  <div class="border-2 border-emerald-300 rounded-xl p-5 bg-emerald-50/40 shadow-sm hover:shadow transition col-span-1 md:col-span-2">
+                      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
+                          <h3 class="font-bold text-emerald-900 text-lg flex items-center gap-2">
+                              <span class="text-xl">👨‍👩‍👧</span>
+                              C. 家長專屬查詢通知小卡 (A4 排版列印 ‧ 掃碼即查)
+                              <span class="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">Ver 3.3 新功能</span>
+                          </h3>
+                          <div class="flex items-center gap-2">
+                              <span class="text-xs text-emerald-800 font-semibold">每頁小卡數量：</span>
+                              <select id="parent-card-density" class="border border-emerald-300 bg-white text-emerald-900 text-xs font-bold rounded-lg px-2.5 py-1.5 outline-none shadow-xs">
+                                  <option value="6" selected>每頁 6 張 (3x2 推薦)</option>
+                                  <option value="8">每頁 8 張 (4x2 經濟省紙)</option>
+                                  <option value="4">每頁 4 張 (大字好讀)</option>
+                              </select>
+                          </div>
+                      </div>
+                      <p class="text-sm text-gray-600 mb-4 leading-relaxed">
+                          一鍵自動排版全班 A4 通知小卡，包含學生座號姓名、專屬查詢 QR Code、防偽代碼與裁切虛線。家長使用手機相機掃描即可秒登入查看孩子作業繳交率、常遲到作業排行與各科明細！
+                      </p>
+                      <div class="flex flex-wrap gap-3">
+                          <button onclick="previewParentCardsModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl shadow-md font-bold transition flex items-center justify-center gap-2 active:scale-95 active:opacity-80 cursor-pointer">
+                              <span>🖨️ 預覽與列印家長查詢小卡</span>
+                          </button>
+                          <a href="parent.html" target="_blank" class="bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 px-4 py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-1.5 active:scale-95 active:opacity-80 shadow-xs cursor-pointer">
+                              <span>🌱 開啟家長端頁面查看</span>
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                          </a>
+                      </div>
+                  </div>
             </div>
             
             <div class="flex justify-end gap-2 mb-6 pb-4 border-b">
@@ -1303,15 +1399,15 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=1791875889"></script>
-    <script src="js/audio.js?v=1791875889"></script>
-    <script src="js/db.js?v=1791875889"></script>
-    <script src="js/ui.js?v=1791875889"></script>
-    <script src="js/scanner.js?v=1791875889"></script>
-    <script src="js/export.js?v=1791875889"></script>
-    <script src="js/report.js?v=1791875889"></script>
-    <script src="js/reminders.js?v=1791875889"></script>
-    <script src="js/main.js?v=1791875889"></script>
+    <script src="js/alerts.js?v=1792188800"></script>
+    <script src="js/audio.js?v=1792188800"></script>
+    <script src="js/db.js?v=1792188800"></script>
+    <script src="js/ui.js?v=1792188800"></script>
+    <script src="js/scanner.js?v=1792188800"></script>
+    <script src="js/export.js?v=1792188800"></script>
+    <script src="js/report.js?v=1792188800"></script>
+    <script src="js/reminders.js?v=1792188800"></script>
+    <script src="js/main.js?v=1792188800"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">

@@ -1343,3 +1343,185 @@
             const dateStr = new Date().toISOString().split('T')[0];
             XLSX.writeFile(wb, `作業繳交統計表_${dateStr}.xlsx`);
         }
+
+
+// ==========================================
+// 家長端專屬查詢小卡預覽與列印模組 (比照 MPScore)
+// ==========================================
+async function previewParentCardsModal() {
+    let studentIds = getCheckedStudentIds('tab4-student-checkboxes');
+    if (!studentIds || studentIds.length === 0) {
+        studentIds = db.students.map(s => s.id);
+    }
+    if (studentIds.length === 0) {
+        showAlert('提示', '尚未建立任何學生名單！');
+        return;
+    }
+
+    const densitySelect = document.getElementById('parent-card-density');
+    const cardsPerPage = densitySelect ? parseInt(densitySelect.value, 10) || 6 : 6;
+
+    let modal = document.getElementById('parent-cards-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'parent-cards-modal';
+        modal.className = 'fixed inset-0 bg-black/60 z-50 flex flex-col justify-between p-2 sm:p-4 overflow-hidden';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-5xl max-h-[92vh] mx-auto overflow-hidden">
+                <!-- 模態框標頭 -->
+                <div class="p-4 bg-emerald-600 text-white flex justify-between items-center no-print">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">👨‍👩‍👧</span>
+                        <div>
+                            <h3 class="font-bold text-lg">家長專屬查詢小卡列印預覽 (A4 排版)</h3>
+                            <p class="text-xs text-emerald-100">支援手機相機一鍵掃碼直達孩子手札 ‧ 裁切後夾於聯絡簿發放</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.print()" class="bg-white text-emerald-800 hover:bg-emerald-50 font-bold px-4 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                            <span>🖨️ 直接列印 (A4)</span>
+                        </button>
+                        <button onclick="closeParentCardsModal()" class="text-white hover:bg-white/20 p-2 rounded-full text-xl transition active:scale-95 cursor-pointer">&times;</button>
+                    </div>
+                </div>
+
+                <!-- 預覽容器 (A4 表格滾動區) -->
+                <div id="parent-cards-print-container" class="p-4 sm:p-6 overflow-y-auto bg-slate-100 flex-1 space-y-6">
+                    <div class="text-center py-10 text-gray-500 font-bold">正在生成 QR Code 排版中...</div>
+                </div>
+
+                <!-- 底部操作列 -->
+                <div class="p-3 bg-gray-50 border-t flex justify-between items-center text-xs text-gray-500 no-print">
+                    <span id="parent-cards-page-stats">全班預計產生 A4 列印頁面</span>
+                    <button onclick="closeParentCardsModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition active:scale-95 cursor-pointer">關閉視窗</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+
+    await renderParentCardsContent(studentIds, cardsPerPage);
+}
+
+function closeParentCardsModal() {
+    const modal = document.getElementById('parent-cards-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
+
+async function renderParentCardsContent(studentIds, cardsPerPage) {
+    const container = document.getElementById('parent-cards-print-container');
+    if (!container) return;
+    container.innerHTML = '<div class="text-center py-10 text-gray-500 font-bold">正在生成 QR Code 排版中...</div>';
+
+    const pool = db.students.filter(s => studentIds.includes(s.id));
+    const totalStudents = pool.length;
+    const totalPages = Math.ceil(totalStudents / cardsPerPage);
+
+    const statsEl = document.getElementById('parent-cards-page-stats');
+    if (statsEl) {
+        statsEl.innerText = `全班共 ${totalStudents} 位學生 ‧ 預計產生 ${totalPages} 頁 A4 (每頁 ${cardsPerPage} 張)`;
+    }
+
+    let classLabel = '本班級';
+    try {
+        const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+        if (cls && cls.label) classLabel = cls.label;
+    } catch(e) {}
+
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const parentBaseUrl = window.location.origin + basePath + 'parent.html';
+
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+
+    let gridClass = 'grid-cols-2 grid-rows-3 gap-3';
+    let qrPixelSize = 160;
+    let qrDisplaySize = 78;
+    if (cardsPerPage === 8) {
+        gridClass = 'grid-cols-2 grid-rows-4 gap-2';
+        qrDisplaySize = 62;
+    } else if (cardsPerPage === 4) {
+        gridClass = 'grid-cols-2 grid-rows-2 gap-4';
+        qrDisplaySize = 96;
+    }
+
+    container.innerHTML = '';
+
+    for (let p = 0; p < totalPages; p++) {
+        const start = p * cardsPerPage;
+        const pageStudents = pool.slice(start, start + cardsPerPage);
+
+        const sheetEl = document.createElement('div');
+        sheetEl.className = 'a4-print-sheet flex flex-col justify-between';
+
+        const gridEl = document.createElement('div');
+        gridEl.className = `grid ${gridClass} h-full flex-1`;
+        sheetEl.appendChild(gridEl);
+
+        for (const st of pageStudents) {
+            const token = st.token || ('STU' + String(st.id).padStart(3, '0'));
+            const queryUrl = `${parentBaseUrl}?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+
+            let qrDataUrl = '';
+            try {
+                qrDataUrl = await QRCode.toDataURL(queryUrl, {
+                    width: qrPixelSize,
+                    margin: 1,
+                    errorCorrectionLevel: 'M'
+                });
+            } catch(e) {
+                console.warn('QR code gen error:', e);
+            }
+
+            const card = document.createElement('div');
+            card.className = 'border-2 border-dashed border-slate-300 rounded-2xl p-3 bg-white flex flex-col justify-between relative';
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 mb-1.5">
+                    <div>
+                        <span class="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">${classLabel}</span>
+                        <span class="text-xs font-black text-slate-800 ml-1">作業繳交查詢卡</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-mono">✂️ 裁切發放</span>
+                </div>
+                
+                <div class="flex items-center justify-between gap-2 flex-1">
+                    <div class="space-y-1">
+                        <div class="text-base font-black text-slate-900">${st.name}</div>
+                        <div class="text-xs font-bold text-slate-600">座號：${String(st.id).padStart(2, '0')}</div>
+                        <div class="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-block font-bold">
+                            代碼：${token}
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 flex items-center justify-center p-1 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                        <img src="${qrDataUrl}" width="${qrDisplaySize}" height="${qrDisplaySize}" alt="QR" class="rounded">
+                    </div>
+                </div>
+
+                <div class="mt-1.5 pt-1 border-t border-slate-100 text-[9px] text-slate-500 leading-tight">
+                    👉 請家長使用手機相機掃描 QR Code，即可隨時查閱孩子作業繳交率、待補交作業與各科明細。
+                </div>
+            `;
+            gridEl.appendChild(card);
+        }
+
+        const footerEl = document.createElement('div');
+        footerEl.className = 'text-center text-[10px] text-slate-400 pt-2 border-t border-slate-200 mt-2 flex justify-between items-center';
+        footerEl.innerHTML = `
+            <span>✂️ 請沿虛線裁切發給家長</span>
+            <span class="font-bold text-slate-600">第 ${p + 1} / ${totalPages} 頁 ‧ 👨‍👩‍👧【家長發放版】(每頁 ${cardsPerPage} 張)</span>
+            <span>QRcode 自動清點作業系統</span>
+        `;
+        sheetEl.appendChild(footerEl);
+        container.appendChild(sheetEl);
+    }
+}
