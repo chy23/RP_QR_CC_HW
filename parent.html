@@ -185,21 +185,21 @@
           </div>
         </div>
 
-        <!-- 今晚待辦作業數 -->
+        <!-- 待補交作業數 -->
         <div class="apple-glass rounded-2xl p-4 text-center shadow-xs" id="pendingActionCard">
-          <div class="text-xs font-bold text-slate-500 mb-1">今晚待辦作業</div>
+          <div class="text-xs font-bold text-slate-500 mb-1">待補交作業</div>
           <div id="metricPendingCount" class="text-2xl sm:text-3xl font-black text-slate-800">0</div>
           <div id="metricPendingSub" class="text-[11px] text-emerald-600 font-bold mt-1">全數完成 🎉</div>
         </div>
       </div>
 
-      <!-- 3. 🚨 模組一：今晚即時待辦 / 待補交與訂正清單 (Action Items) -->
+      <!-- 3. 🚨 模組一：待補交作業清單 (Action Items) -->
       <div class="apple-glass rounded-3xl p-5 sm:p-6 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <div class="flex items-center gap-2">
             <span class="text-xl">🚨</span>
             <div>
-              <h3 class="text-base font-black text-slate-900">今晚待辦作業 / 待補交與訂正清單</h3>
+              <h3 class="text-base font-black text-slate-900">待補交作業清單</h3>
               <p class="text-xs text-slate-500 font-medium">請家長提醒並協助孩子於明日到校前完成</p>
             </div>
           </div>
@@ -629,6 +629,7 @@
         }
 
         if (freshData) {
+          freshData.syncedAt = new Date().toISOString();
           // 寫入快取
           try { localStorage.setItem(cacheKey, JSON.stringify(freshData)); } catch(e) {}
           renderParentDashboard(freshData, false);
@@ -906,7 +907,15 @@
       document.getElementById('heroToken').innerText = student.token;
       document.getElementById('studentAvatar').innerText = String(student.id).padStart(2, '0');
       
-      const nowStr = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+      // 格式化日期、星期及時間 (例如：2026/10/17 (六) 上午07:28)
+      const syncDate = (isFromCache && data && data.syncedAt) ? new Date(data.syncedAt) : new Date();
+      const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+      const weekDay = weekdays[syncDate.getDay()];
+      const y = syncDate.getFullYear();
+      const m = String(syncDate.getMonth() + 1).padStart(2, '0');
+      const d = String(syncDate.getDate()).padStart(2, '0');
+      const timeStr = syncDate.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+      const nowStr = `${y}/${m}/${d} (${weekDay}) ${timeStr}`;
       document.getElementById('lastSyncTime').innerText = (isFromCache ? '快取秒開 ' : '即時同步 ') + nowStr;
 
       // 2. 統計數據計算 (採用通用分類標準)
@@ -1017,7 +1026,7 @@
             <div class="text-2xl">🎉</div>
             <div>
               <div class="text-sm font-bold text-emerald-900">目前所有作業皆已按時完成！</div>
-              <div class="text-xs text-emerald-700">沒有任何缺交或待訂正項目，請給孩子一個大大的讚賞與鼓勵！</div>
+              <div class="text-xs text-emerald-700">沒有任何缺交作業，請給孩子一個大大的讚賞與鼓勵！</div>
             </div>
           </div>
         `;

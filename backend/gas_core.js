@@ -368,6 +368,7 @@ function(e, ss, getSheetNames) {
       
       return ContentService.createTextOutput(JSON.stringify({
         status: 'success',
+        syncedAt: new Date().toISOString(),
         student: targetStudent,
         className: classLabel,
         tasks: studentTasks,

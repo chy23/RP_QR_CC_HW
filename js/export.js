@@ -1457,6 +1457,22 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
 
     container.innerHTML = '';
 
+    if (window.location.protocol === 'file:') {
+        container.innerHTML += `
+            <div class="p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs text-rose-800 font-bold mb-4 no-print flex items-center gap-2">
+                <span class="text-lg">🚨</span>
+                <span>注意：您目前以本地檔案模式 (file://) 開啟，產生的 QR Code 為本機電腦路徑，家長手機無法連線！請務必部署至 GitHub Pages 後再列印發放！</span>
+            </div>
+        `;
+    } else if (!gas) {
+        container.innerHTML += `
+            <div class="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-800 font-bold mb-4 no-print flex items-center gap-2">
+                <span class="text-lg">⚠️</span>
+                <span>溫馨提醒：尚未設定 Google 試算表 GAS 網址！若未設定雲端 API，家長手機掃碼後將無法連線讀取即時作業資料。請先至【0. 資料建置】填入 GAS 網址！</span>
+            </div>
+        `;
+    }
+
     for (let p = 0; p < totalPages; p++) {
         const start = p * cardsPerPage;
         const pageStudents = pool.slice(start, start + cardsPerPage);
@@ -1907,9 +1923,14 @@ function updateParentSimulator(studentId) {
         `;
     });
 
+    const simNow = new Date();
+    const simWeekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    const simW = simWeekdays[simNow.getDay()];
+    const simDateStr = `${simNow.getFullYear()}/${String(simNow.getMonth() + 1).padStart(2, '0')}/${String(simNow.getDate()).padStart(2, '0')} (${simW}) ${simNow.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+
     frame.innerHTML = `
         <!-- 手機頂部英雄卡 -->
-        <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-2xs">
+        <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-2xs flex justify-between items-center">
             <div class="flex items-center gap-2.5">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black text-base shadow-xs">
                     ${String(student.id).padStart(2, '0')}
@@ -1918,6 +1939,12 @@ function updateParentSimulator(studentId) {
                     <div class="text-sm font-black text-slate-900">${student.name}</div>
                     <div class="text-[10px] font-mono text-slate-400">代碼：${token}</div>
                 </div>
+            </div>
+            <div class="text-right">
+                <span class="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    即時同步 ${simDateStr}
+                </span>
             </div>
         </div>
 
@@ -1934,19 +1961,19 @@ function updateParentSimulator(studentId) {
                 <div class="text-[9px] text-slate-400">${lateCount > 0 ? `遲${lateCount} ‧ ` : ''}缺${totalMissing}</div>
             </div>
             <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                <div class="text-[10px] text-slate-400 font-bold">今晚待辦</div>
+                <div class="text-[10px] text-slate-400 font-bold">待補交</div>
                 <div class="text-base font-black ${pendingItems.length > 0 ? 'text-rose-600' : 'text-emerald-600'}">${pendingItems.length}</div>
-                <div class="text-[9px] ${pendingItems.length > 0 ? 'text-rose-500 font-bold' : 'text-emerald-500'}">${pendingItems.length > 0 ? '待補交/訂正' : '全數交齊'}</div>
+                <div class="text-[9px] ${pendingItems.length > 0 ? 'text-rose-500 font-bold' : 'text-emerald-500'}">${pendingItems.length > 0 ? '待補交' : '全數交齊'}</div>
             </div>
         </div>
 
-        <!-- 🚨 今晚待辦 -->
+        <!-- 🚨 待補交作業清單 -->
         <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
             <div class="flex justify-between items-center text-[11px] font-black text-slate-800 border-b pb-1">
-                <span>🚨 今晚即時待辦</span>
+                <span>🚨 待補交作業清單</span>
                 <span class="text-[10px] text-rose-600 font-bold">${pendingItems.length} 項</span>
             </div>
-            ${pendingItems.length === 0 ? '<div class="text-[11px] text-emerald-600 font-bold py-1 text-center">全數完成 🎉</div>' : ''}
+            ${pendingItems.length === 0 ? '<div class="text-[11px] text-emerald-600 font-bold py-1.5 text-center">沒有任何缺交作業，請給孩子一個大大的讚賞與鼓勵！ 🎉</div>' : ''}
             ${pendingItems.map(p => `
                 <div class="flex items-center justify-between text-[11px] py-0.5">
                     <span class="font-bold text-slate-700">[${p.subject}] ${p.taskName}</span>
