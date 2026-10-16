@@ -130,6 +130,7 @@
           <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
             <div id="metricRateBar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
           </div>
+          <div class="text-[11px] text-slate-500 mt-1 font-medium">總繳交率 <span id="metricSubmittedRate" class="font-bold text-slate-700">0%</span></div>
         </div>
 
         <!-- 累計準時/總次數 -->
@@ -536,6 +537,108 @@
     }
 
     // ==========================================
+    // 通用家長端作業狀態分類器
+    // ==========================================
+    function classifyTaskStatus(statusStr, timestamp, deadline) {
+      const s = (statusStr || '').toString().trim();
+      const ts = (timestamp || '').toString().trim();
+
+      // 1. 缺交 / 未交 (Missing)
+      if (
+        s === '缺交' || s === '未交' || s === 'missing' || s === '曠課' ||
+        s.includes('leave_custom_缺交') || s.includes('leave_custom_未交') ||
+        s === ''
+      ) {
+        return {
+          type: 'missing',
+          label: '缺交',
+          badge: '❌ 缺交未交',
+          badgeClass: 'bg-rose-100 text-rose-700 border-rose-200',
+          isPending: true
+        };
+      }
+
+      // 2. 沒帶 (Forgot)
+      if (s === '沒帶' || s === 'forgot' || s.includes('leave_custom_沒帶')) {
+        return {
+          type: 'forgot',
+          label: '沒帶',
+          badge: '🎒 聯絡簿沒帶',
+          badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+          isPending: true
+        };
+      }
+
+      // 3. 退回待訂正 (Returned)
+      if (s === '退回' || s === 'returned' || s.includes('訂正') || s.includes('重交')) {
+        return {
+          type: 'returned',
+          label: '待訂正',
+          badge: '⚠️ 需訂正重交',
+          badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+          isPending: true
+        };
+      }
+
+      // 4. 請假 / 免計入分母 (Excused Leaves)
+      const standardLeaves = ['事假', '病假', '公假', '喪假', '免交', '請假', '其他假別', '其他'];
+      const isLeave = standardLeaves.includes(s) || (
+        s.startsWith('leave_') &&
+        !s.includes('曠課') && !s.includes('遲到') && !s.includes('沒帶') && !s.includes('缺交')
+      );
+      if (isLeave) {
+        let leaveName = s.replace(/^leave_custom_/, '').replace(/^leave_/, '');
+        if (!leaveName || leaveName === '其他') leaveName = '請假免交';
+        return {
+          type: 'excused',
+          label: leaveName,
+          badge: leaveName,
+          badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+          isPending: false
+        };
+      }
+
+      // 5. 遲交 (Late)
+      let isLate = false;
+      if (s === '遲交' || s === 'late' || s.includes('[遲交]') || s.includes('遲交')) {
+        isLate = true;
+      } else if (deadline && ts) {
+        try {
+          const dl = new Date(deadline + 'T23:59:59');
+          let scDate = null;
+          if (ts.includes('T') || ts.includes('-')) {
+            scDate = new Date(ts);
+          } else {
+            const year = new Date().getFullYear();
+            scDate = new Date(`${year}/${ts}`);
+          }
+          if (scDate && !isNaN(scDate.getTime()) && scDate > dl) {
+            isLate = true;
+          }
+        } catch(e) {}
+      }
+
+      if (isLate) {
+        return {
+          type: 'late',
+          label: '遲交',
+          badge: '⏰ 遲交',
+          badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+          isPending: false
+        };
+      }
+
+      // 6. 準時繳交 (On-time)
+      return {
+        type: 'ontime',
+        label: '準時',
+        badge: '✅ 準時',
+        badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        isPending: false
+      };
+    }
+
+    // ==========================================
     // 渲染家長端完整介面
     // ==========================================
     function renderParentDashboard(data, isFromCache) {
@@ -552,70 +655,68 @@
       const nowStr = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
       document.getElementById('lastSyncTime').innerText = (isFromCache ? '快取秒開 ' : '即時同步 ') + nowStr;
 
-      // 2. 統計數據計算
+      // 2. 統計數據計算 (採用通用分類標準)
       let totalAssigned = tasks.length;
-      let submittedCount = 0;
+      let onTimeCount = 0;
       let lateCount = 0;
       let missingCount = 0;
+      let forgotCount = 0;
       let returnedCount = 0;
       let excusedCount = 0;
 
       const pendingItems = []; // 今晚待辦 (缺交, 沒帶, 退回需訂正)
       const lateCountsPerTask = {}; // 常遲到統計 { '作業名稱': 次數 }
 
-      const leavesList = ['事假', '病假', '公假', '喪假', '免交', '請假', '其他'];
-
       tasks.forEach(t => {
-        const st = t.status || '';
+        const c = classifyTaskStatus(t.status, t.timestamp, t.deadline);
 
-        if (st === '已交' || st === 'ontime' || st === '準時') {
-          submittedCount++;
-        } else if (st === '遲交' || st === 'late') {
+        if (c.type === 'ontime') {
+          onTimeCount++;
+        } else if (c.type === 'late') {
           lateCount++;
-          // 累加遲到次數
           const key = `[${t.subject}] ${t.taskName}`;
           lateCountsPerTask[key] = (lateCountsPerTask[key] || 0) + 1;
-        } else if (st === '退回') {
+        } else if (c.type === 'missing') {
+          missingCount++;
+          pendingItems.push({
+            subject: t.subject,
+            taskName: t.taskName,
+            range: t.range,
+            date: t.date,
+            statusBadge: c.badge,
+            badgeClass: c.badgeClass
+          });
+        } else if (c.type === 'forgot') {
+          forgotCount++;
+          pendingItems.push({
+            subject: t.subject,
+            taskName: t.taskName,
+            range: t.range,
+            date: t.date,
+            statusBadge: c.badge,
+            badgeClass: c.badgeClass
+          });
+        } else if (c.type === 'returned') {
           returnedCount++;
           pendingItems.push({
             subject: t.subject,
             taskName: t.taskName,
             range: t.range,
             date: t.date,
-            statusBadge: '⚠️ 需訂正重交',
-            badgeClass: 'bg-amber-100 text-amber-800 border-amber-200'
+            statusBadge: c.badge,
+            badgeClass: c.badgeClass
           });
-        } else if (st === '沒帶') {
-          missingCount++;
-          pendingItems.push({
-            subject: t.subject,
-            taskName: t.taskName,
-            range: t.range,
-            date: t.date,
-            statusBadge: '🎒 聯絡簿沒帶',
-            badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200'
-          });
-        } else if (leavesList.includes(st)) {
+        } else if (c.type === 'excused') {
           excusedCount++;
-        } else if (st === '缺交' || st === '未交' || st === 'missing') {
-          missingCount++;
-          pendingItems.push({
-            subject: t.subject,
-            taskName: t.taskName,
-            range: t.range,
-            date: t.date,
-            statusBadge: '❌ 缺交未交',
-            badgeClass: 'bg-rose-100 text-rose-700 border-rose-200'
-          });
-        } else {
-          // 其他預設為已交
-          submittedCount++;
         }
       });
 
-      // 準時率計算 (扣除請假)
+      // 準時率計算 (扣除請假/免交)
       const effectiveTotal = Math.max(1, totalAssigned - excusedCount);
-      const onTimeRate = totalAssigned > 0 ? Math.round((submittedCount / effectiveTotal) * 100) : 100;
+      const onTimeRate = totalAssigned > 0 ? Math.round((onTimeCount / effectiveTotal) * 100) : 100;
+      const totalSubmitted = onTimeCount + lateCount;
+      const submittedRate = totalAssigned > 0 ? Math.round((totalSubmitted / effectiveTotal) * 100) : 100;
+      const totalMissing = missingCount + forgotCount;
 
       // 渲染指標卡
       const rateEl = document.getElementById('metricOnTimeRate');
@@ -629,10 +730,13 @@
       }
 
       document.getElementById('metricRateBar').style.width = onTimeRate + '%';
-      document.getElementById('metricSubmitted').innerText = submittedCount;
-      document.getElementById('metricTotal').innerText = totalAssigned;
+      document.getElementById('metricSubmitted').innerText = onTimeCount;
+      document.getElementById('metricTotal').innerText = effectiveTotal;
       document.getElementById('metricLate').innerText = lateCount;
-      document.getElementById('metricMissing').innerText = missingCount;
+      document.getElementById('metricMissing').innerText = totalMissing;
+
+      const subRateEl = document.getElementById('metricSubmittedRate');
+      if (subRateEl) subRateEl.innerText = submittedRate + '%';
 
       const pendingCount = pendingItems.length;
       document.getElementById('metricPendingCount').innerText = pendingCount;
@@ -736,7 +840,7 @@
       Object.entries(groupedSubjects).forEach(([sub, subTasks], sIdx) => {
         const icon = getSubjectIcon(sub);
         const subTotal = subTasks.length;
-        let subSubmitted = 0;
+        let subOnTime = 0;
         let subLate = 0;
         let subMissing = 0;
         let subExcused = 0;
@@ -747,18 +851,18 @@
         subTasks.forEach(st => {
           const tName = st.taskName;
           if (!tasksMap[tName]) {
-            tasksMap[tName] = { total: 0, submitted: 0, late: 0, missing: 0, excused: 0 };
+            tasksMap[tName] = { total: 0, ontime: 0, late: 0, missing: 0, excused: 0 };
           }
           tasksMap[tName].total++;
 
-          const s = st.status || '';
-          if (s === '已交' || s === 'ontime' || s === '準時') {
-            subSubmitted++;
-            tasksMap[tName].submitted++;
-          } else if (s === '遲交' || s === 'late') {
+          const c = classifyTaskStatus(st.status, st.timestamp, st.deadline);
+          if (c.type === 'ontime') {
+            subOnTime++;
+            tasksMap[tName].ontime++;
+          } else if (c.type === 'late') {
             subLate++;
             tasksMap[tName].late++;
-          } else if (leavesList.includes(s)) {
+          } else if (c.type === 'excused') {
             subExcused++;
             tasksMap[tName].excused++;
           } else {
@@ -768,7 +872,7 @@
         });
 
         const subEffTotal = Math.max(1, subTotal - subExcused);
-        const subRate = Math.round((subSubmitted / subEffTotal) * 100);
+        const subRate = Math.round((subOnTime / subEffTotal) * 100);
         const accId = 'subject-acc-' + sIdx;
 
         // 長條圖顏色
@@ -786,12 +890,12 @@
         let detailsHtml = '';
         Object.entries(tasksMap).forEach(([tName, stats]) => {
           const tEff = Math.max(1, stats.total - stats.excused);
-          const tRate = Math.round((stats.submitted / tEff) * 100);
+          const tRate = Math.round((stats.ontime / tEff) * 100);
           detailsHtml += `
             <div class="p-2.5 bg-slate-50/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border border-slate-100">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-bold text-slate-800">${tName}</span>
-                <span class="text-[11px] text-slate-400">(${stats.submitted}/${stats.total} 次)</span>
+                <span class="text-[11px] text-slate-400">(${stats.ontime}/${tEff} 次)</span>
               </div>
               <div class="flex items-center gap-3">
                 <div class="w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden">
@@ -802,6 +906,7 @@
                 </div>
                 ${stats.late > 0 ? '<span class="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-bold">遲交 ' + stats.late + '</span>' : ''}
                 ${stats.missing > 0 ? '<span class="text-[10px] text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded font-bold">缺交 ' + stats.missing + '</span>' : ''}
+                ${stats.excused > 0 ? '<span class="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">免計 ' + stats.excused + '</span>' : ''}
               </div>
             </div>
           `;
