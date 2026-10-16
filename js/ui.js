@@ -169,6 +169,15 @@ async function saveGlobalGasUrl(testConnection = false) {
                             saveAppConfig();
                             if (typeof loadSheetIframe === 'function') loadSheetIframe();
                         }
+                        if (data.config && data.config.classes && data.config.classes.length > 0) {
+                            if (!appConfig.classes || appConfig.classes.length === 0) {
+                                appConfig.classes = data.config.classes;
+                                appConfig.activeClassId = data.config.activeClassId || appConfig.classes[0].id;
+                                saveAppConfig();
+                                renderClassManager();
+                                addStep(`已自動還原雲端 ${appConfig.classes.length} 個班級清單`, 'ok');
+                            }
+                        }
                         
                         setTimeout(() => {
                             Swal.fire({
@@ -450,11 +459,11 @@ function deleteClass(id) {
                       let msg = '';
                       // 處理 config 復原
                       if (data.config) {
-                          if (data.config.classes) {
+                          if (data.config.classes && data.config.classes.length > 0) {
                               // 新版多班級架構的設定 (智慧合併，避免覆寫本地剛建立的新班級)
                               if (!appConfig.classes) appConfig.classes = [];
                               data.config.classes.forEach(cloudClass => {
-                                  const localClass = appConfig.classes.find(c => c.id === cloudClass.id);
+                                  const localClass = appConfig.classes.find(c => c.id === cloudClass.id || c.prefix === cloudClass.prefix || c.label === cloudClass.label);
                                   if (!localClass) {
                                       appConfig.classes.push(cloudClass);
                                   }
@@ -463,15 +472,11 @@ function deleteClass(id) {
                               if (data.config.gasUrl && !appConfig.gasUrl) appConfig.gasUrl = data.config.gasUrl;
                               if (data.config.sheetUrl && !appConfig.sheetUrl) appConfig.sheetUrl = data.config.sheetUrl;
                               
+                              if (!appConfig.activeClassId || !appConfig.classes.find(c => c.id === appConfig.activeClassId)) {
+                                  appConfig.activeClassId = appConfig.classes[0] ? appConfig.classes[0].id : null;
+                              }
                               saveAppConfig();
                               renderClassManager();
-                              
-                              if (!appConfig.classes.find(c => c.id === appConfig.activeClassId)) {
-                                  appConfig.activeClassId = appConfig.classes[0] ? appConfig.classes[0].id : null;
-                                  saveAppConfig();
-                                  window.location.reload();
-                                  return;
-                              }
                           } else if (data.config.classInfo) {
                               // 舊版單一班級相容
                               db.classInfo = data.config.classInfo;

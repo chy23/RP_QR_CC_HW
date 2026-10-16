@@ -2,15 +2,79 @@ function(e, ss, getSheetNames) {
   try {
     var payload = JSON.parse(e.postData.contents);
     
+    // 輔助函式：自動掃描試算表所有分頁，發現包含「學生名單」的所有班級
+    function discoverAllClasses(existingConfig) {
+      var allSheets = ss.getSheets();
+      var discovered = [];
+      for (var i = 0; i < allSheets.length; i++) {
+        var sName = allSheets[i].getName();
+        if (sName.indexOf("學生名單") !== -1) {
+          var cleanLabel = sName.replace("學生名單", "").trim();
+          if (cleanLabel.indexOf("[") === 0 && cleanLabel.lastIndexOf("]") === cleanLabel.length - 1) {
+            cleanLabel = cleanLabel.substring(1, cleanLabel.length - 1).trim();
+          }
+          if (!cleanLabel) cleanLabel = "預設班級";
+          discovered.push({
+            sheetName: sName,
+            label: cleanLabel,
+            prefix: cleanLabel
+          });
+        }
+      }
+      
+      var cfg = existingConfig || {};
+      if (!cfg.classes || cfg.classes.length === 0) {
+        cfg.classes = discovered.map(function(dc, idx) {
+          return {
+            id: 'c_' + idx + '_' + Math.abs(dc.label.split('').reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)).toString(36),
+            label: dc.label,
+            prefix: dc.prefix
+          };
+        });
+        if (cfg.classes.length > 0 && !cfg.activeClassId) {
+          cfg.activeClassId = cfg.classes[0].id;
+        }
+      } else {
+        discovered.forEach(function(dc) {
+          var exists = cfg.classes.some(function(c) {
+            return c.prefix === dc.prefix || c.label === dc.label;
+          });
+          if (!exists) {
+            cfg.classes.push({
+              id: 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
+              label: dc.label,
+              prefix: dc.prefix
+            });
+          }
+        });
+      }
+      return { config: cfg, discovered: discovered };
+    }
+
     if (payload.action === 'ping') {
-      return ContentService.createTextOutput(JSON.stringify({status: 'success', sheetUrl: ss.getUrl()})).setMimeType(ContentService.MimeType.JSON);
+      var config = null;
+      var configSheet = ss.getSheetByName("SystemConfig");
+      if (configSheet) {
+        var configStr = configSheet.getRange("A1").getValue();
+        if (configStr) {
+          try { config = JSON.parse(configStr); } catch (err) {}
+        }
+      }
+      var disc = discoverAllClasses(config);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        sheetUrl: ss.getUrl(),
+        config: disc.config
+      })).setMimeType(ContentService.MimeType.JSON);
     }
     
     // 如果有傳入 classPrefix，就在所有分頁名稱加上前綴，例如 "[112上-三年甲班] "
-    var prefix = "";
-    if (payload.classPrefix) {
-      prefix = "[" + payload.classPrefix + "] ";
+    var rawPrefix = (payload.classPrefix || "").toString().trim();
+    if (rawPrefix.indexOf("[") === 0 && rawPrefix.lastIndexOf("]") === rawPrefix.length - 1) {
+      rawPrefix = rawPrefix.substring(1, rawPrefix.length - 1).trim();
     }
+    var prefix = rawPrefix ? "[" + rawPrefix + "] " : "";
+
     function getColorForPrefix(p) {
       if (!p) return null;
       var colors = ['#ea4335', '#fbbc04', '#34a853', '#4285f4', '#ff6d01', '#46bdc6', '#7baaf7', '#d01884', '#00bfa5', '#9c27b0', '#e91e63', '#673ab7'];
@@ -34,8 +98,6 @@ function(e, ss, getSheetNames) {
       return sheet;
     }
 
-    
-    
     if (payload.action === 'hide_class_tabs') {
       if (!prefix) return ContentService.createTextOutput(JSON.stringify({status: 'error', message: 'No prefix provided'})).setMimeType(ContentService.MimeType.JSON);
       var sheets = ss.getSheets();
@@ -67,14 +129,9 @@ function(e, ss, getSheetNames) {
     var studentSheetName = prefix + "學生名單";
     var logSheetName = prefix + "所有掃描紀錄";
 
-    // 取得設定與學生名單
+    // 取得設定與學生名單 (具備班級自動發現與容錯機制)
     if (payload.action === 'get_students') {
-      var studentSheet = ss.getSheetByName(studentSheetName);
-      if (!studentSheet) {
-        return ContentService.createTextOutput(JSON.stringify({status: 'error', message: '找不到名為「' + studentSheetName + '」的分頁'})).setMimeType(ContentService.MimeType.JSON);
-      }
-      
-      // 讀取全域設定檔 (不加前綴)
+      // 1. 讀取全域設定檔 (不加前綴)
       var config = null;
       var configSheet = ss.getSheetByName("SystemConfig");
       if (configSheet) {
@@ -82,6 +139,68 @@ function(e, ss, getSheetNames) {
         if (configStr) {
           try { config = JSON.parse(configStr); } catch (err) {}
         }
+      }
+
+      // 2. 自動掃描所有班級
+      var disc = discoverAllClasses(config);
+      config = disc.config;
+      var discovered = disc.discovered;
+      var allSheets = ss.getSheets();
+
+      // 3. 尋找目標學生名單分頁
+      var studentSheet = null;
+      
+      // (a) 若有傳入前綴，先找精確匹配
+      if (prefix) {
+        studentSheet = ss.getSheetByName(studentSheetName);
+        if (!studentSheet) {
+          // 模糊搜尋包含 rawPrefix 的學生名單分頁
+          for (var i = 0; i < allSheets.length; i++) {
+            var n = allSheets[i].getName();
+            if (n.indexOf(rawPrefix) !== -1 && n.indexOf("學生名單") !== -1) {
+              studentSheet = allSheets[i];
+              break;
+            }
+          }
+        }
+      }
+
+      // (b) 若無前綴或未找到，依據 config.activeClassId 尋找
+      if (!studentSheet && config && config.activeClassId && config.classes) {
+        for (var c = 0; c < config.classes.length; c++) {
+          if (config.classes[c].id === config.activeClassId) {
+            var targetPrefix = config.classes[c].prefix || config.classes[c].label;
+            studentSheet = ss.getSheetByName("[" + targetPrefix + "] 學生名單");
+            if (!studentSheet) {
+              for (var i = 0; i < allSheets.length; i++) {
+                var n = allSheets[i].getName();
+                if (n.indexOf(targetPrefix) !== -1 && n.indexOf("學生名單") !== -1) {
+                  studentSheet = allSheets[i];
+                  break;
+                }
+              }
+            }
+            break;
+          }
+        }
+      }
+
+      // (c) 若仍未找到，直接取試算表第一個發現的學生名單分頁
+      if (!studentSheet && discovered.length > 0) {
+        studentSheet = ss.getSheetByName(discovered[0].sheetName);
+        // 同步將該班設為作用中班級
+        if (config && config.classes && config.classes.length > 0) {
+          var matchedCls = config.classes.find(function(c) { return c.prefix === discovered[0].prefix || c.label === discovered[0].label; });
+          if (matchedCls) config.activeClassId = matchedCls.id;
+        }
+      }
+
+      // (d) 若試算表中完全不存在任何學生名單分頁
+      if (!studentSheet) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: '試算表中找不到任何「學生名單」分頁。請先在「0. 資料建置」建立班級與學生後點擊「備份至雲端」！'
+        })).setMimeType(ContentService.MimeType.JSON);
       }
 
       var data = studentSheet.getDataRange().getDisplayValues();
