@@ -399,27 +399,46 @@
     // 本地 LocalStorage 查詢解析器 (供離線與同裝置測試)
     function queryFromLocalStorage(query) {
       try {
-        let dbKey = 'BETA_doc_productivity_db';
-        let raw = localStorage.getItem(dbKey);
-        if (!raw) {
-          dbKey = 'doc_productivity_db';
-          raw = localStorage.getItem(dbKey);
-        }
-        if (!raw) return null;
-
-        const db = JSON.parse(raw);
-        if (!db.students || db.students.length === 0) return null;
-
         const qUpper = query.toUpperCase();
-        const student = db.students.find(s => {
-          if (s.token && s.token.toUpperCase() === qUpper) return true;
-          if (('STU' + String(s.id).padStart(3, '0')).toUpperCase() === qUpper) return true;
-          if (s.name === query) return true;
-          if (String(s.id) === query) return true;
-          return false;
-        });
+        let db = null;
+        let student = null;
+        let matchedClassId = null;
 
-        if (!student) return null;
+        // 收集所有可能的 DB 鍵值
+        const candidateKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k.includes('doc_productivity_db')) {
+            candidateKeys.push(k);
+          }
+        }
+        // 優先排入當前可能鍵值
+        if (!candidateKeys.includes('BETA_doc_productivity_db')) candidateKeys.unshift('BETA_doc_productivity_db');
+        if (!candidateKeys.includes('doc_productivity_db')) candidateKeys.unshift('doc_productivity_db');
+
+        for (const k of candidateKeys) {
+          try {
+            const raw = localStorage.getItem(k);
+            if (!raw) continue;
+            const parsed = JSON.parse(raw);
+            if (!parsed.students || parsed.students.length === 0) continue;
+            const found = parsed.students.find(s => {
+              if (s.token && s.token.toUpperCase() === qUpper) return true;
+              if (('STU' + String(s.id).padStart(3, '0')).toUpperCase() === qUpper) return true;
+              if (s.name === query) return true;
+              if (String(s.id) === query) return true;
+              return false;
+            });
+            if (found) {
+              db = parsed;
+              student = found;
+              if (k.includes('_db_')) matchedClassId = k.split('_db_')[1];
+              break;
+            }
+          } catch(e) {}
+        }
+
+        if (!student || !db) return null;
 
         // 班級名稱
         let className = '本班級';
@@ -427,7 +446,8 @@
           const cfgRaw = localStorage.getItem('BETA_app_config') || localStorage.getItem('app_config');
           if (cfgRaw) {
             const conf = JSON.parse(cfgRaw);
-            const cls = conf.classes ? conf.classes.find(c => c.id === conf.activeClassId) : null;
+            const targetId = matchedClassId || conf.activeClassId;
+            const cls = conf.classes ? conf.classes.find(c => c.id === targetId) : null;
             if (cls) className = cls.label;
           }
         } catch(e) {}

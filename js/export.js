@@ -1525,3 +1525,351 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
         container.appendChild(sheetEl);
     }
 }
+
+// ==========================================
+// Tab 8: 家長手札與專屬查詢小卡中心
+// ==========================================
+let currentSimulatorStudentId = null;
+
+function renderParentTab() {
+    const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+    const classLabel = cls ? cls.label : '目前班級';
+    const labelEl = document.getElementById('parent-tab-class-label');
+    if (labelEl) labelEl.innerText = classLabel;
+
+    // 1. 渲染學生勾選框清單
+    const selector = document.getElementById('parent-tab-students-selector');
+    if (selector) {
+        selector.innerHTML = '';
+        db.students.forEach(s => {
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-1.5 p-1.5 hover:bg-white rounded cursor-pointer border border-transparent hover:border-slate-200 transition';
+            label.innerHTML = `
+                <input type="checkbox" value="${s.id}" checked class="parent-tab-stu-cb rounded text-emerald-600 focus:ring-emerald-500" onchange="updateParentTabSelectedCount()">
+                <span class="font-bold text-slate-700">${String(s.id).padStart(2, '0')} ${s.name}</span>
+            `;
+            selector.appendChild(label);
+        });
+        updateParentTabSelectedCount();
+    }
+
+    // 2. 渲染全班 Token 代碼表
+    const tbody = document.getElementById('parent-tab-tokens-tbody');
+    if (tbody) {
+        tbody.innerHTML = '';
+        const gas = appConfig.gasUrl || '';
+        let apiParam = '';
+        if (gas && gas.includes('/macros/s/')) {
+            apiParam = gas.split('/macros/s/')[1].split('/')[0];
+        }
+        const currentPath = window.location.pathname;
+        let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+        const parentBaseUrl = window.location.origin + basePath + 'parent.html';
+
+        db.students.forEach(s => {
+            const token = s.token || ('STU' + String(s.id).padStart(3, '0'));
+            const directUrl = `${parentBaseUrl}?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50 transition';
+            tr.innerHTML = `
+                <td class="p-2 text-center font-bold text-slate-500">${String(s.id).padStart(2, '0')}</td>
+                <td class="p-2 font-bold text-slate-800">${s.name}</td>
+                <td class="p-2 font-mono font-bold text-emerald-700 bg-emerald-50/50 rounded px-1.5 py-0.5">${token}</td>
+                <td class="p-2 text-center space-x-1">
+                    <button onclick="navigator.clipboard.writeText('${directUrl}').then(() => showToast('已複製 ${s.name} 專屬手札網址！', 'success'))" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-bold active:scale-95 transition cursor-pointer">複製</button>
+                    <a href="${directUrl}" target="_blank" class="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[11px] font-bold transition inline-block">開啟</a>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 3. 渲染手機模擬器學生下拉選單
+    const sel = document.getElementById('parent-simulator-student-select');
+    if (sel) {
+        sel.innerHTML = '';
+        db.students.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.innerText = `${String(s.id).padStart(2, '0')} ${s.name}`;
+            sel.appendChild(opt);
+        });
+        if (db.students.length > 0) {
+            updateParentSimulator(db.students[0].id);
+        } else {
+            const frame = document.getElementById('parent-simulator-frame');
+            if (frame) frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">目前班級尚無學生資料</div>';
+        }
+    }
+}
+
+function updateParentTabSelectedCount() {
+    const total = db.students.length;
+    const checked = document.querySelectorAll('.parent-tab-stu-cb:checked').length;
+    const el = document.getElementById('parent-tab-selected-count');
+    if (el) el.innerText = `已勾選 ${checked} / ${total} 人`;
+}
+
+function selectAllParentTabStudents(check) {
+    document.querySelectorAll('.parent-tab-stu-cb').forEach(cb => cb.checked = check);
+    updateParentTabSelectedCount();
+}
+
+function previewParentCardsFromTab8() {
+    const density = parseInt(document.getElementById('parent-tab-card-density').value, 10) || 6;
+    const checkedIds = Array.from(document.querySelectorAll('.parent-tab-stu-cb:checked')).map(cb => parseInt(cb.value, 10));
+    if (checkedIds.length === 0) {
+        showAlert('提示', '請至少勾選一位學生！');
+        return;
+    }
+    previewParentCardsModal(checkedIds, density);
+}
+
+function updateParentSimulator(studentId) {
+    currentSimulatorStudentId = parseInt(studentId, 10);
+    const frame = document.getElementById('parent-simulator-frame');
+    if (!frame) return;
+
+    const student = db.students.find(s => s.id === currentSimulatorStudentId);
+    if (!student) {
+        frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">查無該生資料</div>';
+        return;
+    }
+
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+    const tasks = db.tasks || [];
+    const records = db.records || [];
+    const ranges = db.ranges || [];
+
+    // 計算各作業狀況
+    const studentTasks = [];
+    tasks.forEach(t => {
+        let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
+        if (ranges) {
+            const rangeNotices = ranges.filter(r => r.taskId === t.id).map(r => r.noticeName || '');
+            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
+        }
+        if (noticeNames.length === 0) noticeNames = [''];
+
+        noticeNames.forEach(nn => {
+            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+                status = rec.manualStatus || '已交';
+                timestamp = rec.timestamp || rec.fullTimestamp || '';
+            }
+            let range = '';
+            const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            if (rObj) range = rObj.range || '';
+
+            studentTasks.push({
+                subject: t.subject || '其他',
+                taskName: t.name,
+                range: range,
+                date: nn || '近期',
+                status: status,
+                timestamp: timestamp
+            });
+        });
+    });
+
+    // 統計計算
+    let totalAssigned = studentTasks.length;
+    let submittedCount = 0;
+    let lateCount = 0;
+    let missingCount = 0;
+    let excusedCount = 0;
+    const pendingItems = [];
+    const lateCountsPerTask = {};
+    const leavesList = ['事假', '病假', '公假', '喪假', '免交', '請假', '其他'];
+
+    studentTasks.forEach(t => {
+        const st = t.status || '';
+        if (st === '已交' || st === 'ontime' || st === '準時') {
+            submittedCount++;
+        } else if (st === '遲交' || st === 'late') {
+            lateCount++;
+            const key = `[${t.subject}] ${t.taskName}`;
+            lateCountsPerTask[key] = (lateCountsPerTask[key] || 0) + 1;
+        } else if (st === '退回') {
+            pendingItems.push({ subject: t.subject, taskName: t.taskName, range: t.range, badge: '⚠️ 需訂正' });
+        } else if (st === '沒帶') {
+            missingCount++;
+            pendingItems.push({ subject: t.subject, taskName: t.taskName, range: t.range, badge: '🎒 沒帶' });
+        } else if (leavesList.includes(st)) {
+            excusedCount++;
+        } else if (st === '缺交' || st === '未交') {
+            missingCount++;
+            pendingItems.push({ subject: t.subject, taskName: t.taskName, range: t.range, badge: '❌ 缺交' });
+        } else {
+            submittedCount++;
+        }
+    });
+
+    const effTotal = Math.max(1, totalAssigned - excusedCount);
+    const onTimeRate = totalAssigned > 0 ? Math.round((submittedCount / effTotal) * 100) : 100;
+    const delayEntries = Object.entries(lateCountsPerTask).sort((a, b) => b[1] - a[1]);
+
+    // 依科目群組化
+    const groupedSubjects = {};
+    studentTasks.forEach(t => {
+        const sub = t.subject || '其他';
+        if (!groupedSubjects[sub]) groupedSubjects[sub] = [];
+        groupedSubjects[sub].push(t);
+    });
+
+    let subjectsHtml = '';
+    Object.entries(groupedSubjects).forEach(([sub, subTasks], idx) => {
+        const sTotal = subTasks.length;
+        let sSub = 0;
+        let sLate = 0;
+        let sMiss = 0;
+        let sExc = 0;
+        const taskMap = {};
+
+        subTasks.forEach(st => {
+            const tn = st.taskName;
+            if (!taskMap[tn]) taskMap[tn] = { total: 0, sub: 0, late: 0, miss: 0 };
+            taskMap[tn].total++;
+            const s = st.status || '';
+            if (s === '已交' || s === 'ontime' || s === '準時') {
+                sSub++;
+                taskMap[tn].sub++;
+            } else if (s === '遲交' || s === 'late') {
+                sLate++;
+                taskMap[tn].late++;
+            } else if (leavesList.includes(s)) {
+                sExc++;
+            } else {
+                sMiss++;
+                taskMap[tn].miss++;
+            }
+        });
+
+        const sEff = Math.max(1, sTotal - sExc);
+        const sRate = Math.round((sSub / sEff) * 100);
+        const simAccId = 'sim-acc-' + idx;
+
+        let details = '';
+        Object.entries(taskMap).forEach(([tn, ts]) => {
+            const tr = Math.round((ts.sub / Math.max(1, ts.total)) * 100);
+            details += `
+                <div class="flex items-center justify-between text-[11px] p-1.5 bg-white rounded border border-slate-100">
+                    <span class="font-bold text-slate-700">${tn}</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-bold ${tr >= 90 ? 'text-emerald-600' : 'text-amber-600'}">${tr}%</span>
+                        ${ts.late > 0 ? '<span class="text-[9px] bg-amber-50 text-amber-700 px-1 rounded">遲' + ts.late + '</span>' : ''}
+                        ${ts.miss > 0 ? '<span class="text-[9px] bg-rose-50 text-rose-700 px-1 rounded">缺' + ts.miss + '</span>' : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        subjectsHtml += `
+            <div class="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                <button type="button" onclick="toggleSimAccordion('${simAccId}')" class="w-full p-2.5 flex flex-col gap-1 text-left hover:bg-slate-50 transition cursor-pointer">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-black text-slate-800">${sub}</span>
+                        <span class="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">${sRate}% 準時</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div class="${sRate >= 90 ? 'bg-emerald-500' : (sRate >= 80 ? 'bg-amber-500' : 'bg-rose-500')} h-1.5 rounded-full" style="width: ${sRate}%"></div>
+                    </div>
+                </button>
+                <div id="${simAccId}" class="hidden p-2 pt-0 space-y-1 bg-slate-50/50 border-t border-slate-100">
+                    ${details}
+                </div>
+            </div>
+        `;
+    });
+
+    frame.innerHTML = `
+        <!-- 手機頂部英雄卡 -->
+        <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-2xs">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black text-base shadow-xs">
+                    ${String(student.id).padStart(2, '0')}
+                </div>
+                <div>
+                    <div class="text-sm font-black text-slate-900">${student.name}</div>
+                    <div class="text-[10px] font-mono text-slate-400">代碼：${token}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 三大指標 -->
+        <div class="grid grid-cols-3 gap-1.5 text-center">
+            <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                <div class="text-[10px] text-slate-400 font-bold">準時率</div>
+                <div class="text-base font-black ${onTimeRate >= 90 ? 'text-emerald-600' : 'text-amber-600'}">${onTimeRate}%</div>
+            </div>
+            <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                <div class="text-[10px] text-slate-400 font-bold">已準時交</div>
+                <div class="text-xs font-black text-slate-800 mt-0.5">${submittedCount} / ${totalAssigned}</div>
+            </div>
+            <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                <div class="text-[10px] text-slate-400 font-bold">今晚待辦</div>
+                <div class="text-base font-black ${pendingItems.length > 0 ? 'text-rose-600' : 'text-emerald-600'}">${pendingItems.length}</div>
+            </div>
+        </div>
+
+        <!-- 🚨 今晚待辦 -->
+        <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
+            <div class="flex justify-between items-center text-[11px] font-black text-slate-800 border-b pb-1">
+                <span>🚨 今晚即時待辦</span>
+                <span class="text-[10px] text-rose-600 font-bold">${pendingItems.length} 項</span>
+            </div>
+            ${pendingItems.length === 0 ? '<div class="text-[11px] text-emerald-600 font-bold py-1 text-center">全數完成 🎉</div>' : ''}
+            ${pendingItems.map(p => `
+                <div class="flex items-center justify-between text-[11px] py-0.5">
+                    <span class="font-bold text-slate-700">[${p.subject}] ${p.taskName}</span>
+                    <span class="text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold">${p.badge}</span>
+                </div>
+            `).join('')}
+        </div>
+
+        <!-- ⚠️ 常遲到作業排行 -->
+        <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
+            <div class="text-[11px] font-black text-slate-800 border-b pb-1">⚠️ 常遲到作業排行</div>
+            ${delayEntries.length === 0 ? '<div class="text-[11px] text-slate-400 py-1 text-center font-bold">目前無任何遲到紀錄 模範生！</div>' : ''}
+            ${delayEntries.slice(0, 3).map(([taskKey, count], idx) => `
+                <div class="flex items-center justify-between text-[11px] py-0.5">
+                    <span class="font-bold text-slate-700">#${idx + 1} ${taskKey}</span>
+                    <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">遲交 ${count} 次</span>
+                </div>
+            `).join('')}
+        </div>
+
+        <!-- 📊 各科習慣與展開明細 -->
+        <div class="space-y-1.5">
+            <div class="text-[11px] font-black text-slate-800 px-1">📊 各科長條圖 (點擊可展開明細)</div>
+            ${subjectsHtml}
+        </div>
+    `;
+}
+
+function toggleSimAccordion(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden');
+}
+
+function openSelectedStudentParentPage() {
+    if (!currentSimulatorStudentId) {
+        if (db.students.length > 0) currentSimulatorStudentId = db.students[0].id;
+        else return;
+    }
+    const student = db.students.find(s => s.id === currentSimulatorStudentId);
+    if (!student) return;
+
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const directUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+    window.open(directUrl, '_blank');
+}

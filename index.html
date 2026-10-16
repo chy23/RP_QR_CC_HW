@@ -338,11 +338,12 @@
                         <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/10/16 (Beta)</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li><strong>👨‍👩‍👧 獨立家長端查詢手札 (parent.html)：</strong>比照 MPScore 雙端設計，家長掃描小卡 QR Code 免密碼直達孩子專屬手札，即時掌握作業繳交進度。</li>
+                        <li><strong>👨‍👩‍👧 新增第 8 個分頁【8. 家長手札與專屬查詢小卡】：</strong>全新獨立分頁，整合 A4 小卡批次列印中心（每頁 4/6/8 張）、全班查詢 Token 代碼表，以及<strong>「家長端手機即時畫面模擬器」</strong>，教師在電腦端就能直接秒選學生檢視家長手札畫面！</li>
+                        <li><strong>🐞 解決更換設備匯入名單失敗錯誤（核心修復）：</strong>修復在本地無班級設定時點擊「從雲端匯入」出現「找不到名為學生名單的分頁」的問題。升級雲端引擎智慧掃描機制，自動讀取所有帶有班級前綴（如 <code>[115下-六年5班（beta）] 學生名單</code>）之分頁，更換設備貼上 GAS 網址即自動還原全班級清單與學生！</li>
+                        <li><strong>🌱 獨立家長端查詢手札 (parent.html)：</strong>比照 MPScore 雙端設計，家長掃描小卡 QR Code 免密碼直達孩子專屬手札，SWR 秒級快取載入，即時掌握作業繳交進度。</li>
                         <li><strong>📊 各科目習慣橫向長條圖與展開明細：</strong>以直觀彩色長條圖呈現各科準時率，<strong>點擊各科目卡片可向下展開</strong>該科各項具體作業簿冊（如國習、甲本、乙本）的詳細繳交比率與次數。</li>
                         <li><strong>⚠️ 常遲到作業警示排行：</strong>自動統計本學期孩子最常遲交、拖延的作業 Top 3，精準抓出弱點作業與拖延瓶頸，方便親師即時引導。</li>
                         <li><strong>🚨 今晚即時待辦清單：</strong>首頁醒目列出當前處於「缺交」、「聯絡簿沒帶」或「退回待訂正」之具體作業名稱與頁碼範圍；全數交齊則顯示綠色嘉獎徽章。</li>
-                        <li><strong>🖨️ 教師端 A4 家長查詢小卡一鍵列印：</strong>在【4. 條碼匯出】新增專屬小卡列印中心，支援每頁 4 / 6 / 8 張 A4 排版列印，附專屬 QR Code、防偽代碼與裁切虛線，發放親師交流零負擔。</li>
                     </ul>
                 </div>
 
@@ -631,6 +632,10 @@
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-red-600 font-bold transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(5)">5. 批改與退回</button>
             <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-purple-600 font-bold transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(6)">6. 缺交提醒單</button>
         <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-amber-600 font-bold transition-all duration-150 active:scale-95 active:opacity-80" onclick="switchTab(7)">7. 個人報表</button>
+            <button class="tab-btn px-4 py-2 hover:bg-gray-100 rounded-t-md text-emerald-800 font-bold transition-all duration-150 active:scale-95 active:opacity-80 flex items-center gap-1.5" onclick="switchTab(8)">
+                <span>👨‍👩‍👧 8. 家長手札與小卡</span>
+                <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full">New</span>
+            </button>
         </div>
 
         <!-- Tab 0: 前端資料建置 -->
@@ -1081,6 +1086,9 @@
                           <button onclick="previewParentCardsModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl shadow-md font-bold transition flex items-center justify-center gap-2 active:scale-95 active:opacity-80 cursor-pointer">
                               <span>🖨️ 預覽與列印家長查詢小卡</span>
                           </button>
+                          <button onclick="switchTab(8)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 px-4 py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer">
+                              <span>👨‍👩‍👧 前往【8. 家長手札與小卡】專屬中心</span>
+                          </button>
                           <a href="parent.html" target="_blank" class="bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 px-4 py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-1.5 active:scale-95 active:opacity-80 shadow-xs cursor-pointer">
                               <span>🌱 開啟家長端頁面查看</span>
                               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
@@ -1303,6 +1311,184 @@
 
         </div>
 
+        <!-- Tab 8: 家長手札與查詢小卡中心 -->
+        <div id="tab-8" class="tab-content bg-white p-6 rounded-b shadow">
+            <!-- 頁面標頭 -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-4 mb-6 gap-3">
+                <div>
+                    <h2 class="text-2xl font-bold m-0 border-0 pb-0 flex items-center gap-2 text-emerald-800">
+                        <span class="text-2xl">👨‍👩‍👧</span>
+                        8. 家長手札與專屬查詢小卡中心
+                        <span class="text-xs bg-emerald-600 text-white px-2.5 py-0.5 rounded-full font-bold">Ver 3.3 新功能</span>
+                    </h2>
+                    <p class="text-sm text-gray-500 mt-1">
+                        親師同心伴讀 ‧ 手機免密碼掃碼秒查 ‧ A4 小卡批次列印 ‧ 教師端即時手機畫面模擬
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="parent.html" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5 text-sm active:scale-95 cursor-pointer">
+                        <span>🌱 開啟家長端獨立網頁</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                    <button onclick="previewParentCardsModal()" class="bg-white hover:bg-emerald-50 text-emerald-800 border-2 border-emerald-300 font-bold px-4 py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-sm active:scale-95 cursor-pointer">
+                        <span>🖨️ A4 排版列印通知小卡</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 上方三項特色提示卡 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-xl font-bold flex-shrink-0">
+                        📲
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-emerald-950 text-sm">免下載 APP ‧ 免帳密秒查</h4>
+                        <p class="text-xs text-emerald-800 mt-1 leading-relaxed">
+                            家長使用手機內建相機或 LINE 掃描小卡 QR Code，直達個人手札，SWR 秒級快取開啟。
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center text-xl font-bold flex-shrink-0">
+                        📊
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-blue-950 text-sm">各科繳交進度 ‧ 展開作業細項</h4>
+                        <p class="text-xs text-blue-800 mt-1 leading-relaxed">
+                            橫向長條圖呈現準時率，點擊各科卡片可向下展開該科各項簿冊（國習、甲本、數作）狀況。
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xl font-bold flex-shrink-0">
+                        ⚠️
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-amber-950 text-sm">今晚待辦清單 ‧ 常遲到排行</h4>
+                        <p class="text-xs text-amber-800 mt-1 leading-relaxed">
+                            首頁醒目列出缺交／沒帶／退回待訂正項目，並自動統計常遲交作業 Top 3，親師聯手引導。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主區塊：左側小卡列印設定，右側即時手機模擬器 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- 左側：A4 小卡列印與學生代碼表 (7 欄) -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <!-- 卡片 1: A4 小卡列印設定 -->
+                    <div class="border-2 border-emerald-200 rounded-2xl p-5 bg-white shadow-xs">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                            <h3 class="font-black text-slate-800 text-base flex items-center gap-2">
+                                <span>🖨️</span> A4 家長查詢小卡批次列印設定
+                            </h3>
+                            <span class="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold" id="parent-tab-class-label">目前班級</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">每頁 A4 小卡密度排版：</label>
+                                <select id="parent-tab-card-density" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 bg-white shadow-2xs outline-none">
+                                    <option value="6" selected>每頁 6 張 (3x2 經典推薦版)</option>
+                                    <option value="8">每頁 8 張 (4x2 經濟省紙版)</option>
+                                    <option value="4">每頁 4 張 (2x2 大字清晰版)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">列印操作：</label>
+                                <button onclick="previewParentCardsFromTab8()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <span>🖨️ 開啟 A4 預覽並列印</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 學生勾選列表 -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-slate-600">選擇要列印小卡的學生：</span>
+                                <div class="space-x-1.5 text-xs">
+                                    <button type="button" onclick="selectAllParentTabStudents(true)" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold transition">全選</button>
+                                    <button type="button" onclick="selectAllParentTabStudents(false)" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold transition">全不選</button>
+                                </div>
+                            </div>
+                            <div id="parent-tab-students-selector" class="max-h-44 overflow-y-auto border border-slate-200 rounded-xl p-2.5 bg-slate-50/50 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                                <!-- 動態生成學生勾選框 -->
+                            </div>
+                            <div class="text-[11px] text-slate-400 mt-2 flex justify-between">
+                                <span>💡 小卡包含裁切虛線，列印後可裁開夾於聯絡簿發放給家長。</span>
+                                <span id="parent-tab-selected-count" class="font-bold text-slate-600">已勾選 0 / 0 人</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 卡片 2: 全班防偽查詢代碼列表 -->
+                    <div class="border border-slate-200 rounded-2xl p-5 bg-white shadow-xs">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
+                            <h3 class="font-black text-slate-800 text-base flex items-center gap-2">
+                                <span>🔐</span> 全班專屬家長查詢代碼表 (Token)
+                            </h3>
+                            <button onclick="pushStudentsToGas()" class="text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-lg font-bold transition flex items-center gap-1 active:scale-95 cursor-pointer">
+                                <span>☁️ 備份代碼至雲端</span>
+                            </button>
+                        </div>
+                        <div class="max-h-64 overflow-y-auto border border-slate-100 rounded-xl">
+                            <table class="w-full text-left text-xs text-slate-700">
+                                <thead class="bg-slate-50 text-slate-500 font-bold sticky top-0 border-b">
+                                    <tr>
+                                        <th class="p-2 text-center w-12">座號</th>
+                                        <th class="p-2">姓名</th>
+                                        <th class="p-2 font-mono">查詢代碼</th>
+                                        <th class="p-2 text-center">專屬連結</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="parent-tab-tokens-tbody" class="divide-y divide-slate-100">
+                                    <!-- 動態生成學生代碼表格 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 右側：📱 學生家長端即時手機畫面模擬器 (5 欄) -->
+                <div class="lg:col-span-5">
+                    <div class="border-2 border-emerald-300 rounded-3xl p-5 bg-gradient-to-b from-slate-50 to-white shadow-md sticky top-6">
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">📱</span>
+                                <div>
+                                    <h3 class="font-black text-slate-900 text-sm">家長端手機即時畫面模擬</h3>
+                                    <p class="text-[11px] text-slate-400">點選學生即時檢視該生手札內容</p>
+                                </div>
+                            </div>
+                            <select id="parent-simulator-student-select" onchange="updateParentSimulator(this.value)" class="text-xs font-bold border border-emerald-300 bg-white text-emerald-900 rounded-xl px-2.5 py-1.5 shadow-2xs outline-none">
+                                <!-- 動態載入學生選單 -->
+                            </select>
+                        </div>
+
+                        <!-- 手機框架外觀 -->
+                        <div class="bg-slate-900 p-3 rounded-[2.5rem] shadow-xl max-w-sm mx-auto border-4 border-slate-800">
+                            <div class="w-16 h-3 bg-slate-800 rounded-full mx-auto mb-2"></div>
+                            <div id="parent-simulator-frame" class="bg-slate-50 rounded-[1.8rem] p-3 max-h-[500px] overflow-y-auto space-y-3 text-slate-800 text-xs">
+                                <!-- 模擬器動態內容 -->
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-200 text-center">
+                            <button id="btn-open-current-student-parent" onclick="openSelectedStudentParentPage()" class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-4 py-2 rounded-full transition active:scale-95 shadow-2xs cursor-pointer">
+                                <span>🌱 以此學生身分開啟獨立家長頁面</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
     <!-- Reminder Modal -->
     <div id="reminder-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
         <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
@@ -1399,15 +1585,15 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=1792188800"></script>
-    <script src="js/audio.js?v=1792188800"></script>
-    <script src="js/db.js?v=1792188800"></script>
-    <script src="js/ui.js?v=1792188800"></script>
-    <script src="js/scanner.js?v=1792188800"></script>
-    <script src="js/export.js?v=1792188800"></script>
-    <script src="js/report.js?v=1792188800"></script>
-    <script src="js/reminders.js?v=1792188800"></script>
-    <script src="js/main.js?v=1792188800"></script>
+    <script src="js/alerts.js?v=1792198888"></script>
+    <script src="js/audio.js?v=1792198888"></script>
+    <script src="js/db.js?v=1792198888"></script>
+    <script src="js/ui.js?v=1792198888"></script>
+    <script src="js/scanner.js?v=1792198888"></script>
+    <script src="js/export.js?v=1792198888"></script>
+    <script src="js/report.js?v=1792198888"></script>
+    <script src="js/reminders.js?v=1792198888"></script>
+    <script src="js/main.js?v=1792198888"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
