@@ -1192,7 +1192,7 @@
               </div>
 
               <div class="flex justify-between items-center text-[11px] text-slate-400 pt-0.5">
-                <span>應繳 ${subTotal} 次 ‧ 準時 ${subSubmitted} 次</span>
+                <span>應繳 ${subTotal} 次 ‧ 準時 ${subOnTime} 次${subExcused > 0 ? ' ‧ 免計 ' + subExcused + ' 次' : ''}</span>
                 <span>${subLate > 0 ? '遲交 ' + subLate + ' 次 ‧ ' : ''}${subMissing > 0 ? '缺交 ' + subMissing + ' 次' : '無缺交'}</span>
               </div>
             </button>
@@ -1214,16 +1214,8 @@
         logsContainer.innerHTML = '<div class="py-4 text-center text-xs text-slate-400">尚無近期打卡紀錄</div>';
       } else {
         recentLogs.forEach(l => {
-          let badge = '<span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">✅ 準時</span>';
-          if (l.status === '遲交' || l.status === 'late') {
-            badge = '<span class="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">⏰ 遲交</span>';
-          } else if (l.status === '退回') {
-            badge = '<span class="text-xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">⚠️ 退回</span>';
-          } else if (l.status === '缺交' || l.status === '未交') {
-            badge = '<span class="text-xs font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">❌ 缺交</span>';
-          } else if (leavesList.includes(l.status)) {
-            badge = `<span class="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">🏥 ${l.status}</span>`;
-          }
+          const c = classifyTaskStatus(l.status, l.timestamp, l.deadline);
+          const badge = `<span class="text-xs font-bold px-2 py-0.5 rounded-full border ${c.badgeClass}">${c.badge}</span>`;
 
           logsContainer.innerHTML += `
             <div class="py-2.5 flex items-center justify-between text-xs hover:bg-slate-50/50 px-1 rounded-lg transition">
