@@ -232,13 +232,12 @@ function(e, ss, getSheetNames) {
       return ContentService.createTextOutput(JSON.stringify({status: 'success', students: students, config: config})).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 家長端專屬查詢 (僅回傳該學生的資料，保護同班同學隱私)
+    // 家長端專屬查詢 (僅支援小卡專屬 QR Code 代碼，保護學生隱私)
     if (payload.action === 'parent_query') {
       var queryToken = (payload.token || '').toString().trim().toUpperCase();
-      var queryName = (payload.studentName || '').toString().trim();
       
-      if (!queryToken && !queryName) {
-        return ContentService.createTextOutput(JSON.stringify({status: 'error', message: '請提供查詢代碼或學生姓名'})).setMimeType(ContentService.MimeType.JSON);
+      if (!queryToken) {
+        return ContentService.createTextOutput(JSON.stringify({status: 'error', message: '為保護學生隱私，請掃描小卡專屬 QR Code 登入'})).setMimeType(ContentService.MimeType.JSON);
       }
       
       var allSheets = ss.getSheets();
@@ -267,7 +266,6 @@ function(e, ss, getSheetNames) {
               var isMatch = false;
               if (queryToken && rTok && rTok === queryToken) isMatch = true;
               else if (queryToken && !rTok && ('STU' + ('00' + rId).slice(-3)).toUpperCase() === queryToken) isMatch = true;
-              else if (queryName && rName === queryName) isMatch = true;
               
               if (isMatch) {
                 targetStudent = { id: rId, name: rName, token: rTok || ('STU' + ('00' + rId).slice(-3)) };
