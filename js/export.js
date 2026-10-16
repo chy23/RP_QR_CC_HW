@@ -1937,7 +1937,6 @@ function updateParentSimulator(studentId) {
                 </div>
                 <div>
                     <div class="text-sm font-black text-slate-900">${student.name}</div>
-                    <div class="text-[10px] font-mono text-slate-400">代碼：${token}</div>
                 </div>
             </div>
             <div class="text-right">
