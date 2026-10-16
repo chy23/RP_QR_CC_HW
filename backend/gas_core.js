@@ -317,6 +317,21 @@ function(e, ss, getSheetNames) {
               var tName = headerTaskNames[col] || baseName;
               var tRange = headerRanges[col] || '';
               var tDate = headerDates[col] || '';
+
+              // 檢查該作業欄位在全班是否有任何登記資料 (是否有任何學生在該欄位有紀錄)
+              var colHasAnyStudentData = false;
+              for (var rowCheck = 3; rowCheck < sheetValues.length; rowCheck++) {
+                if (sheetValues[rowCheck][col] && sheetValues[rowCheck][col].toString().trim() !== '') {
+                  colHasAnyStudentData = true;
+                  break;
+                }
+              }
+
+              // 若全班沒有任何學生在該作業有紀錄，且試算表欄位未設定範圍或日期，代表尚未開始清點，不計入準時率！
+              if (!colHasAnyStudentData && !tRange && !tDate) {
+                continue;
+              }
+
               var tStatus = studentRowValues[col] || '';
               if (!tStatus) tStatus = '缺交';
               

@@ -1641,17 +1641,32 @@ function updateParentSimulator(studentId) {
     const records = db.records || [];
     const ranges = db.ranges || [];
 
-    // 計算各作業狀況
+    // 計算各作業狀況 (排除從未掃描統計過、且未設定範圍的作業)
     const studentTasks = [];
     tasks.forEach(t => {
+        // 檢查全班是否有任何繳交打卡紀錄
+        const hasAnyRecord = (records || []).some(r => r.taskId === t.id);
+        // 檢查是否有設定範圍或日期
+        const hasAnyRange = (ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
+
+        // 若全班完全沒有任何掃描/打卡紀錄，且未設定範圍日期，表示尚未開始清點，不計入準時率與待辦
+        if (!hasAnyRecord && !hasAnyRange) {
+            return;
+        }
+
         let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
         if (ranges) {
-            const rangeNotices = ranges.filter(r => r.taskId === t.id).map(r => r.noticeName || '');
+            const rangeNotices = ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
             rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
         }
         if (noticeNames.length === 0) noticeNames = [''];
 
         noticeNames.forEach(nn => {
+            // 確認該子項目在全班是否有紀錄或範圍
+            const subHasRecord = (records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
+            if (!subHasRecord && !subHasRange) return;
+
             const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
             let status = '缺交';
             let timestamp = '';
