@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>學生作業繳交與學習習慣手札 ‧ 親師同心伴讀</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- QR Code Scanner Libraries -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+    :root {
+      --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang TC", "Noto Sans TC", sans-serif;
+    }
+    body {
+      font-family: var(--font-system);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #F8F9FA;
+    }
+    button, .touch-target {
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.12s cubic-bezier(0.3, 0, 0, 1), box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+    button:active, .touch-target:active {
+      transform: scale(0.97);
+    }
+    .apple-glass {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+    }
+    /* 平滑展開動畫 */
+    .accordion-content {
+      transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    }
+  </style>
+</head>
+<body class="text-slate-800 min-h-screen pb-16 selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- ==================== 頂部導覽列 ==================== -->
+  <header class="apple-glass sticky top-0 z-40 text-slate-800 border-b border-slate-200/70">
+    <div class="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-black text-lg shadow-sm">
+          🌱
+        </div>
+        <div>
+          <h1 class="text-base font-black text-slate-900 tracking-tight flex items-center gap-1">
+            <span>學生作業學習手札</span>
+            <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-bold">家長端</span>
+          </h1>
+          <p class="text-xs text-slate-500 font-medium hidden sm:block">看見孩子的每一步累積 ‧ 親師同心伴讀</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btnScanStudent" onclick="openScanModal()" class="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full transition active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-2xs">
+          <span>📷 掃描換人</span>
+        </button>
+        <button id="btnRefresh" onclick="doParentQuery(currentStudentToken, true)" class="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-full border border-emerald-200 transition active:scale-95 flex items-center gap-1 shadow-2xs cursor-pointer">
+          <span id="refreshIcon">🔄</span>
+          <span class="hidden sm:inline">重新整理</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 mt-5 space-y-5">
+
+    <!-- ==================== 專屬 QR Code 掃描登入區 ==================== -->
+    <div id="parentScanBox" class="apple-glass rounded-3xl p-6 sm:p-8 space-y-5 shadow-sm text-center">
+      <div class="space-y-2">
+        <div class="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white flex items-center justify-center text-3xl shadow-md">
+          📷
+        </div>
+        <div class="inline-flex items-center gap-1 text-xs font-bold text-emerald-900 bg-emerald-50 px-3 py-0.5 rounded-full border border-emerald-200">
+          <span>🔒</span> 個人隱私專屬保護
+        </div>
+        <h2 class="text-xl font-black text-slate-800">請掃描孩子專屬小卡上的 QR Code</h2>
+        <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+          為保護每位學生的個人作業隱私，本系統不提供手動輸入名字或代碼。<br class="hidden sm:inline">請對準小卡 QR Code 掃描，即可秒速登入。
+        </p>
+      </div>
+
+      <!-- 掃描動作按鈕組 -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        <!-- 開啟相機掃描 -->
+        <button id="btnStartCamera" type="button" onclick="startCameraScan()" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-black px-6 py-3.5 rounded-2xl text-base transition shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer">
+          <span class="text-xl">📷</span>
+          <span>開啟相機鏡頭掃描</span>
+        </button>
+
+        <!-- 從相簿選取照片 -->
+        <label for="qrFileInput" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold px-5 py-3.5 rounded-2xl text-sm transition border border-slate-200 flex items-center justify-center gap-2 cursor-pointer">
+          <span class="text-lg">🖼️</span>
+          <span>從相簿選擇小卡照片</span>
+        </label>
+        <input type="file" id="qrFileInput" accept="image/*" onchange="handleFileScan(event)" class="hidden">
+      </div>
+
+      <!-- 相機鏡頭預覽區塊 (點擊開啟相機後展開) -->
+      <div id="qr-scanner-wrapper" class="hidden space-y-3 pt-2">
+        <div class="relative max-w-sm mx-auto overflow-hidden rounded-3xl border-4 border-emerald-500 shadow-xl bg-black">
+          <div id="qr-reader" class="w-full aspect-square"></div>
+          <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div class="w-48 h-48 border-2 border-emerald-400 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]"></div>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500 font-medium">請將相機鏡頭對準小卡上的 QR Code，對焦後將自動載入</p>
+        <button type="button" onclick="stopCameraScan()" class="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-full transition active:scale-95 cursor-pointer">
+          ✖️ 關閉相機
+        </button>
+      </div>
+
+      <!-- 錯誤提示訊息 -->
+      <div id="parentScanError" class="text-rose-600 text-xs text-center hidden leading-relaxed bg-rose-50 p-3 rounded-2xl border border-rose-200 font-medium max-w-md mx-auto"></div>
+
+      <!-- 當前已有載入學生時，允許返回目前的畫面 -->
+      <div id="btnCancelScan" class="hidden pt-2">
+        <button type="button" onclick="cancelScanAndReturn()" class="text-xs font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer">
+          ← 返回目前學生作業畫面
+        </button>
+      </div>
+    </div>
+
+    <!-- ⚡ 載入中指示器 -->
+    <div id="parentLoadingState" class="hidden text-center py-10 space-y-3">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent"></div>
+      <p class="text-sm font-bold text-slate-600">正在同步最新作業紀錄，請稍候...</p>
+    </div>
+
+    <!-- ==================== 查詢結果呈現區 ==================== -->
+    <div id="parentResultArea" class="hidden space-y-5">
+
+      <!-- 1. 學生身分英雄卡 (Hero Card) -->
+      <div class="apple-glass rounded-3xl p-5 sm:p-6 shadow-sm relative overflow-hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div id="studentAvatar" class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xl font-black shadow-md flex-shrink-0">
+              01
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span id="heroClassName" class="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">班級</span>
+                <span id="heroToken" class="hidden"></span>
+              </div>
+              <h2 id="heroStudentName" class="text-2xl font-black text-slate-900 mt-1">學生姓名</h2>
+            </div>
+          </div>
+          <div class="text-left sm:text-right">
+            <div class="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 font-bold">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span id="lastSyncTime">資料即時連線中</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LINE 官方帳號一秒綁定橫幅 -->
+      <div id="lineBindBanner" class="hidden apple-glass rounded-2xl p-3.5 border border-emerald-200 bg-gradient-to-r from-emerald-50/90 to-teal-50/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-xl font-bold flex-shrink-0 shadow-2xs">
+            💬
+          </div>
+          <div>
+            <div class="text-sm font-black text-emerald-950 flex items-center gap-1.5">
+              <span>開啟 LINE 每日缺交自動提醒</span>
+              <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">免打字</span>
+            </div>
+            <div class="text-xs text-emerald-700 mt-0.5">點擊一秒跳轉至班級 LINE，自動帶入代碼完成綁定，放學有缺交即時通知！</div>
+          </div>
+        </div>
+        <a id="btnLineBindDeepLink" href="#" target="_blank" class="w-full sm:w-auto text-center flex-shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-black shadow-xs transition active:scale-95 cursor-pointer">
+          一秒綁定 LINE
+        </a>
+      </div>
+
+      <!-- 2. 三大核心指標卡 (總覽數據) -->
+      <div class="grid grid-cols-3 gap-3">
+        <!-- 準時繳交率 -->
+        <div class="apple-glass rounded-2xl p-4 text-center shadow-xs">
+          <div class="text-xs font-bold text-slate-500 mb-1">準時繳交率</div>
+          <div id="metricOnTimeRate" class="text-2xl sm:text-3xl font-black text-emerald-600">0%</div>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+            <div id="metricRateBar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+          <div class="text-[11px] text-slate-500 mt-1 font-medium">總繳交率 <span id="metricSubmittedRate" class="font-bold text-slate-700">0%</span></div>
+        </div>
+
+        <!-- 累計準時/總次數 -->
+        <div class="apple-glass rounded-2xl p-4 text-center shadow-xs">
+          <div class="text-xs font-bold text-slate-500 mb-1">累計準時繳交</div>
+          <div class="text-xl sm:text-2xl font-black text-slate-800">
+            <span id="metricSubmitted">0</span> <span class="text-xs text-slate-400 font-normal">/ <span id="metricTotal">0</span></span>
+          </div>
+          <div class="text-[11px] text-slate-500 mt-1 font-medium">
+            遲交 <span id="metricLate" class="text-amber-600 font-bold">0</span> ‧ 缺交 <span id="metricMissing" class="text-rose-600 font-bold">0</span>
+          </div>
+        </div>
+
+        <!-- 待補交作業數 -->
+        <div class="apple-glass rounded-2xl p-4 text-center shadow-xs" id="pendingActionCard">
+          <div class="text-xs font-bold text-slate-500 mb-1">待補交作業</div>
+          <div id="metricPendingCount" class="text-2xl sm:text-3xl font-black text-slate-800">0</div>
+          <div id="metricPendingSub" class="text-[11px] text-emerald-600 font-bold mt-1">全數完成 🎉</div>
+        </div>
+      </div>
+
+      <!-- 3. 🚨 模組一：待補交作業清單 (Action Items) -->
+      <div class="apple-glass rounded-3xl p-5 sm:p-6 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🚨</span>
+            <div>
+              <h3 class="text-base font-black text-slate-900">待補交作業清單</h3>
+              <p class="text-xs text-slate-500 font-medium">請家長提醒並協助孩子於明日到校前完成</p>
+            </div>
+          </div>
+          <span id="pendingCountBadge" class="text-xs font-bold bg-rose-100 text-rose-700 px-2.5 py-0.5 rounded-full">0 項</span>
+        </div>
+
+        <!-- 待辦清單容器 -->
+        <div id="pendingTasksContainer" class="space-y-2 pt-1">
+          <!-- 動態插入 -->
+        </div>
+      </div>
+
+      <!-- 4. ⚠️ 模組二：常遲到 / 易拖延作業排行榜 (Top Delay Warning) -->
+      <div class="apple-glass rounded-3xl p-5 sm:p-6 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">⚠️</span>
+            <div>
+              <h3 class="text-base font-black text-slate-900">常遲到作業警示排行</h3>
+              <p class="text-xs text-slate-500 font-medium">統計本學期遲交次數較高之作業，協助孩子突破拖延瓶頸</p>
+            </div>
+          </div>
+          <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">重點提醒</span>
+        </div>
+
+        <!-- 常遲到排行容器 -->
+        <div id="topDelayContainer" class="space-y-2 pt-1">
+          <!-- 動態插入 -->
+        </div>
+      </div>
+
+      <!-- 5. 📊 模組三：各科目繳交習慣橫向長條圖 (點開可查看該科各項作業繳交狀況) -->
+      <div class="apple-glass rounded-3xl p-5 sm:p-6 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">📊</span>
+            <div>
+              <h3 class="text-base font-black text-slate-900">各科目繳交習慣與作業明細</h3>
+              <p class="text-xs text-slate-500 font-medium">點擊各科目可展開查看各項作業簿冊之詳細繳交比率</p>
+            </div>
+          </div>
+          <span class="text-xs text-slate-400 font-bold">點擊卡片展開細項</span>
+        </div>
+
+        <!-- 各科目長條圖與折疊清單容器 -->
+        <div id="subjectsBreakdownContainer" class="space-y-3 pt-1">
+          <!-- 動態插入 -->
+        </div>
+      </div>
+
+      <!-- 6. 📅 模組四：近期作業繳交足跡 (打卡日誌 Activity Feed) -->
+      <div class="apple-glass rounded-3xl p-5 sm:p-6 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">📅</span>
+            <div>
+              <h3 class="text-base font-black text-slate-900">近期作業繳交足跡</h3>
+              <p class="text-xs text-slate-500 font-medium">課堂清點作業之打卡時序日誌</p>
+            </div>
+          </div>
+          <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">最近 20 筆</span>
+        </div>
+
+        <!-- 近期紀錄清單容器 -->
+        <div id="recentLogsContainer" class="divide-y divide-slate-100 pt-1">
+          <!-- 動態插入 -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 底部隱私宣導小頁尾 -->
+    <footer class="text-center text-xs text-slate-400 pt-6 space-y-1">
+      <p>🔒 本系統僅供個別家長查閱自己孩子之學習狀況 ‧ 請妥善保管專屬代碼</p>
+      <p>QRcode 自動清點作業系統 (家長手札端)</p>
+    </footer>
+
+  </main>
+
+  <script>
+    // ==========================================
+    // 家長端核心資料處理與渲染邏輯
+    // ==========================================
+    let activeApiUrl = '';
+    let currentStudentToken = '';
+
+    // 科目圖示對照
+    const SUBJECT_ICONS = {
+      '國語': '📘',
+      '數學': '📐',
+      '英語': '🔤',
+      '英文': '🔤',
+      '社會': '🌍',
+      '自然': '🔬',
+      '聯絡簿': '📔',
+      '閱讀': '📖',
+      '藝文': '🎨',
+      '健體': '🏃',
+      '綜合': '🌟'
+    };
+
+    function getSubjectIcon(sub) {
+      for (const key in SUBJECT_ICONS) {
+        if (sub.includes(key)) return SUBJECT_ICONS[key];
+      }
+      return '📝';
+    }
+
+    let html5QrCode = null;
+
+    // 開啟掃描介面 (或切換孩子)
+    function openScanModal() {
+      const scanBox = document.getElementById('parentScanBox');
+      scanBox.classList.remove('hidden');
+      
+      const cancelBtn = document.getElementById('btnCancelScan');
+      if (currentStudentToken) {
+        cancelBtn.classList.remove('hidden');
+      } else {
+        cancelBtn.classList.add('hidden');
+      }
+
+      const errBox = document.getElementById('parentScanError');
+      errBox.classList.add('hidden');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 取消掃描並返回當前學生手札
+    function cancelScanAndReturn() {
+      stopCameraScan();
+      document.getElementById('parentScanBox').classList.add('hidden');
+      if (currentStudentToken) {
+        document.getElementById('parentResultArea').classList.remove('hidden');
+      }
+    }
+
+    // 啟動相機鏡頭即時掃描
+    async function startCameraScan() {
+      const wrapper = document.getElementById('qr-scanner-wrapper');
+      const startBtn = document.getElementById('btnStartCamera');
+      const errBox = document.getElementById('parentScanError');
+      errBox.classList.add('hidden');
+
+      wrapper.classList.remove('hidden');
+      startBtn.classList.add('hidden');
+
+      try {
+        if (!html5QrCode) {
+          html5QrCode = new Html5Qrcode("qr-reader");
+        }
+
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 220, height: 220 },
+            aspectRatio: 1.0
+          },
+          (decodedText) => {
+            onQrScanSuccess(decodedText);
+          },
+          () => {} // 忽略每影格的未命中
+        );
+      } catch (err) {
+        console.warn("啟動相機失敗:", err);
+        errBox.innerHTML = `
+          <div class="font-bold text-rose-700">⚠️ 無法存取相機</div>
+          <div class="text-xs text-rose-600 mt-1">請確認瀏覽器已允許使用相機權限（或檢查是否為 HTTPS 連線）；您也可以點選下方【從相簿選擇照片】進行掃描。</div>
+        `;
+        errBox.classList.remove('hidden');
+        stopCameraScan();
+      }
+    }
+
+    // 停止相機
+    async function stopCameraScan() {
+      if (html5QrCode) {
+        try {
+          if (html5QrCode.isScanning) {
+            await html5QrCode.stop();
+          }
+        } catch(e) {}
+      }
+      const wrapper = document.getElementById('qr-scanner-wrapper');
+      if (wrapper) wrapper.classList.add('hidden');
+      const startBtn = document.getElementById('btnStartCamera');
+      if (startBtn) startBtn.classList.remove('hidden');
+    }
+
+    // 從相簿選取照片掃描
+    async function handleFileScan(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const errBox = document.getElementById('parentScanError');
+      errBox.classList.add('hidden');
+
+      try {
+        let decodedText = null;
+
+        // 1. 優先使用 Html5Qrcode.scanFile
+        try {
+          if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("qr-reader");
+          }
+          decodedText = await html5QrCode.scanFile(file, true);
+        } catch(scanErr) {
+          console.warn("html5QrCode.scanFile failed, trying jsQR fallback...", scanErr);
+        }
+
+        // 2. 備援引擎：jsQR 離線解碼
+        if (!decodedText) {
+          decodedText = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+              const img = new Image();
+              img.onload = function() {
+                try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = img.width;
+                  canvas.height = img.height;
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(img, 0, 0);
+                  const imgData = ctx.getImageData(0, 0, img.width, img.height);
+                  if (typeof jsQR !== 'undefined') {
+                    const code = jsQR(imgData.data, img.width, img.height);
+                    if (code && code.data) {
+                      resolve(code.data);
+                      return;
+                    }
+                  }
+                  reject(new Error("未偵測到 QR Code"));
+                } catch(ex) {
+                  reject(ex);
+                }
+              };
+              img.onerror = () => reject(new Error("圖片載入失敗"));
+              img.src = evt.target.result;
+            };
+            reader.onerror = () => reject(new Error("讀取檔案失敗"));
+            reader.readAsDataURL(file);
+          });
+        }
+
+        if (decodedText) {
+          onQrScanSuccess(decodedText);
+        } else {
+          throw new Error("未能在此照片中辨識出 QR Code");
+        }
+
+      } catch(err) {
+        console.warn("照片解碼失敗:", err);
+        errBox.innerHTML = `
+          <div class="font-bold text-rose-700">⚠️ 未能辨識 QR Code</div>
+          <div class="text-xs text-rose-600 mt-1">請確認照片完整包含小卡 QR Code 且無嚴重反光，或直接使用【開啟相機鏡頭掃描】。</div>
+        `;
+        errBox.classList.remove('hidden');
+      } finally {
+        e.target.value = ''; // 重設以利重複選取
+      }
+    }
+
+    // QR Code 掃描成功處理回呼
+    function onQrScanSuccess(decodedText) {
+      if (!decodedText) return;
+      
+      // 觸覺短震動回饋
+      try { if (navigator.vibrate) navigator.vibrate(40); } catch(e) {}
+
+      stopCameraScan();
+
+      let token = '';
+      let apiParam = '';
+
+      // 若掃描結果為完整網址
+      if (decodedText.includes('http://') || decodedText.includes('https://') || decodedText.includes('?')) {
+        try {
+          let urlStr = decodedText;
+          if (!urlStr.startsWith('http')) urlStr = 'https://dummy.com/' + urlStr;
+          const url = new URL(urlStr);
+          token = url.searchParams.get('t') || url.searchParams.get('token');
+          apiParam = url.searchParams.get('a') || url.searchParams.get('api');
+        } catch(e) {
+          const mToken = decodedText.match(/[?&](?:t|token)=([^&]+)/i);
+          if (mToken) token = decodeURIComponent(mToken[1]);
+          const mApi = decodedText.match(/[?&](?:a|api)=([^&]+)/i);
+          if (mApi) apiParam = decodeURIComponent(mApi[1]);
+        }
+      }
+
+      // 若直接為代碼字串
+      if (!token) {
+        token = decodedText.trim();
+      }
+
+      if (apiParam) {
+        let fullApi = apiParam;
+        if (!fullApi.startsWith('http')) {
+          fullApi = 'https://script.google.com/macros/s/' + fullApi + '/exec';
+        }
+        activeApiUrl = fullApi;
+        try { localStorage.setItem('rp_parent_gas_url', activeApiUrl); } catch(e) {}
+      }
+
+      if (token) {
+        // 更新網址與 session 狀態
+        try {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('t', token);
+          if (apiParam) newUrl.searchParams.set('a', apiParam);
+          window.history.replaceState({}, '', newUrl.toString());
+          sessionStorage.setItem('rp_parent_token', token);
+        } catch(e) {}
+
+        doParentQuery(token);
+      } else {
+        const errBox = document.getElementById('parentScanError');
+        errBox.innerHTML = `
+          <div class="font-bold text-rose-700">⚠️ 無法識別此 QR Code</div>
+          <div class="text-xs text-rose-600 mt-1">請確認掃描的是孩子專屬的【作業查詢小卡】。</div>
+        `;
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('t') || urlParams.get('token') || sessionStorage.getItem('rp_parent_token');
+      const apiParam = urlParams.get('a') || urlParams.get('api');
+
+      // 解析 API URL
+      if (apiParam) {
+        let fullApi = apiParam;
+        if (!fullApi.startsWith('http')) {
+          fullApi = 'https://script.google.com/macros/s/' + fullApi + '/exec';
+        }
+        activeApiUrl = fullApi;
+        localStorage.setItem('rp_parent_gas_url', activeApiUrl);
+      } else {
+        const savedApi = localStorage.getItem('rp_parent_gas_url');
+        if (savedApi) {
+          activeApiUrl = savedApi;
+        } else {
+          try {
+            const betaConfig = localStorage.getItem('BETA_app_config');
+            const mainConfig = localStorage.getItem('app_config');
+            const conf = betaConfig ? JSON.parse(betaConfig) : (mainConfig ? JSON.parse(mainConfig) : null);
+            if (conf && conf.gasUrl) {
+              activeApiUrl = conf.gasUrl;
+            }
+          } catch(e) {}
+        }
+      }
+
+      if (token) {
+        document.getElementById('parentScanBox').classList.add('hidden');
+        doParentQuery(token);
+      } else {
+        // 未登入狀態：呈現掃描區，隱藏重新整理
+        document.getElementById('parentScanBox').classList.remove('hidden');
+        document.getElementById('parentResultArea').classList.add('hidden');
+        const btnRefresh = document.getElementById('btnRefresh');
+        if (btnRefresh) btnRefresh.classList.add('hidden');
+      }
+    });
+
+    async function doParentQuery(targetToken, forceRefresh = false) {
+      const query = (targetToken || currentStudentToken || '').trim();
+      const errBox = document.getElementById('parentScanError');
+
+      if (!query) {
+        openScanModal();
+        return;
+      }
+      errBox.classList.add('hidden');
+
+      currentStudentToken = query;
+      const cacheKey = 'rp_parent_cache_' + query.toUpperCase();
+
+      // 1. SWR 優先渲染快取 (0.01 秒秒開，避免白屏等待)
+      let hasCache = false;
+      if (!forceRefresh) {
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const data = JSON.parse(cached);
+            if (data && data.student) {
+              renderParentDashboard(data, true);
+              hasCache = true;
+            }
+          }
+        } catch(e) {}
+      }
+
+      // 2. 顯示載入動畫（若無快取）
+      if (!hasCache) {
+        document.getElementById('parentLoadingState').classList.remove('hidden');
+        document.getElementById('parentResultArea').classList.add('hidden');
+      }
+
+      // 3. 發起遠端雲端拉取，若無 API 則使用本地資料庫相容模式
+      try {
+        let freshData = null;
+
+        if (activeApiUrl) {
+          const response = await fetch(activeApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'parent_query',
+              token: query
+            })
+          });
+          const res = await response.json();
+          if (res.status === 'success') {
+            freshData = res;
+          } else {
+            throw new Error(res.message || '查詢失敗');
+          }
+        } else {
+          // 本機 LocalStorage 離線相容模式 (僅依 token 查詢)
+          freshData = queryFromLocalStorage(query);
+          if (!freshData) {
+            throw new Error('查無此專屬代碼之學生資料，請確認小卡是否正確。');
+          }
+        }
+
+        if (freshData) {
+          freshData.syncedAt = new Date().toISOString();
+          // 寫入快取
+          try { localStorage.setItem(cacheKey, JSON.stringify(freshData)); } catch(e) {}
+          renderParentDashboard(freshData, false);
+          document.getElementById('parentScanBox').classList.add('hidden');
+          const btnRefresh = document.getElementById('btnRefresh');
+          if (btnRefresh) btnRefresh.classList.remove('hidden');
+        }
+
+      } catch (err) {
+        console.warn('Query error:', err);
+        if (!hasCache) {
+          errBox.innerHTML = `
+            <div class="font-bold text-rose-700">⚠️ 查詢發生錯誤</div>
+            <div class="text-xs text-rose-600 mt-1">${err.message || '無法連線至雲端資料庫'}</div>
+          `;
+          errBox.classList.remove('hidden');
+          document.getElementById('parentScanBox').classList.remove('hidden');
+          document.getElementById('parentLoadingState').classList.add('hidden');
+        }
+      } finally {
+        document.getElementById('parentLoadingState').classList.add('hidden');
+      }
+    }
+
+    // 本地 LocalStorage 查詢解析器 (供離線與同裝置測試)
+    function queryFromLocalStorage(query) {
+      try {
+        const qUpper = query.toUpperCase();
+        let db = null;
+        let student = null;
+        let matchedClassId = null;
+
+        // 收集所有可能的 DB 鍵值
+        const candidateKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k.includes('doc_productivity_db')) {
+            candidateKeys.push(k);
+          }
+        }
+        // 優先排入當前可能鍵值
+        if (!candidateKeys.includes('BETA_doc_productivity_db')) candidateKeys.unshift('BETA_doc_productivity_db');
+        if (!candidateKeys.includes('doc_productivity_db')) candidateKeys.unshift('doc_productivity_db');
+
+        for (const k of candidateKeys) {
+          try {
+            const raw = localStorage.getItem(k);
+            if (!raw) continue;
+            const parsed = JSON.parse(raw);
+            if (!parsed.students || parsed.students.length === 0) continue;
+            const found = parsed.students.find(s => {
+              if (s.token && s.token.toUpperCase() === qUpper) return true;
+              if (('STU' + String(s.id).padStart(3, '0')).toUpperCase() === qUpper) return true;
+              return false;
+            });
+            if (found) {
+              db = parsed;
+              student = found;
+              if (k.includes('_db_')) matchedClassId = k.split('_db_')[1];
+              break;
+            }
+          } catch(e) {}
+        }
+
+        if (!student || !db) return null;
+
+        // 班級名稱
+        let className = '本班級';
+        try {
+          const cfgRaw = localStorage.getItem('BETA_app_config') || localStorage.getItem('app_config');
+          if (cfgRaw) {
+            const conf = JSON.parse(cfgRaw);
+            const targetId = matchedClassId || conf.activeClassId;
+            const cls = conf.classes ? conf.classes.find(c => c.id === targetId) : null;
+            if (cls) className = cls.label;
+          }
+        } catch(e) {}
+
+        // 整理 tasks (排除從未掃描統計過、且未設定範圍的作業)
+        const studentTasks = [];
+        const taskList = db.tasks || [];
+        
+        taskList.forEach(t => {
+          // 檢查全班是否有任何繳交打卡紀錄
+          const hasAnyRecord = (db.records || []).some(r => r.taskId === t.id);
+          // 檢查是否有設定範圍或日期
+          const hasAnyRange = (db.ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
+
+          // 若全班完全沒有任何掃描/打卡紀錄，且未設定範圍日期，表示尚未開始清點，不計入準時率與待辦
+          if (!hasAnyRecord && !hasAnyRange) {
+            return;
+          }
+
+          let noticeNames = [...new Set((db.records || []).filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
+          if (db.ranges) {
+            const rangeNotices = db.ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
+            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
+          }
+          if (noticeNames.length === 0) noticeNames = [''];
+
+          noticeNames.forEach(nn => {
+            // 確認該子項目在全班是否有紀錄或範圍
+            const subHasRecord = (db.records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            const subHasRange = (db.ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
+            if (!subHasRecord && !subHasRange) return;
+
+            const rec = (db.records || []).find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+              status = rec.manualStatus || '已交';
+              timestamp = rec.timestamp || rec.fullTimestamp || '';
+            }
+            
+            // 抓取範圍
+            let range = '';
+            if (db.ranges) {
+              const rObj = db.ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
+              if (rObj) range = rObj.range || '';
+            }
+
+            studentTasks.push({
+              subject: t.subject || '其他',
+              taskName: t.name,
+              range: range,
+              date: nn || '近期',
+              status: status,
+              timestamp: timestamp
+            });
+          });
+        });
+
+        // 整理近期打卡紀錄
+        const recentLogs = (db.records || [])
+          .filter(r => r.studentId === student.id)
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+          .slice(0, 25)
+          .map(r => {
+            const t = taskList.find(x => x.id === r.taskId);
+            return {
+              timestamp: r.fullTimestamp || r.timestamp || r.timeOnly || '',
+              subject: t ? t.subject : '',
+              taskName: t ? t.name : '',
+              range: r.range || '',
+              status: r.manualStatus || '已交'
+            };
+          });
+
+        return {
+          status: 'success',
+          student: { id: student.id, name: student.name, token: student.token || ('STU' + String(student.id).padStart(3, '0')) },
+          className: className,
+          tasks: studentTasks,
+          recentLogs: recentLogs
+        };
+      } catch(e) {
+        console.error('queryFromLocalStorage error:', e);
+        return null;
+      }
+    }
+
+    // ==========================================
+    // 通用家長端作業狀態分類器
+    // ==========================================
+    function classifyTaskStatus(statusStr, timestamp, deadline) {
+      const s = (statusStr || '').toString().trim();
+      const ts = (timestamp || '').toString().trim();
+
+      // 1. 缺交 / 未交 (Missing)
+      if (
+        s === '缺交' || s === '未交' || s === 'missing' || s === '曠課' ||
+        s.includes('leave_custom_缺交') || s.includes('leave_custom_未交') ||
+        s === ''
+      ) {
+        return {
+          type: 'missing',
+          label: '缺交',
+          badge: '❌ 缺交未交',
+          badgeClass: 'bg-rose-100 text-rose-700 border-rose-200',
+          isPending: true
+        };
+      }
+
+      // 2. 沒帶 (Forgot)
+      if (s === '沒帶' || s === 'forgot' || s.includes('leave_custom_沒帶')) {
+        return {
+          type: 'forgot',
+          label: '沒帶',
+          badge: '🎒 聯絡簿沒帶',
+          badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+          isPending: true
+        };
+      }
+
+      // 3. 退回待訂正 (Returned)
+      if (s === '退回' || s === 'returned' || s.includes('訂正') || s.includes('重交')) {
+        return {
+          type: 'returned',
+          label: '待訂正',
+          badge: '⚠️ 需訂正重交',
+          badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+          isPending: true
+        };
+      }
+
+      // 4. 請假 / 免計入分母 (Excused Leaves)
+      const standardLeaves = ['事假', '病假', '公假', '喪假', '免交', '請假', '其他假別', '其他'];
+      const isLeave = standardLeaves.includes(s) || (
+        s.startsWith('leave_') &&
+        !s.includes('曠課') && !s.includes('遲到') && !s.includes('沒帶') && !s.includes('缺交')
+      );
+      if (isLeave) {
+        let leaveName = s.replace(/^leave_custom_/, '').replace(/^leave_/, '');
+        if (!leaveName || leaveName === '其他') leaveName = '請假免交';
+        return {
+          type: 'excused',
+          label: leaveName,
+          badge: leaveName,
+          badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+          isPending: false
+        };
+      }
+
+      // 5. 遲交 (Late)
+      let isLate = false;
+      if (s === '遲交' || s === 'late' || s.includes('[遲交]') || s.includes('遲交')) {
+        isLate = true;
+      } else if (deadline && ts) {
+        try {
+          const dl = new Date(deadline + 'T23:59:59');
+          let scDate = null;
+          if (ts.includes('T') || ts.includes('-')) {
+            scDate = new Date(ts);
+          } else {
+            const year = new Date().getFullYear();
+            scDate = new Date(`${year}/${ts}`);
+          }
+          if (scDate && !isNaN(scDate.getTime()) && scDate > dl) {
+            isLate = true;
+          }
+        } catch(e) {}
+      }
+
+      if (isLate) {
+        return {
+          type: 'late',
+          label: '遲交',
+          badge: '⏰ 遲交',
+          badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+          isPending: false
+        };
+      }
+
+      // 6. 準時繳交 (On-time)
+      return {
+        type: 'ontime',
+        label: '準時',
+        badge: '✅ 準時',
+        badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        isPending: false
+      };
+    }
+
+    // ==========================================
+    // 渲染家長端完整介面
+    // ==========================================
+    function renderParentDashboard(data, isFromCache) {
+      const student = data.student;
+      const tasks = data.tasks || [];
+      const recentLogs = data.recentLogs || [];
+
+      // 1. 學生身分英雄卡
+      document.getElementById('heroStudentName').innerText = student.name;
+      document.getElementById('heroClassName').innerText = data.className || '目前班級';
+      document.getElementById('heroToken').innerText = student.token;
+      document.getElementById('studentAvatar').innerText = String(student.id).padStart(2, '0');
+      
+      // 格式化日期、星期及時間 (例如：2026/10/17 (六) 上午07:28)
+      const syncDate = (isFromCache && data && data.syncedAt) ? new Date(data.syncedAt) : new Date();
+      const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+      const weekDay = weekdays[syncDate.getDay()];
+      const y = syncDate.getFullYear();
+      const m = String(syncDate.getMonth() + 1).padStart(2, '0');
+      const d = String(syncDate.getDate()).padStart(2, '0');
+      const timeStr = syncDate.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+      const nowStr = `${y}/${m}/${d} (${weekDay}) ${timeStr}`;
+      document.getElementById('lastSyncTime').innerText = (isFromCache ? '快取秒開 ' : '即時同步 ') + nowStr;
+
+      // LINE 官方帳號一秒綁定橫幅
+      const lineBanner = document.getElementById('lineBindBanner');
+      const botId = data.lineBotBasicId || localStorage.getItem('rp_line_bot_id') || '';
+      if (lineBanner) {
+        if (botId && student && student.token) {
+          try { localStorage.setItem('rp_line_bot_id', botId); } catch(e) {}
+          const cleanBotId = botId.startsWith('@') ? botId : ('@' + botId);
+          const deepLink = `https://line.me/R/oaMessage/${encodeURIComponent(cleanBotId)}/?${encodeURIComponent(student.token)}`;
+          const btnLink = document.getElementById('btnLineBindDeepLink');
+          if (btnLink) btnLink.href = deepLink;
+          lineBanner.classList.remove('hidden');
+        } else {
+          lineBanner.classList.add('hidden');
+        }
+      }
+
+      // 2. 統計數據計算 (採用通用分類標準)
+      let totalAssigned = tasks.length;
+      let onTimeCount = 0;
+      let lateCount = 0;
+      let missingCount = 0;
+      let forgotCount = 0;
+      let returnedCount = 0;
+      let excusedCount = 0;
+
+      const pendingItems = []; // 今晚待辦 (缺交, 沒帶, 退回需訂正)
+      const lateCountsPerTask = {}; // 常遲到統計 { '作業名稱': 次數 }
+
+      tasks.forEach(t => {
+        const c = classifyTaskStatus(t.status, t.timestamp, t.deadline);
+
+        if (c.type === 'ontime') {
+          onTimeCount++;
+        } else if (c.type === 'late') {
+          lateCount++;
+          const key = `[${t.subject}] ${t.taskName}`;
+          lateCountsPerTask[key] = (lateCountsPerTask[key] || 0) + 1;
+        } else if (c.type === 'missing') {
+          missingCount++;
+          pendingItems.push({
+            subject: t.subject,
+            taskName: t.taskName,
+            range: t.range,
+            date: t.date,
+            statusBadge: c.badge,
+            badgeClass: c.badgeClass
+          });
+        } else if (c.type === 'forgot') {
+          forgotCount++;
+          pendingItems.push({
+            subject: t.subject,
+            taskName: t.taskName,
+            range: t.range,
+            date: t.date,
+            statusBadge: c.badge,
+            badgeClass: c.badgeClass
+          });
+        } else if (c.type === 'returned') {
+          returnedCount++;
+          pendingItems.push({
+            subject: t.subject,
+            taskName: t.taskName,
+            range: t.range,
+            date: t.date,
+            statusBadge: c.badge,
+            badgeClass: c.badgeClass
+          });
+        } else if (c.type === 'excused') {
+          excusedCount++;
+        }
+      });
+
+      // 準時率計算 (扣除請假/免交)
+      const effectiveTotal = Math.max(1, totalAssigned - excusedCount);
+      const onTimeRate = totalAssigned > 0 ? Math.round((onTimeCount / effectiveTotal) * 100) : 100;
+      const totalSubmitted = onTimeCount + lateCount;
+      const submittedRate = totalAssigned > 0 ? Math.round((totalSubmitted / effectiveTotal) * 100) : 100;
+      const totalMissing = missingCount + forgotCount;
+
+      // 渲染指標卡
+      const rateEl = document.getElementById('metricOnTimeRate');
+      rateEl.innerText = onTimeRate + '%';
+      if (onTimeRate >= 90) {
+        rateEl.className = 'text-2xl sm:text-3xl font-black text-emerald-600';
+      } else if (onTimeRate >= 80) {
+        rateEl.className = 'text-2xl sm:text-3xl font-black text-amber-600';
+      } else {
+        rateEl.className = 'text-2xl sm:text-3xl font-black text-rose-600';
+      }
+
+      document.getElementById('metricRateBar').style.width = onTimeRate + '%';
+      document.getElementById('metricSubmitted').innerText = onTimeCount;
+      document.getElementById('metricTotal').innerText = effectiveTotal;
+      document.getElementById('metricLate').innerText = lateCount;
+      document.getElementById('metricMissing').innerText = totalMissing;
+
+      const subRateEl = document.getElementById('metricSubmittedRate');
+      if (subRateEl) subRateEl.innerText = submittedRate + '%';
+
+      const pendingCount = pendingItems.length;
+      document.getElementById('metricPendingCount').innerText = pendingCount;
+      document.getElementById('pendingCountBadge').innerText = `${pendingCount} 項`;
+
+      const pendingSub = document.getElementById('metricPendingSub');
+      if (pendingCount === 0) {
+        pendingSub.innerText = '全數完成 🎉';
+        pendingSub.className = 'text-[11px] text-emerald-600 font-bold mt-1';
+        document.getElementById('pendingActionCard').classList.remove('ring-2', 'ring-rose-400', 'bg-rose-50/50');
+      } else {
+        pendingSub.innerText = '尚有待補作業 🚨';
+        pendingSub.className = 'text-[11px] text-rose-600 font-bold mt-1';
+        document.getElementById('pendingActionCard').classList.add('ring-2', 'ring-rose-400', 'bg-rose-50/50');
+      }
+
+      // 3. 渲染 🚨 模組一：今晚即時待辦清單
+      const pendingContainer = document.getElementById('pendingTasksContainer');
+      pendingContainer.innerHTML = '';
+
+      if (pendingItems.length === 0) {
+        pendingContainer.innerHTML = `
+          <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3">
+            <div class="text-2xl">🎉</div>
+            <div>
+              <div class="text-sm font-bold text-emerald-900">目前所有作業皆已按時完成！</div>
+              <div class="text-xs text-emerald-700">沒有任何缺交作業，請給孩子一個大大的讚賞與鼓勵！</div>
+            </div>
+          </div>
+        `;
+      } else {
+        pendingItems.forEach(item => {
+          const icon = getSubjectIcon(item.subject);
+          pendingContainer.innerHTML += `
+            <div class="p-3 bg-white border border-rose-100 rounded-2xl flex items-center justify-between shadow-2xs hover:border-rose-200 transition">
+              <div class="flex items-center gap-2.5">
+                <span class="text-lg">${icon}</span>
+                <div>
+                  <div class="text-sm font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                    <span>${item.taskName}</span>
+                    <span class="text-xs text-slate-400 font-normal">(${item.subject})</span>
+                  </div>
+                  <div class="text-xs text-slate-500 font-medium">
+                    ${item.range ? '範圍：<span class="text-rose-600 font-bold">' + item.range + '</span>' : '日常作業'} ‧ 日期：${item.date}
+                  </div>
+                </div>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-full border ${item.badgeClass} flex-shrink-0">
+                ${item.statusBadge}
+              </span>
+            </div>
+          `;
+        });
+      }
+
+      // 4. 渲染 ⚠️ 模組二：常遲到作業排行榜 (Top Delay Warning)
+      const topDelayContainer = document.getElementById('topDelayContainer');
+      topDelayContainer.innerHTML = '';
+
+      const delayEntries = Object.entries(lateCountsPerTask).sort((a, b) => b[1] - a[1]);
+
+      if (delayEntries.length === 0) {
+        topDelayContainer.innerHTML = `
+          <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
+            <div class="text-2xl">🌟</div>
+            <div>
+              <div class="text-sm font-bold text-slate-800">時間管理守時模範</div>
+              <div class="text-xs text-slate-500">本學期孩子表現優良，目前查無任何作業遲交或拖延紀錄！</div>
+            </div>
+          </div>
+        `;
+      } else {
+        const medals = ['🥇 第一名', '🥈 第二名', '🥉 第三名'];
+        delayEntries.slice(0, 3).forEach(([taskKey, count], idx) => {
+          topDelayContainer.innerHTML += `
+            <div class="p-3 bg-white border border-amber-100 rounded-2xl flex items-center justify-between shadow-2xs">
+              <div class="flex items-center gap-2.5">
+                <span class="text-xs font-bold text-amber-900 bg-amber-100 px-2.5 py-1 rounded-full">${medals[idx] || '#' + (idx+1)}</span>
+                <span class="text-sm font-bold text-slate-800">${taskKey}</span>
+              </div>
+              <div class="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full font-bold">
+                累計遲交 <span class="text-sm font-black text-amber-900">${count}</span> 次
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // 5. 渲染 📊 模組三：各科目繳交習慣橫向長條圖 (點開展開各項作業明細)
+      const subjectsContainer = document.getElementById('subjectsBreakdownContainer');
+      subjectsContainer.innerHTML = '';
+
+      // 依科目群組化
+      const groupedSubjects = {};
+      tasks.forEach(t => {
+        const sub = t.subject || '其他';
+        if (!groupedSubjects[sub]) groupedSubjects[sub] = [];
+        groupedSubjects[sub].push(t);
+      });
+
+      Object.entries(groupedSubjects).forEach(([sub, subTasks], sIdx) => {
+        const icon = getSubjectIcon(sub);
+        const subTotal = subTasks.length;
+        let subOnTime = 0;
+        let subLate = 0;
+        let subMissing = 0;
+        let subExcused = 0;
+
+        // 科目底下的各簿冊個別統計
+        const tasksMap = {};
+
+        subTasks.forEach(st => {
+          const tName = st.taskName;
+          if (!tasksMap[tName]) {
+            tasksMap[tName] = { total: 0, ontime: 0, late: 0, missing: 0, excused: 0 };
+          }
+          tasksMap[tName].total++;
+
+          const c = classifyTaskStatus(st.status, st.timestamp, st.deadline);
+          if (c.type === 'ontime') {
+            subOnTime++;
+            tasksMap[tName].ontime++;
+          } else if (c.type === 'late') {
+            subLate++;
+            tasksMap[tName].late++;
+          } else if (c.type === 'excused') {
+            subExcused++;
+            tasksMap[tName].excused++;
+          } else {
+            subMissing++;
+            tasksMap[tName].missing++;
+          }
+        });
+
+        const subEffTotal = Math.max(1, subTotal - subExcused);
+        const subRate = Math.round((subOnTime / subEffTotal) * 100);
+        const accId = 'subject-acc-' + sIdx;
+
+        // 長條圖顏色
+        let barColor = 'bg-emerald-500';
+        let badgeColor = 'text-emerald-700 bg-emerald-50 border-emerald-200';
+        if (subRate < 80) {
+          barColor = 'bg-rose-500';
+          badgeColor = 'text-rose-700 bg-rose-50 border-rose-200';
+        } else if (subRate < 90) {
+          barColor = 'bg-amber-500';
+          badgeColor = 'text-amber-700 bg-amber-50 border-amber-200';
+        }
+
+        // 展開明細的 HTML
+        let detailsHtml = '';
+        Object.entries(tasksMap).forEach(([tName, stats]) => {
+          const tEff = Math.max(1, stats.total - stats.excused);
+          const tRate = Math.round((stats.ontime / tEff) * 100);
+          detailsHtml += `
+            <div class="p-2.5 bg-slate-50/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border border-slate-100">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-800">${tName}</span>
+                <span class="text-[11px] text-slate-400">(${stats.ontime}/${tEff} 次)</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                  <div class="${tRate >= 90 ? 'bg-emerald-500' : (tRate >= 80 ? 'bg-amber-500' : 'bg-rose-500')} h-1.5 rounded-full" style="width: ${tRate}%"></div>
+                </div>
+                <div class="text-xs font-mono font-bold ${tRate >= 90 ? 'text-emerald-700' : (tRate >= 80 ? 'text-amber-700' : 'text-rose-700')} min-w-[36px] text-right">
+                  ${tRate}%
+                </div>
+                ${stats.late > 0 ? '<span class="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-bold">遲交 ' + stats.late + '</span>' : ''}
+                ${stats.missing > 0 ? '<span class="text-[10px] text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded font-bold">缺交 ' + stats.missing + '</span>' : ''}
+                ${stats.excused > 0 ? '<span class="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">免計 ' + stats.excused + '</span>' : ''}
+              </div>
+            </div>
+          `;
+        });
+
+        subjectsContainer.innerHTML += `
+          <div class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs transition-all">
+            <!-- 頂部按鈕長條圖 -->
+            <button type="button" onclick="toggleSubjectAccordion('${accId}')" class="w-full p-4 flex flex-col gap-2 text-left hover:bg-slate-50/60 transition active:scale-[0.99] cursor-pointer">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-xl">${icon}</span>
+                  <span class="text-base font-bold text-slate-900">${sub}</span>
+                  <span class="text-xs text-slate-400 font-medium">(${Object.keys(tasksMap).length} 項作業)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold px-2 py-0.5 rounded-full border ${badgeColor}">
+                    ${subRate}% 準時
+                  </span>
+                  <svg id="${accId}-arrow" class="w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- 橫向彩色進度條 -->
+              <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div class="${barColor} h-2 rounded-full transition-all duration-500" style="width: ${subRate}%"></div>
+              </div>
+
+              <div class="flex justify-between items-center text-[11px] text-slate-400 pt-0.5">
+                <span>應繳 ${subTotal} 次 ‧ 準時 ${subOnTime} 次${subExcused > 0 ? ' ‧ 免計 ' + subExcused + ' 次' : ''}</span>
+                <span>${subLate > 0 ? '遲交 ' + subLate + ' 次 ‧ ' : ''}${subMissing > 0 ? '缺交 ' + subMissing + ' 次' : '無缺交'}</span>
+              </div>
+            </button>
+
+            <!-- 點開後展開的各項作業清單 -->
+            <div id="${accId}" class="hidden p-3 pt-0 border-t border-slate-100 space-y-1.5 bg-slate-50/30">
+              <div class="text-[11px] font-bold text-slate-400 px-1 py-1">該科各項作業詳細繳交狀況：</div>
+              ${detailsHtml}
+            </div>
+          </div>
+        `;
+      });
+
+      // 6. 渲染 📅 模組四：近期作業繳交足跡 (Activity Feed)
+      const logsContainer = document.getElementById('recentLogsContainer');
+      logsContainer.innerHTML = '';
+
+      if (recentLogs.length === 0) {
+        logsContainer.innerHTML = '<div class="py-4 text-center text-xs text-slate-400">尚無近期打卡紀錄</div>';
+      } else {
+        recentLogs.forEach(l => {
+          const c = classifyTaskStatus(l.status, l.timestamp, l.deadline);
+          const badge = `<span class="text-xs font-bold px-2 py-0.5 rounded-full border ${c.badgeClass}">${c.badge}</span>`;
+
+          logsContainer.innerHTML += `
+            <div class="py-2.5 flex items-center justify-between text-xs hover:bg-slate-50/50 px-1 rounded-lg transition">
+              <div class="flex items-center gap-2">
+                <span class="text-slate-400 font-mono text-[11px]">${l.timestamp || '-'}</span>
+                <span class="font-bold text-slate-800">[${l.subject}] ${l.taskName}</span>
+                ${l.range ? '<span class="text-slate-500 font-mono text-[11px]">(' + l.range + ')</span>' : ''}
+              </div>
+              <div>${badge}</div>
+            </div>
+          `;
+        });
+      }
+
+      // 呈現主結果區塊
+      document.getElementById('parentResultArea').classList.remove('hidden');
+    }
+
+    // 各科目點開折疊 Accordion 切換
+    function toggleSubjectAccordion(id) {
+      const el = document.getElementById(id);
+      const arrow = document.getElementById(id + '-arrow');
+      if (!el) return;
+
+      const isHidden = el.classList.contains('hidden');
+      if (isHidden) {
+        el.classList.remove('hidden');
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+      } else {
+        el.classList.add('hidden');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+      }
+    }
+  </script>
+</body>
+</html>

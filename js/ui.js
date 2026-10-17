@@ -317,6 +317,9 @@ function deleteClass(id) {
             if(tabIndex === 7) {
                 if(typeof renderReportTab === 'function') renderReportTab();
             }
+            if(tabIndex === 8) {
+                if(typeof renderParentTab === 'function') renderParentTab();
+            }
             if(typeof updateSelectedTasksPreviewUI === 'function') {
                 updateSelectedTasksPreviewUI();
             }
@@ -636,8 +639,8 @@ function deleteClass(id) {
                         
                         // 忽略空白
                         if (!cellValue) continue;
-                        if (cellValue === '缺交' || cellValue === '沒帶') {
-                            // If they typed missing, we don't save a record, so it defaults to missing
+                        if (['缺交', '未交', '缺', '沒帶', 'missing'].includes(cellValue)) {
+                            // 缺交或未交不建構打卡紀錄，維持未交預設狀態
                             continue;
                         }
                         

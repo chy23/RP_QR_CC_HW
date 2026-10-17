@@ -51,6 +51,224 @@ function(e, ss, getSheetNames) {
       return { config: cfg, discovered: discovered };
     }
 
+    // ==========================================
+    // 0. LINE Webhook 接收器 (連線驗證、傳送代碼自動綁定、輸入查詢回傳手札)
+    // ==========================================
+    if (payload.events !== undefined) {
+      // (a) 若為 LINE 後台點擊「Verify (驗證)」測試連線 (events 為空陣列)
+      if (!payload.events || payload.events.length === 0) {
+        return ContentService.createTextOutput("OK").setMimeType(ContentService.MimeType.TEXT);
+      }
+
+      // 讀取 SystemConfig 取得 LINE Channel Access Token
+      var lineToken = "";
+      var configSheet = ss.getSheetByName("SystemConfig");
+      if (configSheet) {
+        try {
+          var cfgObj = JSON.parse(configSheet.getRange("A1").getValue());
+          if (cfgObj && cfgObj.lineChannelAccessToken) {
+            lineToken = cfgObj.lineChannelAccessToken;
+          }
+        } catch(e) {}
+      }
+
+      // 發送 LINE Reply 訊息輔助函式
+      function replyLine(replyToken, textMsg) {
+        if (!lineToken || !replyToken) return;
+        try {
+          UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + lineToken
+            },
+            payload: JSON.stringify({
+              replyToken: replyToken,
+              messages: [{ type: "text", text: textMsg }]
+            }),
+            muteHttpExceptions: true
+          });
+        } catch(err) {
+          console.error("LINE reply error: " + err);
+        }
+      }
+
+      function getPortalUrl(classLabel, token) {
+        var isBeta = (classLabel || "").toLowerCase().indexOf("beta") !== -1;
+        var base = isBeta ? "https://chy23.github.io/RP_QR_CC_HW/beta/parent.html" : "https://chy23.github.io/RP_QR_CC_HW/parent.html";
+        return base + "?t=" + encodeURIComponent(token);
+      }
+
+      for (var evIdx = 0; evIdx < payload.events.length; evIdx++) {
+        var ev = payload.events[evIdx];
+        if (ev.type === "message" && ev.message && ev.message.type === "text") {
+          var userMsg = ev.message.text.trim();
+          var userId = ev.source ? ev.source.userId : "";
+          var replyToken = ev.replyToken;
+
+          if (!userId) continue;
+
+          // (1) 查詢指令
+          if (userMsg === "查詢" || userMsg === "查作業" || userMsg === "作業" || userMsg.toLowerCase() === "query") {
+            var allSheets = ss.getSheets();
+            var boundStudents = [];
+            for (var sIdx = 0; sIdx < allSheets.length; sIdx++) {
+              var sName = allSheets[sIdx].getName();
+              if (sName.indexOf("LINE用戶綁定") !== -1) {
+                var bData = allSheets[sIdx].getDataRange().getDisplayValues();
+                for (var bRow = 1; bRow < bData.length; bRow++) {
+                  if (bData[bRow][3] && bData[bRow][3].trim() === userId) {
+                    var sPrefix = sName.replace("LINE用戶綁定", "").replace(/\[|\]/g, "").trim();
+                    boundStudents.push({
+                      className: sPrefix || "本班",
+                      id: bData[bRow][0],
+                      name: bData[bRow][1],
+                      token: bData[bRow][2]
+                    });
+                  }
+                }
+              }
+            }
+
+            if (boundStudents.length > 0) {
+              var replyLines = ["📖 【孩子專屬作業手札連結】\n"];
+              for (var bs = 0; bs < boundStudents.length; bs++) {
+                var stu = boundStudents[bs];
+                var portalUrl = getPortalUrl(stu.className, stu.token);
+                replyLines.push("👦 " + stu.className + " " + stu.id + "號 " + stu.name + "\n🔗 手札網址：" + portalUrl + "\n");
+              }
+              replyLines.push("👉 點擊上方連結即可秒開孩子作業繳交率、待補交清單與常遲到排行！");
+              replyLine(replyToken, replyLines.join("\n"));
+            } else {
+              replyLine(replyToken, "⚠️ 您尚未綁定任何學生！\n\n請直接回傳孩子的【查詢代碼】（例如：V9UPK4）進行綁定，日後即可接收缺交通知與隨時查詢！");
+            }
+            continue;
+          }
+
+          // (2) 取消綁定 / 解除綁定指令
+          var lowerMsg = userMsg.toLowerCase();
+          if (userMsg === "取消綁定" || userMsg === "解除綁定" || userMsg === "解綁" || lowerMsg === "unbind" ||
+              userMsg.indexOf("取消綁定") === 0 || userMsg.indexOf("解除綁定") === 0 || userMsg.indexOf("解綁") === 0) {
+            var param = userMsg.replace(/^(取消綁定|解除綁定|解綁|unbind)\s*/i, "").trim().toUpperCase();
+            var allSheets = ss.getSheets();
+            var unboundStudents = [];
+
+            for (var sIdx = 0; sIdx < allSheets.length; sIdx++) {
+              var sName = allSheets[sIdx].getName();
+              if (sName.indexOf("LINE用戶綁定") !== -1) {
+                var bSheet = allSheets[sIdx];
+                var bData = bSheet.getDataRange().getDisplayValues();
+                var sPrefix = sName.replace("LINE用戶綁定", "").replace(/\[|\]/g, "").trim();
+
+                for (var bRow = 1; bRow < bData.length; bRow++) {
+                  var rowUid = bData[bRow][3] ? bData[bRow][3].trim() : "";
+                  var rowSid = bData[bRow][0] ? bData[bRow][0].trim() : "";
+                  var rowTok = bData[bRow][2] ? bData[bRow][2].trim().toUpperCase() : "";
+
+                  if (rowUid === userId) {
+                    if (param && param !== rowSid && param !== (rowSid + "號") && param !== rowTok) {
+                      continue;
+                    }
+                    unboundStudents.push({
+                      className: sPrefix || "本班",
+                      id: bData[bRow][0],
+                      name: bData[bRow][1]
+                    });
+                    bSheet.getRange(bRow + 1, 4, 1, 3).setValues([["", Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/MM/dd HH:mm:ss"), "已解除"]]);
+                  }
+                }
+              }
+            }
+
+            if (unboundStudents.length > 0) {
+              var stuListStr = unboundStudents.map(function(u) {
+                return "👦 【" + u.className + "】" + u.id + "號 " + u.name;
+              }).join("\n");
+              replyLine(replyToken, "✅ 【LINE 綁定已成功解除】\n\n已為您解除以下學生之通知綁定：\n" + stuListStr + "\n\n日後系統將不再向您發送該生的缺交私訊通知。\n若日後欲重新綁定，隨時傳送孩子的小卡代碼即可重新綁定！");
+            } else {
+              replyLine(replyToken, "ℹ️ 您目前沒有符合條件的已綁定學生紀錄。\n\n若欲綁定，請直接傳送孩子的專屬查詢代碼（例如：V9UPK4）。");
+            }
+            continue;
+          }
+
+          // (3) 代碼綁定
+          var codeToMatch = userMsg.replace(/^綁定\s*/i, "").trim().toUpperCase();
+          var allSheets = ss.getSheets();
+          var matchedStudent = null;
+          var matchedClassPrefix = "";
+
+          for (var i = 0; i < allSheets.length; i++) {
+            var shName = allSheets[i].getName();
+            if (shName.indexOf("學生名單") !== -1) {
+              var stData = allSheets[i].getDataRange().getDisplayValues();
+              if (stData.length > 1) {
+                var h = stData[0];
+                var idIdx = h.indexOf("座號") !== -1 ? h.indexOf("座號") : 0;
+                var nameIdx = h.indexOf("姓名") !== -1 ? h.indexOf("姓名") : 1;
+                var tokIdx = h.indexOf("防偽碼") !== -1 ? h.indexOf("防偽碼") : h.indexOf("系統代碼");
+
+                for (var r = 1; r < stData.length; r++) {
+                  var rRow = stData[r];
+                  var rId = rRow[idIdx].toString().trim();
+                  var rName = rRow[nameIdx].toString().trim();
+                  var rTok = (tokIdx !== -1 && rRow[tokIdx]) ? rRow[tokIdx].toString().trim().toUpperCase() : "";
+                  var rSysCode = ("STU" + ("00" + rId).slice(-3)).toUpperCase();
+
+                  if ((rTok && rTok === codeToMatch) || rSysCode === codeToMatch) {
+                    matchedStudent = { id: rId, name: rName, token: rTok || rSysCode };
+                    matchedClassPrefix = shName.replace("學生名單", "");
+                    break;
+                  }
+                }
+              }
+              if (matchedStudent) break;
+            }
+          }
+
+          if (matchedStudent) {
+            var bindSheetName = matchedClassPrefix + "LINE用戶綁定";
+            var bindSheet = ss.getSheetByName(bindSheetName);
+            if (!bindSheet) {
+              bindSheet = ss.insertSheet(bindSheetName);
+              bindSheet.appendRow(["座號", "姓名", "防偽代碼", "LINE User ID", "綁定時間", "狀態"]);
+              bindSheet.getRange("A1:F1").setBackground("#34a853").setFontColor("#ffffff").setFontWeight("bold");
+            }
+
+            var bValues = bindSheet.getDataRange().getDisplayValues();
+            var existingRow = -1;
+            for (var b = 1; b < bValues.length; b++) {
+              if (bValues[b][0].toString().trim() === matchedStudent.id.toString()) {
+                existingRow = b + 1;
+                break;
+              }
+            }
+
+            var nowStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/MM/dd HH:mm:ss");
+            if (existingRow > 0) {
+              bindSheet.getRange(existingRow, 1, 1, 6).setValues([[
+                matchedStudent.id, matchedStudent.name, matchedStudent.token, userId, nowStr, "已綁定"
+              ]]);
+            } else {
+              bindSheet.appendRow([matchedStudent.id, matchedStudent.name, matchedStudent.token, userId, nowStr, "已綁定"]);
+            }
+
+            var cLabel = matchedClassPrefix.replace(/\[|\]/g, "").trim() || "本班";
+            var directUrl = getPortalUrl(cLabel, matchedStudent.token);
+            var successMsg = "🎉 【LINE 綁定成功通知】\n\n" +
+              "家長您好，您已成功綁定：\n" +
+              "👦 學生：【" + cLabel + "】" + matchedStudent.id + "號 " + matchedStudent.name + "\n\n" +
+              "日後放學若有作業缺交或重要叮嚀，系統將會第一時間發送 LINE 通知提醒您！\n\n" +
+              "🔗 隨時查看作業學習手札：\n" + directUrl;
+
+            replyLine(replyToken, successMsg);
+          } else {
+            replyLine(replyToken, "⚠️ 查無此代碼【" + userMsg + "】！\n\n請核對作業查詢小卡上的專屬代碼（如：V9UPK4），並重新傳送代碼以完成綁定。");
+          }
+        }
+      }
+      return ContentService.createTextOutput("OK").setMimeType(ContentService.MimeType.TEXT);
+    }
+
     if (payload.action === 'ping') {
       var config = null;
       var configSheet = ss.getSheetByName("SystemConfig");
@@ -74,6 +292,164 @@ function(e, ss, getSheetNames) {
       rawPrefix = rawPrefix.substring(1, rawPrefix.length - 1).trim();
     }
     var prefix = rawPrefix ? "[" + rawPrefix + "] " : "";
+
+    // ==========================================
+    // LINE 設定儲存、查詢綁定、發送今日缺交推播
+    // ==========================================
+    if (payload.action === 'line_save_config') {
+      var configSheet = ss.getSheetByName("SystemConfig");
+      if (!configSheet) configSheet = ss.insertSheet("SystemConfig");
+      var existingCfg = {};
+      try {
+        var str = configSheet.getRange("A1").getValue();
+        if (str) existingCfg = JSON.parse(str);
+      } catch(e) {}
+      if (payload.lineChannelAccessToken !== undefined) existingCfg.lineChannelAccessToken = payload.lineChannelAccessToken;
+      if (payload.lineBotBasicId !== undefined) existingCfg.lineBotBasicId = payload.lineBotBasicId;
+      configSheet.getRange("A1").setValue(JSON.stringify(existingCfg));
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success' })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (payload.action === 'line_get_status') {
+      var configSheet = ss.getSheetByName("SystemConfig");
+      var lineCfg = { isConfigured: false, botBasicId: '' };
+      if (configSheet) {
+        try {
+          var cfg = JSON.parse(configSheet.getRange("A1").getValue());
+          if (cfg && cfg.lineChannelAccessToken) {
+            lineCfg.isConfigured = true;
+            lineCfg.botBasicId = cfg.lineBotBasicId || '';
+          }
+        } catch(e) {}
+      }
+
+      var bindSheetName = prefix + "LINE用戶綁定";
+      var bindSheet = ss.getSheetByName(bindSheetName);
+      var bindings = [];
+      if (bindSheet && bindSheet.getLastRow() > 1) {
+        var bData = bindSheet.getDataRange().getDisplayValues();
+        for (var b = 1; b < bData.length; b++) {
+          bindings.push({
+            studentId: bData[b][0],
+            studentName: bData[b][1],
+            token: bData[b][2],
+            lineUserId: bData[b][3],
+            boundAt: bData[b][4],
+            isBound: !!(bData[b][3] && bData[b][3].trim())
+          });
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        config: lineCfg,
+        bindings: bindings
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (payload.action === 'line_push_missing') {
+      var configSheet = ss.getSheetByName("SystemConfig");
+      var tokenToUse = payload.lineChannelAccessToken || "";
+      if (!tokenToUse && configSheet) {
+        try {
+          var cfg = JSON.parse(configSheet.getRange("A1").getValue());
+          if (cfg && cfg.lineChannelAccessToken) tokenToUse = cfg.lineChannelAccessToken;
+        } catch(e) {}
+      }
+
+      if (!tokenToUse) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '尚未設定 LINE Channel Access Token！' })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var bindSheetName = prefix + "LINE用戶綁定";
+      var bindSheet = ss.getSheetByName(bindSheetName);
+      var userMap = {};
+      if (bindSheet && bindSheet.getLastRow() > 1) {
+        var bData = bindSheet.getDataRange().getDisplayValues();
+        for (var b = 1; b < bData.length; b++) {
+          var sid = bData[b][0].toString().trim();
+          var uid = bData[b][3] ? bData[b][3].toString().trim() : '';
+          if (sid && uid) userMap[sid] = uid;
+        }
+      }
+
+      var targets = payload.targets || [];
+      var successCount = 0;
+      var failCount = 0;
+      var skippedCount = 0;
+
+      for (var t = 0; t < targets.length; t++) {
+        var tgt = targets[t];
+        var uid = userMap[tgt.studentId.toString()] || tgt.lineUserId;
+        if (!uid) {
+          skippedCount++;
+          continue;
+        }
+
+        var taskLines = [];
+        (tgt.missingTasks || []).forEach(function(mt) {
+          var rg = mt.range ? " (" + mt.range + ")" : "";
+          taskLines.push("‧ 【" + mt.subject + "】" + mt.taskName + rg);
+        });
+        if (taskLines.length === 0) taskLines.push("‧ 請參閱作業手札待補交清單");
+
+        var portalUrl = getPortalUrl(prefix, tgt.token);
+        var msgText = "🚨 【作業待補交提醒】\n\n" +
+          tgt.studentName + " 家長您好：\n" +
+          "今日學校清點作業，孩子尚有 " + tgt.missingTasks.length + " 項作業待補交：\n" +
+          taskLines.join("\n") + "\n\n" +
+          "請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！\n\n" +
+          "🔗 點此秒開專屬手札查看明細：\n" + portalUrl + "\n\n" +
+          "（由 班級作業管理系統 自動推播）";
+
+        try {
+          var pushResp = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + tokenToUse
+            },
+            payload: JSON.stringify({
+              to: uid,
+              messages: [{ type: "text", text: msgText }]
+            }),
+            muteHttpExceptions: true
+          });
+          if (pushResp.getResponseCode() === 200) {
+            successCount++;
+          } else {
+            console.error("Push failed for " + tgt.studentName + ": " + pushResp.getContentText());
+            failCount++;
+          }
+        } catch(pushErr) {
+          console.error("Push error: " + pushErr);
+          failCount++;
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        successCount: successCount,
+        failCount: failCount,
+        skippedCount: skippedCount
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (payload.action === 'line_unbind_student') {
+      var bindSheetName = prefix + "LINE用戶綁定";
+      var bindSheet = ss.getSheetByName(bindSheetName);
+      var studentId = (payload.studentId || "").toString().trim();
+      var unboundName = "";
+      if (bindSheet && bindSheet.getLastRow() > 1) {
+        var bData = bindSheet.getDataRange().getDisplayValues();
+        for (var b = 1; b < bData.length; b++) {
+          if (bData[b][0].toString().trim() === studentId) {
+            unboundName = bData[b][1];
+            bindSheet.getRange(b + 1, 4, 1, 3).setValues([["", Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/MM/dd HH:mm:ss"), "教師手動解除"]]);
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', studentName: unboundName })).setMimeType(ContentService.MimeType.JSON);
+    }
 
     function getColorForPrefix(p) {
       if (!p) return null;
@@ -230,6 +606,161 @@ function(e, ss, getSheetNames) {
         }
       }
       return ContentService.createTextOutput(JSON.stringify({status: 'success', students: students, config: config})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 家長端專屬查詢 (僅支援小卡專屬 QR Code 代碼，保護學生隱私)
+    if (payload.action === 'parent_query') {
+      var queryToken = (payload.token || '').toString().trim().toUpperCase();
+      
+      if (!queryToken) {
+        return ContentService.createTextOutput(JSON.stringify({status: 'error', message: '為保護學生隱私，請掃描小卡專屬 QR Code 登入'})).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      var allSheets = ss.getSheets();
+      var targetStudent = null;
+      var matchedPrefix = prefix;
+      
+      // 1. 尋找學生 (若有指定班級前綴先查該班，否則搜尋所有學生名單分頁)
+      for (var i = 0; i < allSheets.length; i++) {
+        var sName = allSheets[i].getName();
+        if (sName.indexOf("學生名單") !== -1) {
+          if (prefix && sName.indexOf(prefix) !== 0) continue;
+          
+          var sData = allSheets[i].getDataRange().getDisplayValues();
+          if (sData.length > 1) {
+            var h = sData[0];
+            var idIdx = h.indexOf("座號") !== -1 ? h.indexOf("座號") : 0;
+            var nameIdx = h.indexOf("姓名") !== -1 ? h.indexOf("姓名") : 1;
+            var tokIdx = h.indexOf("防偽碼") !== -1 ? h.indexOf("防偽碼") : h.indexOf("系統代碼");
+            
+            for (var r = 1; r < sData.length; r++) {
+              var row = sData[r];
+              var rId = row[idIdx].toString().trim();
+              var rName = row[nameIdx].toString().trim();
+              var rTok = (tokIdx !== -1 && row[tokIdx]) ? row[tokIdx].toString().trim().toUpperCase() : '';
+              
+              var isMatch = false;
+              if (queryToken && rTok && rTok === queryToken) isMatch = true;
+              else if (queryToken && !rTok && ('STU' + ('00' + rId).slice(-3)).toUpperCase() === queryToken) isMatch = true;
+              
+              if (isMatch) {
+                targetStudent = { id: rId, name: rName, token: rTok || ('STU' + ('00' + rId).slice(-3)) };
+                matchedPrefix = sName.replace("學生名單", "");
+                break;
+              }
+            }
+          }
+          if (targetStudent) break;
+        }
+      }
+      
+      if (!targetStudent) {
+        return ContentService.createTextOutput(JSON.stringify({status: 'error', message: '查無此代碼或學生，請確認代碼是否正確。'})).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // 2. 取得班級資訊
+      var classLabel = matchedPrefix ? matchedPrefix.replace(/\[|\]/g, '').trim() : '目前班級';
+      
+      // 3. 讀取該班級的各科目分頁資料 (抓取該學生的作業紀錄)
+      var studentTasks = [];
+      for (var j = 0; j < allSheets.length; j++) {
+        var sheet = allSheets[j];
+        var sName2 = sheet.getName();
+        if (matchedPrefix && sName2.indexOf(matchedPrefix) !== 0) continue;
+        if (!matchedPrefix && sName2.indexOf("[") === 0) continue;
+        
+        var baseName = matchedPrefix ? sName2.substring(matchedPrefix.length) : sName2;
+        if (baseName === "學生名單" || baseName === "所有掃描紀錄" || baseName.indexOf("統計") !== -1 || baseName === "SystemConfig") continue;
+        
+        var sheetValues = sheet.getDataRange().getDisplayValues();
+        if (sheetValues.length >= 4) {
+          var headerTaskNames = sheetValues[0];
+          var headerRanges = sheetValues[1];
+          var headerDates = sheetValues[2];
+          
+          var studentRowValues = null;
+          for (var rIdx = 3; rIdx < sheetValues.length; rIdx++) {
+            if (sheetValues[rIdx][0].toString().trim() === targetStudent.name) {
+              studentRowValues = sheetValues[rIdx];
+              break;
+            }
+          }
+          
+          if (studentRowValues) {
+            for (var col = 1; col < headerTaskNames.length; col++) {
+              var tName = headerTaskNames[col] || baseName;
+              var tRange = headerRanges[col] || '';
+              var tDate = headerDates[col] || '';
+
+              // 檢查該作業欄位在全班是否有任何登記資料 (是否有任何學生在該欄位有紀錄)
+              var colHasAnyStudentData = false;
+              for (var rowCheck = 3; rowCheck < sheetValues.length; rowCheck++) {
+                if (sheetValues[rowCheck][col] && sheetValues[rowCheck][col].toString().trim() !== '') {
+                  colHasAnyStudentData = true;
+                  break;
+                }
+              }
+
+              // 若全班沒有任何學生在該作業有紀錄，且試算表欄位未設定範圍或日期，代表尚未開始清點，不計入準時率！
+              if (!colHasAnyStudentData && !tRange && !tDate) {
+                continue;
+              }
+
+              var tStatus = studentRowValues[col] || '';
+              if (!tStatus) tStatus = '缺交';
+              
+              studentTasks.push({
+                subject: baseName,
+                taskName: tName,
+                range: tRange,
+                date: tDate,
+                status: tStatus
+              });
+            }
+          }
+        }
+      }
+      
+      // 4. 讀取該學生的近期打卡紀錄 (所有掃描紀錄)
+      var logSheetName = matchedPrefix + "所有掃描紀錄";
+      var logSheet = ss.getSheetByName(logSheetName);
+      var recentLogs = [];
+      if (logSheet && logSheet.getLastRow() > 1) {
+        var logValues = logSheet.getDataRange().getDisplayValues();
+        for (var l = logValues.length - 1; l >= 1; l--) {
+          var lRow = logValues[l];
+          if (lRow[5] && lRow[5].toString().trim() === targetStudent.name) {
+            recentLogs.push({
+              timestamp: lRow[0],
+              subject: lRow[2],
+              taskName: lRow[3],
+              range: lRow[4],
+              status: lRow[6]
+            });
+            if (recentLogs.length >= 25) break;
+          }
+        }
+      }
+      
+      // 讀取 LINE Bot Basic ID (供家長端一秒深層連結)
+      var botBasicId = "";
+      var configSheet = ss.getSheetByName("SystemConfig");
+      if (configSheet) {
+        try {
+          var cfg = JSON.parse(configSheet.getRange("A1").getValue());
+          if (cfg && cfg.lineBotBasicId) botBasicId = cfg.lineBotBasicId;
+        } catch(e) {}
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        syncedAt: new Date().toISOString(),
+        student: targetStudent,
+        className: classLabel,
+        lineBotBasicId: botBasicId,
+        tasks: studentTasks,
+        recentLogs: recentLogs
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
     // 從雲端拉取所有繳交紀錄

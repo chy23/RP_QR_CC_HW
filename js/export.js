@@ -1343,3 +1343,1177 @@
             const dateStr = new Date().toISOString().split('T')[0];
             XLSX.writeFile(wb, `作業繳交統計表_${dateStr}.xlsx`);
         }
+
+
+// ==========================================
+// 家長端專屬查詢小卡預覽與列印模組 (比照 MPScore)
+// ==========================================
+async function previewParentCardsModal() {
+    let studentIds = getCheckedStudentIds('tab4-student-checkboxes');
+    if (!studentIds || studentIds.length === 0) {
+        studentIds = db.students.map(s => s.id);
+    }
+    if (studentIds.length === 0) {
+        showAlert('提示', '尚未建立任何學生名單！');
+        return;
+    }
+
+    const densitySelect = document.getElementById('parent-card-density');
+    const cardsPerPage = densitySelect ? parseInt(densitySelect.value, 10) || 6 : 6;
+
+    let modal = document.getElementById('parent-cards-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'parent-cards-modal';
+        modal.className = 'fixed inset-0 bg-black/60 z-50 flex flex-col justify-between p-2 sm:p-4 overflow-hidden';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-5xl max-h-[92vh] mx-auto overflow-hidden">
+                <!-- 模態框標頭 -->
+                <div class="p-4 bg-emerald-600 text-white flex justify-between items-center no-print">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">👨‍👩‍👧</span>
+                        <div>
+                            <h3 class="font-bold text-lg">家長專屬查詢小卡列印預覽 (A4 排版)</h3>
+                            <p class="text-xs text-emerald-100">支援手機相機一鍵掃碼直達孩子手札 ‧ 裁切後夾於聯絡簿發放</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.print()" class="bg-white text-emerald-800 hover:bg-emerald-50 font-bold px-4 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                            <span>🖨️ 直接列印 (A4)</span>
+                        </button>
+                        <button onclick="closeParentCardsModal()" class="text-white hover:bg-white/20 p-2 rounded-full text-xl transition active:scale-95 cursor-pointer">&times;</button>
+                    </div>
+                </div>
+
+                <!-- 預覽容器 (A4 表格滾動區) -->
+                <div id="parent-cards-print-container" class="p-4 sm:p-6 overflow-y-auto bg-slate-100 flex-1 space-y-6">
+                    <div class="text-center py-10 text-gray-500 font-bold">正在生成 QR Code 排版中...</div>
+                </div>
+
+                <!-- 底部操作列 -->
+                <div class="p-3 bg-gray-50 border-t flex justify-between items-center text-xs text-gray-500 no-print">
+                    <span id="parent-cards-page-stats">全班預計產生 A4 列印頁面</span>
+                    <button onclick="closeParentCardsModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition active:scale-95 cursor-pointer">關閉視窗</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+
+    await renderParentCardsContent(studentIds, cardsPerPage);
+}
+
+function closeParentCardsModal() {
+    const modal = document.getElementById('parent-cards-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
+
+async function renderParentCardsContent(studentIds, cardsPerPage) {
+    const container = document.getElementById('parent-cards-print-container');
+    if (!container) return;
+    container.innerHTML = '<div class="text-center py-10 text-gray-500 font-bold">正在生成 QR Code 排版中...</div>';
+
+    const pool = db.students.filter(s => studentIds.includes(s.id));
+    const totalStudents = pool.length;
+    const totalPages = Math.ceil(totalStudents / cardsPerPage);
+
+    const statsEl = document.getElementById('parent-cards-page-stats');
+    if (statsEl) {
+        statsEl.innerText = `全班共 ${totalStudents} 位學生 ‧ 預計產生 ${totalPages} 頁 A4 (每頁 ${cardsPerPage} 張)`;
+    }
+
+    let classLabel = '本班級';
+    try {
+        const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+        if (cls && cls.label) classLabel = cls.label;
+    } catch(e) {}
+
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const parentBaseUrl = window.location.origin + basePath + 'parent.html';
+
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+
+    let gridClass = 'grid-cols-2 grid-rows-3 gap-3';
+    let qrPixelSize = 160;
+    let qrDisplaySize = 78;
+    if (cardsPerPage === 8) {
+        gridClass = 'grid-cols-2 grid-rows-4 gap-2';
+        qrDisplaySize = 62;
+    } else if (cardsPerPage === 4) {
+        gridClass = 'grid-cols-2 grid-rows-2 gap-4';
+        qrDisplaySize = 96;
+    }
+
+    container.innerHTML = '';
+
+    if (window.location.protocol === 'file:') {
+        container.innerHTML += `
+            <div class="p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs text-rose-800 font-bold mb-4 no-print flex items-center gap-2">
+                <span class="text-lg">🚨</span>
+                <span>注意：您目前以本地檔案模式 (file://) 開啟，產生的 QR Code 為本機電腦路徑，家長手機無法連線！請務必部署至 GitHub Pages 後再列印發放！</span>
+            </div>
+        `;
+    } else if (!gas) {
+        container.innerHTML += `
+            <div class="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-800 font-bold mb-4 no-print flex items-center gap-2">
+                <span class="text-lg">⚠️</span>
+                <span>溫馨提醒：尚未設定 Google 試算表 GAS 網址！若未設定雲端 API，家長手機掃碼後將無法連線讀取即時作業資料。請先至【0. 資料建置】填入 GAS 網址！</span>
+            </div>
+        `;
+    }
+
+    for (let p = 0; p < totalPages; p++) {
+        const start = p * cardsPerPage;
+        const pageStudents = pool.slice(start, start + cardsPerPage);
+
+        const sheetEl = document.createElement('div');
+        sheetEl.className = 'a4-print-sheet flex flex-col justify-between';
+
+        const gridEl = document.createElement('div');
+        gridEl.className = `grid ${gridClass} h-full flex-1`;
+        sheetEl.appendChild(gridEl);
+
+        for (const st of pageStudents) {
+            const token = st.token || ('STU' + String(st.id).padStart(3, '0'));
+            const queryUrl = `${parentBaseUrl}?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+
+            let qrDataUrl = '';
+            try {
+                qrDataUrl = await QRCode.toDataURL(queryUrl, {
+                    width: qrPixelSize,
+                    margin: 1,
+                    errorCorrectionLevel: 'M'
+                });
+            } catch(e) {
+                console.warn('QR code gen error:', e);
+            }
+
+            const card = document.createElement('div');
+            card.className = 'border-2 border-dashed border-slate-300 rounded-2xl p-3 bg-white flex flex-col justify-between relative';
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 mb-1.5">
+                    <div>
+                        <span class="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">${classLabel}</span>
+                        <span class="text-xs font-black text-slate-800 ml-1">作業繳交查詢卡</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-mono">✂️ 裁切發放</span>
+                </div>
+                
+                <div class="flex items-center justify-between gap-2 flex-1">
+                    <div class="space-y-1">
+                        <div class="text-base font-black text-slate-900">${st.name}</div>
+                        <div class="text-xs font-bold text-slate-600">座號：${String(st.id).padStart(2, '0')}</div>
+                        <div class="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-block font-bold">
+                            代碼：${token}
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 flex items-center justify-center p-1 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                        <img src="${qrDataUrl}" width="${qrDisplaySize}" height="${qrDisplaySize}" alt="QR" class="rounded">
+                    </div>
+                </div>
+
+                <div class="mt-1.5 pt-1 border-t border-slate-100 text-[9px] text-slate-500 leading-tight">
+                    👉 請家長使用手機相機掃描 QR Code，即可隨時查閱孩子作業繳交率、待補交作業與各科明細。
+                </div>
+            `;
+            gridEl.appendChild(card);
+        }
+
+        const footerEl = document.createElement('div');
+        footerEl.className = 'text-center text-[10px] text-slate-400 pt-2 border-t border-slate-200 mt-2 flex justify-between items-center';
+        footerEl.innerHTML = `
+            <span>✂️ 請沿虛線裁切發給家長</span>
+            <span class="font-bold text-slate-600">第 ${p + 1} / ${totalPages} 頁 ‧ 👨‍👩‍👧【家長發放版】(每頁 ${cardsPerPage} 張)</span>
+            <span>QRcode 自動清點作業系統</span>
+        `;
+        sheetEl.appendChild(footerEl);
+        container.appendChild(sheetEl);
+    }
+}
+
+// ==========================================
+// Tab 8: 家長手札與專屬查詢小卡中心
+// ==========================================
+let currentSimulatorStudentId = null;
+
+function renderParentTab() {
+    const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+    const classLabel = cls ? cls.label : '目前班級';
+    const labelEl = document.getElementById('parent-tab-class-label');
+    if (labelEl) labelEl.innerText = classLabel;
+
+    // 1. 渲染學生勾選框清單
+    const selector = document.getElementById('parent-tab-students-selector');
+    if (selector) {
+        selector.innerHTML = '';
+        db.students.forEach(s => {
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-1.5 p-1.5 hover:bg-white rounded cursor-pointer border border-transparent hover:border-slate-200 transition';
+            label.innerHTML = `
+                <input type="checkbox" value="${s.id}" checked class="parent-tab-stu-cb rounded text-emerald-600 focus:ring-emerald-500" onchange="updateParentTabSelectedCount()">
+                <span class="font-bold text-slate-700">${String(s.id).padStart(2, '0')} ${s.name}</span>
+            `;
+            selector.appendChild(label);
+        });
+        updateParentTabSelectedCount();
+    }
+
+    // 2. 渲染全班 Token 代碼表
+    const tbody = document.getElementById('parent-tab-tokens-tbody');
+    if (tbody) {
+        tbody.innerHTML = '';
+        const gas = appConfig.gasUrl || '';
+        let apiParam = '';
+        if (gas && gas.includes('/macros/s/')) {
+            apiParam = gas.split('/macros/s/')[1].split('/')[0];
+        }
+        const currentPath = window.location.pathname;
+        let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+        const parentBaseUrl = window.location.origin + basePath + 'parent.html';
+
+        db.students.forEach(s => {
+            const token = s.token || ('STU' + String(s.id).padStart(3, '0'));
+            const directUrl = `${parentBaseUrl}?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50 transition';
+            tr.innerHTML = `
+                <td class="p-2 text-center font-bold text-slate-500">${String(s.id).padStart(2, '0')}</td>
+                <td class="p-2 font-bold text-slate-800">${s.name}</td>
+                <td class="p-2 font-mono font-bold text-emerald-700 bg-emerald-50/50 rounded px-1.5 py-0.5">${token}</td>
+                <td class="p-2 text-center space-x-1">
+                    <button onclick="navigator.clipboard.writeText('${directUrl}').then(() => showToast('已複製 ${s.name} 專屬手札網址！', 'success'))" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-bold active:scale-95 transition cursor-pointer">複製</button>
+                    <a href="${directUrl}" target="_blank" class="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[11px] font-bold transition inline-block">開啟</a>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 3. 渲染手機模擬器學生下拉選單
+    const sel = document.getElementById('parent-simulator-student-select');
+    if (sel) {
+        sel.innerHTML = '';
+        db.students.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.innerText = `${String(s.id).padStart(2, '0')} ${s.name}`;
+            sel.appendChild(opt);
+        });
+        if (db.students.length > 0) {
+            updateParentSimulator(db.students[0].id);
+        } else {
+            const frame = document.getElementById('parent-simulator-frame');
+            if (frame) frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">目前班級尚無學生資料</div>';
+        }
+    }
+
+    // 4. 自動載入 LINE 官方帳號推播與綁定狀態
+    if (typeof fetchLineBindingStatus === 'function') {
+        fetchLineBindingStatus();
+    }
+}
+
+function updateParentTabSelectedCount() {
+    const total = db.students.length;
+    const checked = document.querySelectorAll('.parent-tab-stu-cb:checked').length;
+    const el = document.getElementById('parent-tab-selected-count');
+    if (el) el.innerText = `已勾選 ${checked} / ${total} 人`;
+}
+
+function selectAllParentTabStudents(check) {
+    document.querySelectorAll('.parent-tab-stu-cb').forEach(cb => cb.checked = check);
+    updateParentTabSelectedCount();
+}
+
+function previewParentCardsFromTab8() {
+    const density = parseInt(document.getElementById('parent-tab-card-density').value, 10) || 6;
+    const checkedIds = Array.from(document.querySelectorAll('.parent-tab-stu-cb:checked')).map(cb => parseInt(cb.value, 10));
+    if (checkedIds.length === 0) {
+        showAlert('提示', '請至少勾選一位學生！');
+        return;
+    }
+    previewParentCardsModal(checkedIds, density);
+}
+
+// 通用家長端作業狀態分類器
+function classifyParentTaskStatus(statusStr, timestamp, deadline) {
+    const s = (statusStr || '').toString().trim();
+    const ts = (timestamp || '').toString().trim();
+
+    // 1. 缺交 / 未交 (Missing)
+    if (
+        s === '缺交' || s === '未交' || s === 'missing' || s === '曠課' ||
+        s.includes('leave_custom_缺交') || s.includes('leave_custom_未交') ||
+        s === ''
+    ) {
+        return {
+            type: 'missing',
+            label: '缺交',
+            badge: '❌ 缺交',
+            badgeClass: 'bg-rose-100 text-rose-700 border-rose-200',
+            isPending: true
+        };
+    }
+
+    // 2. 沒帶 (Forgot)
+    if (s === '沒帶' || s === 'forgot' || s.includes('leave_custom_沒帶')) {
+        return {
+            type: 'forgot',
+            label: '沒帶',
+            badge: '🎒 聯絡簿沒帶',
+            badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+            isPending: true
+        };
+    }
+
+    // 3. 退回待訂正 (Returned)
+    if (s === '退回' || s === 'returned' || s.includes('訂正') || s.includes('重交')) {
+        return {
+            type: 'returned',
+            label: '待訂正',
+            badge: '⚠️ 需訂正重交',
+            badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+            isPending: true
+        };
+    }
+
+    // 4. 請假 / 免計入分母 (Excused Leaves)
+    const standardLeaves = ['事假', '病假', '公假', '喪假', '免交', '請假', '其他假別', '其他'];
+    const isLeave = standardLeaves.includes(s) || (
+        s.startsWith('leave_') &&
+        !s.includes('曠課') && !s.includes('遲到') && !s.includes('沒帶') && !s.includes('缺交')
+    );
+    if (isLeave) {
+        let leaveName = s.replace(/^leave_custom_/, '').replace(/^leave_/, '');
+        if (!leaveName || leaveName === '其他') leaveName = '請假免交';
+        return {
+            type: 'excused',
+            label: leaveName,
+            badge: leaveName,
+            badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+            isPending: false
+        };
+    }
+
+    // 5. 遲交 (Late)
+    let isLate = false;
+    if (s === '遲交' || s === 'late' || s.includes('[遲交]') || s.includes('遲交')) {
+        isLate = true;
+    } else if (deadline && ts) {
+        try {
+            const dl = new Date(deadline + 'T23:59:59');
+            let scDate = null;
+            if (ts.includes('T') || ts.includes('-')) {
+                scDate = new Date(ts);
+            } else {
+                const year = new Date().getFullYear();
+                scDate = new Date(`${year}/${ts}`);
+            }
+            if (scDate && !isNaN(scDate.getTime()) && scDate > dl) {
+                isLate = true;
+            }
+        } catch(e) {}
+    }
+
+    if (isLate) {
+        return {
+            type: 'late',
+            label: '遲交',
+            badge: '⏰ 遲交',
+            badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+            isPending: false
+        };
+    }
+
+    // 6. 準時繳交 (On-time)
+    return {
+        type: 'ontime',
+        label: '準時',
+        badge: '✅ 準時',
+        badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        isPending: false
+    };
+}
+
+function updateParentSimulator(studentId) {
+    currentSimulatorStudentId = parseInt(studentId, 10);
+    const frame = document.getElementById('parent-simulator-frame');
+    if (!frame) return;
+
+    const student = db.students.find(s => s.id === currentSimulatorStudentId);
+    if (!student) {
+        frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">查無該生資料</div>';
+        return;
+    }
+
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+    const tasks = db.tasks || [];
+    const records = db.records || [];
+    const ranges = db.ranges || [];
+
+    // 計算各作業狀況 (排除從未掃描統計過、且未設定範圍的作業)
+    const studentTasks = [];
+    tasks.forEach(t => {
+        // 檢查全班是否有任何繳交打卡紀錄
+        const hasAnyRecord = (records || []).some(r => r.taskId === t.id);
+        // 檢查是否有設定範圍或日期
+        const hasAnyRange = (ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
+
+        // 若全班完全沒有任何掃描/打卡紀錄，且未設定範圍日期，表示尚未開始清點，不計入準時率與待辦
+        if (!hasAnyRecord && !hasAnyRange) {
+            return;
+        }
+
+        let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
+        if (ranges) {
+            const rangeNotices = ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
+            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
+        }
+        if (noticeNames.length === 0) noticeNames = [''];
+
+        noticeNames.forEach(nn => {
+            // 確認該子項目在全班是否有紀錄或範圍
+            const subHasRecord = (records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
+            if (!subHasRecord && !subHasRange) return;
+
+            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+                status = rec.manualStatus || '已交';
+                timestamp = rec.timestamp || rec.fullTimestamp || '';
+            }
+            let range = '';
+            const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            if (rObj) range = rObj.range || '';
+
+            studentTasks.push({
+                subject: t.subject || '其他',
+                taskName: t.name,
+                range: range,
+                date: nn || '近期',
+                status: status,
+                timestamp: timestamp,
+                deadline: t.deadline || ''
+            });
+        });
+    });
+
+    // 統計計算 (採用統一分類標準)
+    let totalAssigned = studentTasks.length;
+    let onTimeCount = 0;
+    let lateCount = 0;
+    let missingCount = 0;
+    let forgotCount = 0;
+    let returnedCount = 0;
+    let excusedCount = 0;
+    const pendingItems = [];
+    const lateCountsPerTask = {};
+
+    studentTasks.forEach(t => {
+        const c = classifyParentTaskStatus(t.status, t.timestamp, t.deadline);
+        if (c.type === 'ontime') {
+            onTimeCount++;
+        } else if (c.type === 'late') {
+            lateCount++;
+            const key = `[${t.subject}] ${t.taskName}`;
+            lateCountsPerTask[key] = (lateCountsPerTask[key] || 0) + 1;
+        } else if (c.type === 'missing') {
+            missingCount++;
+            pendingItems.push({ subject: t.subject, taskName: t.taskName, range: t.range, date: t.date, badge: c.badge });
+        } else if (c.type === 'forgot') {
+            forgotCount++;
+            pendingItems.push({ subject: t.subject, taskName: t.taskName, range: t.range, date: t.date, badge: c.badge });
+        } else if (c.type === 'returned') {
+            returnedCount++;
+            pendingItems.push({ subject: t.subject, taskName: t.taskName, range: t.range, date: t.date, badge: c.badge });
+        } else if (c.type === 'excused') {
+            excusedCount++;
+        }
+    });
+
+    const effTotal = Math.max(1, totalAssigned - excusedCount);
+    const onTimeRate = totalAssigned > 0 ? Math.round((onTimeCount / effTotal) * 100) : 100;
+    const totalSubmitted = onTimeCount + lateCount;
+    const submittedRate = totalAssigned > 0 ? Math.round((totalSubmitted / effTotal) * 100) : 100;
+    const totalMissing = missingCount + forgotCount;
+    const delayEntries = Object.entries(lateCountsPerTask).sort((a, b) => b[1] - a[1]);
+
+    // 依科目群組化
+    const groupedSubjects = {};
+    studentTasks.forEach(t => {
+        const sub = t.subject || '其他';
+        if (!groupedSubjects[sub]) groupedSubjects[sub] = [];
+        groupedSubjects[sub].push(t);
+    });
+
+    let subjectsHtml = '';
+    Object.entries(groupedSubjects).forEach(([sub, subTasks], idx) => {
+        const sTotal = subTasks.length;
+        let sOnTime = 0;
+        let sLate = 0;
+        let sMiss = 0;
+        let sExc = 0;
+        const taskMap = {};
+
+        subTasks.forEach(st => {
+            const tn = st.taskName;
+            if (!taskMap[tn]) taskMap[tn] = { total: 0, ontime: 0, late: 0, miss: 0, exc: 0 };
+            taskMap[tn].total++;
+            
+            const c = classifyParentTaskStatus(st.status, st.timestamp, st.deadline);
+            if (c.type === 'ontime') {
+                sOnTime++;
+                taskMap[tn].ontime++;
+            } else if (c.type === 'late') {
+                sLate++;
+                taskMap[tn].late++;
+            } else if (c.type === 'excused') {
+                sExc++;
+                taskMap[tn].exc++;
+            } else {
+                sMiss++;
+                taskMap[tn].miss++;
+            }
+        });
+
+        const sEff = Math.max(1, sTotal - sExc);
+        const sRate = Math.round((sOnTime / sEff) * 100);
+        const simAccId = 'sim-acc-' + idx;
+
+        let details = '';
+        Object.entries(taskMap).forEach(([tn, ts]) => {
+            const trEff = Math.max(1, ts.total - ts.exc);
+            const tr = Math.round((ts.ontime / trEff) * 100);
+            details += `
+                <div class="flex items-center justify-between text-[11px] p-1.5 bg-white rounded border border-slate-100">
+                    <span class="font-bold text-slate-700">${tn}</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-bold ${tr >= 90 ? 'text-emerald-600' : (tr >= 80 ? 'text-amber-600' : 'text-rose-600')}">${tr}%</span>
+                        ${ts.late > 0 ? '<span class="text-[9px] bg-amber-50 text-amber-700 px-1 rounded font-bold">遲' + ts.late + '</span>' : ''}
+                        ${ts.miss > 0 ? '<span class="text-[9px] bg-rose-50 text-rose-700 px-1 rounded font-bold">缺' + ts.miss + '</span>' : ''}
+                        ${ts.exc > 0 ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded">免' + ts.exc + '</span>' : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        subjectsHtml += `
+            <div class="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                <button type="button" onclick="toggleSimAccordion('${simAccId}')" class="w-full p-2.5 flex flex-col gap-1 text-left hover:bg-slate-50 transition cursor-pointer">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-black text-slate-800">${sub}</span>
+                        <span class="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">${sRate}% 準時</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div class="${sRate >= 90 ? 'bg-emerald-500' : (sRate >= 80 ? 'bg-amber-500' : 'bg-rose-500')} h-1.5 rounded-full" style="width: ${sRate}%"></div>
+                    </div>
+                </button>
+                <div id="${simAccId}" class="hidden p-2 pt-0 space-y-1 bg-slate-50/50 border-t border-slate-100">
+                    ${details}
+                </div>
+            </div>
+        `;
+    });
+
+    const simNow = new Date();
+    const simWeekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    const simW = simWeekdays[simNow.getDay()];
+    const simDateStr = `${simNow.getFullYear()}/${String(simNow.getMonth() + 1).padStart(2, '0')}/${String(simNow.getDate()).padStart(2, '0')} (${simW}) ${simNow.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+
+    frame.innerHTML = `
+        <!-- 手機頂部英雄卡 -->
+        <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-2xs flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black text-base shadow-xs">
+                    ${String(student.id).padStart(2, '0')}
+                </div>
+                <div>
+                    <div class="text-sm font-black text-slate-900">${student.name}</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    即時同步 ${simDateStr}
+                </span>
+            </div>
+        </div>
+
+        <!-- 三大指標 -->
+        <div class="grid grid-cols-3 gap-1.5 text-center">
+            <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                <div class="text-[10px] text-slate-400 font-bold">準時率</div>
+                <div class="text-base font-black ${onTimeRate >= 90 ? 'text-emerald-600' : (onTimeRate >= 80 ? 'text-amber-600' : 'text-rose-600')}">${onTimeRate}%</div>
+                <div class="text-[9px] text-slate-400">總繳交 ${submittedRate}%</div>
+            </div>
+            <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                <div class="text-[10px] text-slate-400 font-bold">已準時交</div>
+                <div class="text-xs font-black text-slate-800 mt-0.5">${onTimeCount} / ${effTotal}</div>
+                <div class="text-[9px] text-slate-400">${lateCount > 0 ? `遲${lateCount} ‧ ` : ''}缺${totalMissing}</div>
+            </div>
+            <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                <div class="text-[10px] text-slate-400 font-bold">待補交</div>
+                <div class="text-base font-black ${pendingItems.length > 0 ? 'text-rose-600' : 'text-emerald-600'}">${pendingItems.length}</div>
+                <div class="text-[9px] ${pendingItems.length > 0 ? 'text-rose-500 font-bold' : 'text-emerald-500'}">${pendingItems.length > 0 ? '待補交' : '全數交齊'}</div>
+            </div>
+        </div>
+
+        <!-- 🚨 待補交作業清單 -->
+        <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
+            <div class="flex justify-between items-center text-[11px] font-black text-slate-800 border-b pb-1">
+                <span>🚨 待補交作業清單</span>
+                <span class="text-[10px] text-rose-600 font-bold">${pendingItems.length} 項</span>
+            </div>
+            ${pendingItems.length === 0 ? '<div class="text-[11px] text-emerald-600 font-bold py-1.5 text-center">沒有任何缺交作業，請給孩子一個大大的讚賞與鼓勵！ 🎉</div>' : ''}
+            ${pendingItems.map(p => `
+                <div class="flex items-center justify-between text-[11px] py-0.5">
+                    <span class="font-bold text-slate-700">[${p.subject}] ${p.taskName}</span>
+                    <span class="text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold">${p.badge}</span>
+                </div>
+            `).join('')}
+        </div>
+
+        <!-- ⚠️ 常遲到作業排行 -->
+        <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
+            <div class="text-[11px] font-black text-slate-800 border-b pb-1">⚠️ 常遲到作業排行</div>
+            ${delayEntries.length === 0 ? '<div class="text-[11px] text-slate-400 py-1 text-center font-bold">目前無任何遲到紀錄 模範生！</div>' : ''}
+            ${delayEntries.slice(0, 3).map(([taskKey, count], idx) => `
+                <div class="flex items-center justify-between text-[11px] py-0.5">
+                    <span class="font-bold text-slate-700">#${idx + 1} ${taskKey}</span>
+                    <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">遲交 ${count} 次</span>
+                </div>
+            `).join('')}
+        </div>
+
+        <!-- 📊 各科習慣與展開明細 -->
+        <div class="space-y-1.5">
+            <div class="text-[11px] font-black text-slate-800 px-1">📊 各科長條圖 (點擊可展開明細)</div>
+            ${subjectsHtml}
+        </div>
+    `;
+}
+
+function toggleSimAccordion(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden');
+}
+
+function openSelectedStudentParentPage() {
+    if (!currentSimulatorStudentId) {
+        if (db.students.length > 0) currentSimulatorStudentId = db.students[0].id;
+        else return;
+    }
+    const student = db.students.find(s => s.id === currentSimulatorStudentId);
+    if (!student) return;
+
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const directUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+    window.open(directUrl, '_blank');
+}
+
+// ==========================================
+// LINE 官方帳號推播中心邏輯 (Beta)
+// ==========================================
+let currentLineBindings = [];
+
+// 取得單一生目前待補交之作業清單
+function getStudentPendingTasks(student) {
+    if (!student) return [];
+    const tasks = db.tasks || [];
+    const records = db.records || [];
+    const ranges = db.ranges || [];
+
+    const pendingList = [];
+    tasks.forEach(t => {
+        const hasAnyRecord = (records || []).some(r => r.taskId === t.id);
+        const hasAnyRange = (ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
+        if (!hasAnyRecord && !hasAnyRange) return;
+
+        let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
+        if (ranges) {
+            const rangeNotices = ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
+            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
+        }
+        if (noticeNames.length === 0) noticeNames = [''];
+
+        noticeNames.forEach(nn => {
+            const subHasRecord = (records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
+            if (!subHasRecord && !subHasRange) return;
+
+            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+                status = rec.manualStatus || '已交';
+                timestamp = rec.timestamp || rec.fullTimestamp || '';
+            }
+            let range = '';
+            const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            if (rObj) range = rObj.range || '';
+
+            const c = classifyParentTaskStatus(status, timestamp, t.deadline);
+            if (c.type === 'missing' || c.type === 'forgot' || c.type === 'returned') {
+                pendingList.push({
+                    subject: t.subject || '其他',
+                    taskName: t.name,
+                    range: range,
+                    date: nn || '近期',
+                    status: status,
+                    badge: c.badge
+                });
+            }
+        });
+    });
+    return pendingList;
+}
+
+// 篩選出今日有缺交且已綁定 LINE 的學生名單
+function getBoundStudentsWithMissing(boundMap) {
+    if (!boundMap) {
+        boundMap = {};
+        (currentLineBindings || []).forEach(b => {
+            if (b.isBound) boundMap[b.studentId.toString()] = b;
+        });
+    }
+
+    const targets = [];
+    (db.students || []).forEach(s => {
+        const binding = boundMap[s.id.toString()];
+        if (!binding) return; // 家長尚未綁定 LINE，跳過
+
+        const missingTasks = getStudentPendingTasks(s);
+        if (missingTasks.length > 0) {
+            targets.push({
+                studentId: s.id,
+                studentName: s.name,
+                token: s.token || ('STU' + String(s.id).padStart(3, '0')),
+                lineUserId: binding.lineUserId,
+                missingTasks: missingTasks
+            });
+        }
+    });
+    return targets;
+}
+
+// 切換 Token 密碼/明文顯示
+function toggleLineTokenVisibility() {
+    const input = document.getElementById('line-access-token');
+    const btn = event ? event.target : null;
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (btn) btn.innerText = '隱藏';
+    } else {
+        input.type = 'password';
+        if (btn) btn.innerText = '顯示';
+    }
+}
+
+// 複製邀請文案供導師發送至班群
+function copyLineInviteText() {
+    const botIdInput = document.getElementById('line-bot-id');
+    const botId = (botIdInput && botIdInput.value.trim()) || (appConfig.lineBotBasicId || '');
+    const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+    const classLabel = cls ? cls.label : '班級';
+    
+    const botText = botId ? `LINE ID 搜尋：${botId.startsWith('@') ? botId : ('@' + botId)}` : '【請向導師洽詢班級 LINE 帳號】';
+
+    const text = `📢 【${classLabel} LINE 智慧作業通知服務】家長邀請函\n\n` +
+      `親愛的家長您好：\n` +
+      `為了讓您能第一時間掌握孩子的每日作業繳交進度，本班已啟用 LINE 官方帳號作業提醒服務！\n\n` +
+      `📱 【兩步驟輕鬆綁定】：\n` +
+      `1. 請加入班級官方 LINE：\n` +
+      `   ${botText}\n` +
+      `2. 加入好友後，請直接傳送孩子的「專屬代碼」（請參考隨聯絡簿發放的作業查詢小卡，例如：V9UPK4）。\n\n` +
+      `🎉 綁定完成後，若放學有點名缺交，系統將於放學後自動發送私訊提醒您；您也可以隨時在 LINE 中傳送「查詢」查看孩子完整的作業手札。\n` +
+      `感謝各位家長的配合與支持！`;
+
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('已複製家長加好友與綁定說明文案！', 'success');
+    }).catch(() => {
+        showToast('複製失敗，請手動複製', 'error');
+    });
+}
+
+// 儲存 LINE 設定至雲端試算表 SystemConfig
+async function saveLineSettings() {
+    const botIdInput = document.getElementById('line-bot-id');
+    const tokenInput = document.getElementById('line-access-token');
+    const botId = botIdInput ? botIdInput.value.trim() : '';
+    const token = tokenInput ? tokenInput.value.trim() : '';
+
+    if (!botId && !token) {
+        showAlert('提示', '請至少填寫 LINE Bot Basic ID 或 Channel Access Token！');
+        return;
+    }
+
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    if (!gasUrl) {
+        showAlert('提示', '尚未設定 Google Apps Script (GAS) 網址，請先至【系統設定】設定！');
+        return;
+    }
+
+    if (botId) {
+        appConfig.lineBotBasicId = botId;
+        try { localStorage.setItem('line_bot_id', botId); } catch(e) {}
+    }
+    if (token) {
+        appConfig.lineChannelAccessToken = token;
+        try { localStorage.setItem('line_access_token', token); } catch(e) {}
+    }
+    if (typeof saveData === 'function') saveData();
+
+    showLoading();
+    const loadText = document.getElementById('loading-text');
+    if (loadText) loadText.innerText = '正在同步 LINE 設定至雲端...';
+
+    try {
+        const payload = {
+            action: 'line_save_config',
+            classPrefix: getActiveClassPrefix(),
+            lineBotBasicId: botId,
+            lineChannelAccessToken: token
+        };
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+            showToast('LINE 設定已成功儲存並同步至雲端！', 'success');
+            fetchLineBindingStatus();
+        } else {
+            showAlert('儲存失敗', res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        showAlert('連線錯誤', '無法連線至 GAS，請檢查網路或 GAS 發布狀態！');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 讀取全班 LINE 綁定狀態並刷新介面
+async function fetchLineBindingStatus() {
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    const badge = document.getElementById('line-config-status-badge');
+    const botIdInput = document.getElementById('line-bot-id');
+    const tokenInput = document.getElementById('line-access-token');
+    const statsEl = document.getElementById('line-bound-stats');
+    const progressEl = document.getElementById('line-bound-progress');
+    const gridEl = document.getElementById('line-students-bound-grid');
+    const targetCountEl = document.getElementById('line-missing-target-count');
+
+    // 預先帶入本機暫存
+    if (botIdInput && !botIdInput.value) {
+        botIdInput.value = appConfig.lineBotBasicId || localStorage.getItem('line_bot_id') || '';
+    }
+    if (tokenInput && !tokenInput.value) {
+        tokenInput.value = appConfig.lineChannelAccessToken || localStorage.getItem('line_access_token') || '';
+    }
+
+    if (!gasUrl) {
+        if (badge) {
+            badge.innerText = '未設定 GAS';
+            badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200';
+        }
+        if (statsEl) statsEl.innerText = '請先設定 GAS 網址';
+        return;
+    }
+
+    if (statsEl) statsEl.innerText = '檢查連線中...';
+
+    try {
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'line_get_status',
+                classPrefix: getActiveClassPrefix()
+            })
+        });
+        const res = await resp.json();
+
+        if (res.status === 'success') {
+            if (res.config && res.config.isConfigured) {
+                if (badge) {
+                    badge.innerText = '已連線 (金鑰有效)';
+                    badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300';
+                }
+                if (res.config.botBasicId && botIdInput && !botIdInput.value) {
+                    botIdInput.value = res.config.botBasicId;
+                    appConfig.lineBotBasicId = res.config.botBasicId;
+                }
+            } else {
+                if (badge) {
+                    badge.innerText = '未設定金鑰';
+                    badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
+                }
+            }
+
+            currentLineBindings = res.bindings || [];
+
+            // 建立已綁定的 ID map
+            const boundMap = {};
+            currentLineBindings.forEach(b => {
+                if (b.isBound) {
+                    boundMap[b.studentId.toString()] = b;
+                }
+            });
+
+            const totalStudents = db.students ? db.students.length : 0;
+            let boundCount = 0;
+
+            if (gridEl) {
+                gridEl.innerHTML = '';
+                (db.students || []).forEach(s => {
+                    const isBound = !!boundMap[s.id.toString()];
+                    if (isBound) boundCount++;
+
+                    const pill = document.createElement('div');
+                    pill.className = `flex items-center justify-between p-1.5 rounded-lg border text-[11px] ${
+                        isBound
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800 font-bold'
+                            : 'bg-white border-slate-200 text-slate-400'
+                    }`;
+                    pill.innerHTML = `
+                        <span>${String(s.id).padStart(2, '0')} ${s.name}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="${isBound ? 'text-emerald-600' : 'text-slate-300'} font-black text-xs">
+                                ${isBound ? '✓ 已綁定' : '未綁定'}
+                            </span>
+                            ${isBound ? `<button type="button" onclick="unbindLineStudent('${s.id}', '${s.name}')" class="text-[10px] text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded px-1 transition cursor-pointer" title="解除此學生綁定">✕解除</button>` : ''}
+                        </div>
+                    `;
+                    gridEl.appendChild(pill);
+                });
+            } else {
+                (db.students || []).forEach(s => {
+                    if (boundMap[s.id.toString()]) boundCount++;
+                });
+            }
+
+            const percent = totalStudents > 0 ? Math.round((boundCount / totalStudents) * 100) : 0;
+            if (statsEl) statsEl.innerText = `${boundCount} / ${totalStudents} 人 (${percent}%)`;
+            if (progressEl) progressEl.style.width = `${percent}%`;
+
+            // 計算今日缺交且已綁定的學生名單
+            const targetMissing = getBoundStudentsWithMissing(boundMap);
+            if (targetCountEl) targetCountEl.innerText = targetMissing.length;
+
+        } else {
+            if (statsEl) statsEl.innerText = '讀取失敗：' + (res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        if (statsEl) statsEl.innerText = '連線失敗，請檢查網路';
+        if (badge) {
+            badge.innerText = '連線異常';
+            badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300';
+        }
+    }
+}
+
+// 預覽 LINE 推播私訊樣式
+function previewLinePushModal() {
+    const targets = getBoundStudentsWithMissing();
+    if (targets.length === 0) {
+        Swal.fire({
+            title: '📱 LINE 訊息預覽',
+            html: `
+                <div class="text-left text-xs space-y-3">
+                    <div class="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 font-bold">
+                        🎉 太棒了！今日目前全班沒有任何已綁定且缺交作業的學生。
+                    </div>
+                    <div class="text-slate-500">
+                        若有學生缺交，系統將會為每位家長生成客製化私訊如下範例：
+                    </div>
+                    <div class="p-3 bg-slate-100 rounded-xl font-mono text-[11px] text-slate-800 leading-relaxed border border-slate-200">
+                        🚨 【作業待補交提醒】<br><br>
+                        王小明 家長您好：<br>
+                        今日學校清點作業，孩子尚有 1 項作業待補交：<br>
+                        ‧ 【國語】甲本 P.10~12<br><br>
+                        請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！<br><br>
+                        🔗 點此秒開專屬手札查看明細：<br>
+                        https://chy23.github.io/RP_QR_CC_HW/parent.html?t=DEMO<br><br>
+                        （由 班級作業管理系統 自動推播）
+                    </div>
+                </div>
+            `,
+            confirmButtonText: '關閉'
+        });
+        return;
+    }
+
+    const first = targets[0];
+    const taskLines = first.missingTasks.map(mt => `‧ 【${mt.subject}】${mt.taskName}${mt.range ? ' (' + mt.range + ')' : ''}`).join('<br>');
+    const currentPath = window.location.pathname;
+    const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const demoUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(first.token)}`;
+
+    const targetListHtml = targets.map(t => `
+        <span class="inline-block bg-white border border-rose-200 text-rose-800 text-[11px] font-bold px-2 py-0.5 rounded-md">
+            ${String(t.studentId).padStart(2, '0')} ${t.studentName} (${t.missingTasks.length}項)
+        </span>
+    `).join(' ');
+
+    Swal.fire({
+        title: '📱 LINE 訊息預覽',
+        html: `
+            <div class="text-left text-xs space-y-3">
+                <div class="p-2.5 bg-rose-50 text-rose-800 rounded-xl border border-rose-200">
+                    <div class="font-bold">今日預計發送對象共 ${targets.length} 人：</div>
+                    <div class="mt-1 flex flex-wrap gap-1 max-h-24 overflow-y-auto">${targetListHtml}</div>
+                </div>
+                <div class="font-bold text-slate-700">私訊內容範例（以 ${first.studentName} 為例）：</div>
+                <div class="p-3 bg-slate-100 rounded-xl font-mono text-[11px] text-slate-800 leading-relaxed border border-slate-200">
+                    🚨 【作業待補交提醒】<br><br>
+                    ${first.studentName} 家長您好：<br>
+                    今日學校清點作業，孩子尚有 ${first.missingTasks.length} 項作業待補交：<br>
+                    ${taskLines}<br><br>
+                    請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！<br><br>
+                    🔗 點此秒開專屬手札查看明細：<br>
+                    ${demoUrl}<br><br>
+                    （由 班級作業管理系統 自動推播）
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '🚀 立即發送推播',
+        cancelButtonText: '關閉預覽',
+        confirmButtonColor: '#e11d48'
+    }).then(r => {
+        if (r && r.isConfirmed) {
+            sendLinePushMissing();
+        }
+    });
+}
+
+// 一鍵發送今日缺交私訊推播
+async function sendLinePushMissing() {
+    const targets = getBoundStudentsWithMissing();
+    if (targets.length === 0) {
+        showAlert('提示', '目前沒有任何已綁定 LINE 且有缺交作業的學生！');
+        return;
+    }
+
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    if (!gasUrl) {
+        showAlert('提示', '尚未設定 Google Apps Script (GAS) 網址！');
+        return;
+    }
+
+    const tokenInput = document.getElementById('line-access-token');
+    const token = (tokenInput && tokenInput.value.trim()) || appConfig.lineChannelAccessToken || localStorage.getItem('line_access_token') || '';
+
+    const confirmResult = await showConfirm(
+        '確認發送 LINE 缺交通知',
+        `即將發送 LINE 私訊通知給 ${targets.length} 位缺交學生的家長，確定送出嗎？`,
+        'question',
+        '立即發送',
+        '取消'
+    );
+    if (!confirmResult.isConfirmed) return;
+
+    showLoading();
+    const loadText = document.getElementById('loading-text');
+    if (loadText) loadText.innerText = `正在透過 LINE 官方帳號發送 ${targets.length} 則通知...`;
+
+    try {
+        const payload = {
+            action: 'line_push_missing',
+            classPrefix: getActiveClassPrefix(),
+            lineChannelAccessToken: token,
+            targets: targets
+        };
+
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+
+        if (res.status === 'success') {
+            showAlert(
+                '推播發送完成！',
+                `成功發送：${res.successCount} 位\n失敗：${res.failCount} 位\n未綁定跳過：${res.skippedCount} 位`,
+                'success'
+            );
+        } else {
+            showAlert('發送失敗', res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        showAlert('連線錯誤', '發送失敗，請確認網路連線與金鑰有效性！');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 教師端手動解除某學生的 LINE 綁定
+async function unbindLineStudent(studentId, studentName) {
+    const confirmRes = await showConfirm(
+        '解除 LINE 綁定確認',
+        `確定要解除 ${studentName} 的 LINE 官方帳號綁定嗎？\n解除後家長將不再接收自動缺交通知。`,
+        'warning',
+        '解除綁定',
+        '取消'
+    );
+    if (!confirmRes || !confirmRes.isConfirmed) return;
+
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    if (!gasUrl) {
+        showAlert('提示', '尚未設定 GAS 網址！');
+        return;
+    }
+
+    showLoading();
+    try {
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'line_unbind_student',
+                classPrefix: getActiveClassPrefix(),
+                studentId: studentId
+            })
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+            showToast(`已解除 ${studentName} 的 LINE 綁定！`, 'success');
+            fetchLineBindingStatus();
+        } else {
+            showAlert('解除失敗', res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        showAlert('連線錯誤', '解除失敗，請確認網路連線');
+    } finally {
+        hideLoading();
+    }
+}
+
+
