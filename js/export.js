@@ -1344,12 +1344,12 @@
             XLSX.writeFile(wb, `作業繳交統計表_${dateStr}.xlsx`);
         }
 
+        function exportExcel() {
+            return exportStatToExcel();
+        }
 
 // ==========================================
-// 家長端專屬查詢小卡預覽與列印模組 (比照 MPScore)
-// ==========================================
-// ==========================================
-// 家長端查詢小卡自訂文字與設定模組
+// 家長端查詢小卡自訂文字與設定模組 (比照 MPScore)
 // ==========================================
 const DEFAULT_PARENT_CARD_CONFIG = {
     title: '作業繳交狀況查詢卡',
@@ -1414,12 +1414,25 @@ function syncModalCustomInputs(cfg) {
     if (n) n.value = cfg.note || '';
 }
 
+function escapeCardHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 function saveParentCardCustomTextFromUI() {
+    const tEl = document.getElementById('parent-card-cfg-title');
+    const s1El = document.getElementById('parent-card-cfg-step1');
+    const s2El = document.getElementById('parent-card-cfg-step2');
+    const nEl = document.getElementById('parent-card-cfg-note');
+    const current = getParentCardConfig();
     const cfg = {
-        title: document.getElementById('parent-card-cfg-title')?.value || DEFAULT_PARENT_CARD_CONFIG.title,
-        step1: document.getElementById('parent-card-cfg-step1')?.value || DEFAULT_PARENT_CARD_CONFIG.step1,
-        step2: document.getElementById('parent-card-cfg-step2')?.value || DEFAULT_PARENT_CARD_CONFIG.step2,
-        note: document.getElementById('parent-card-cfg-note')?.value || DEFAULT_PARENT_CARD_CONFIG.note,
+        title: tEl ? tEl.value : current.title,
+        step1: s1El ? s1El.value : current.step1,
+        step2: s2El ? s2El.value : current.step2,
+        note: nEl ? nEl.value : current.note,
     };
     saveParentCardConfig(cfg);
     syncParentCardTextsOnCards(cfg);
@@ -1427,11 +1440,16 @@ function saveParentCardCustomTextFromUI() {
 }
 
 function saveParentCardCustomTextFromModalUI() {
+    const tEl = document.getElementById('modal-card-cfg-title');
+    const s1El = document.getElementById('modal-card-cfg-step1');
+    const s2El = document.getElementById('modal-card-cfg-step2');
+    const nEl = document.getElementById('modal-card-cfg-note');
+    const current = getParentCardConfig();
     const cfg = {
-        title: document.getElementById('modal-card-cfg-title')?.value || DEFAULT_PARENT_CARD_CONFIG.title,
-        step1: document.getElementById('modal-card-cfg-step1')?.value || DEFAULT_PARENT_CARD_CONFIG.step1,
-        step2: document.getElementById('modal-card-cfg-step2')?.value || DEFAULT_PARENT_CARD_CONFIG.step2,
-        note: document.getElementById('modal-card-cfg-note')?.value || DEFAULT_PARENT_CARD_CONFIG.note,
+        title: tEl ? tEl.value : current.title,
+        step1: s1El ? s1El.value : current.step1,
+        step2: s2El ? s2El.value : current.step2,
+        note: nEl ? nEl.value : current.note,
     };
     saveParentCardConfig(cfg);
     syncParentCardTextsOnCards(cfg);
@@ -1439,7 +1457,7 @@ function saveParentCardCustomTextFromModalUI() {
 }
 
 function handleCardDirectEdit(field, el) {
-    const text = el.innerText.trim();
+    const text = el.innerText.replace(/^\n+|\n+$/g, '');
     const cfg = getParentCardConfig();
     cfg[field] = text;
     saveParentCardConfig(cfg);
@@ -1752,8 +1770,8 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
                 <!-- 頂部標頭 -->
                 <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 flex-shrink-0">
                     <div class="flex items-center gap-1.5">
-                        <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 select-none">${classLabel}</span>
-                        <span class="card-editable-title text-sm font-black text-slate-800 tracking-tight cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改全班標題" oninput="handleCardDirectEdit('title', this)">${cfg.title}</span>
+                        <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 select-none">${escapeCardHtml(classLabel)}</span>
+                        <span class="card-editable-title text-sm font-black text-slate-800 tracking-tight cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改全班標題" oninput="handleCardDirectEdit('title', this)">${escapeCardHtml(cfg.title)}</span>
                     </div>
                     <span class="text-[10px] text-slate-400 font-mono flex items-center gap-0.5 select-none">✂️ 裁切發放</span>
                 </div>
@@ -1761,14 +1779,14 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
                 <!-- 中間核心資訊 (學生姓名、座號、查詢代碼與大 QR Code) -->
                 <div class="flex items-center justify-between gap-3 py-2 flex-1">
                     <div class="space-y-1.5 flex-1 min-w-0 flex flex-col justify-center">
-                        <div class="${nameSize} font-black text-slate-900 tracking-tight leading-tight truncate">${st.name}</div>
+                        <div class="${nameSize} font-black text-slate-900 tracking-tight leading-tight truncate">${escapeCardHtml(st.name)}</div>
                         <div class="text-sm font-bold text-slate-600 flex items-center gap-1">
                             <span>座號：</span>
                             <span class="font-mono text-base font-black text-slate-900">${String(st.id).padStart(2, '0')} 號</span>
                         </div>
                         <div class="bg-emerald-50/90 border border-emerald-300 rounded-xl px-2.5 py-1 inline-block shadow-2xs self-start">
                             <div class="text-[9.5px] text-emerald-800 font-bold leading-tight">專屬查詢代碼</div>
-                            <div class="text-sm font-mono font-black text-emerald-950 tracking-wider leading-tight">${token}</div>
+                            <div class="text-sm font-mono font-black text-emerald-950 tracking-wider leading-tight">${escapeCardHtml(token)}</div>
                         </div>
                     </div>
                     <div class="flex-shrink-0 flex flex-col items-center justify-center p-1.5 bg-white border border-slate-200 rounded-2xl shadow-xs">
@@ -1783,25 +1801,19 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
                         <div class="w-5 h-5 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
                             1
                         </div>
-                        <div class="${stepTextSize} text-slate-700 leading-snug card-editable-step1 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟一說明" oninput="handleCardDirectEdit('step1', this)">
-                            ${cfg.step1}
-                        </div>
+                        <div class="${stepTextSize} text-slate-700 leading-snug card-editable-step1 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟一說明" oninput="handleCardDirectEdit('step1', this)">${escapeCardHtml(cfg.step1)}</div>
                     </div>
                     <div class="bg-slate-50/90 border border-slate-200/80 rounded-xl ${stepPadding} flex items-start gap-2">
                         <div class="w-5 h-5 rounded-lg bg-blue-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
                             2
                         </div>
-                        <div class="${stepTextSize} text-slate-700 leading-snug card-editable-step2 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟二說明" oninput="handleCardDirectEdit('step2', this)">
-                            ${cfg.step2}
-                        </div>
+                        <div class="${stepTextSize} text-slate-700 leading-snug card-editable-step2 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟二說明" oninput="handleCardDirectEdit('step2', this)">${escapeCardHtml(cfg.step2)}</div>
                     </div>
                     <div class="bg-amber-50/70 border border-amber-200/70 rounded-xl ${stepPadding} flex items-start gap-2">
                         <div class="w-5 h-5 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
                             💡
                         </div>
-                        <div class="${stepTextSize} text-amber-950 leading-snug card-editable-note font-medium cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改導師叮嚀" oninput="handleCardDirectEdit('note', this)">
-                            ${cfg.note}
-                        </div>
+                        <div class="${stepTextSize} text-amber-950 leading-snug card-editable-note font-medium cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改導師叮嚀" oninput="handleCardDirectEdit('note', this)">${escapeCardHtml(cfg.note)}</div>
                     </div>
                 </div>
             `;
