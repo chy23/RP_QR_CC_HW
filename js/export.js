@@ -1523,8 +1523,15 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
                     </div>
                 </div>
 
-                <div class="mt-1.5 pt-1 border-t border-slate-100 text-[9px] text-slate-500 leading-tight">
-                    👉 請家長使用手機相機掃描 QR Code，即可隨時查閱孩子作業繳交率、待補交作業與各科明細。
+                <div class="mt-2 pt-1.5 border-t border-slate-100 space-y-1 text-[9px] text-slate-600 leading-tight">
+                    <div class="flex items-start gap-1.5">
+                        <span class="font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 flex-shrink-0 text-[8.5px] leading-none">📱 如何查詢</span>
+                        <span>手機相機直接對準右側 <strong>QR Code</strong> 掃描，免密碼即可隨時查閱孩子作業繳交狀況與待補交明細。</span>
+                    </div>
+                    <div class="flex items-start gap-1.5">
+                        <span class="font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 flex-shrink-0 text-[8.5px] leading-none">🔔 如何綁定</span>
+                        <span>進入網頁後點擊<strong>「一秒綁定 LINE」</strong>，放學有缺交主動發送推播通知！（亦可直接回傳查詢代碼至班級 LINE 完成綁定）</span>
+                    </div>
                 </div>
             `;
             gridEl.appendChild(card);
