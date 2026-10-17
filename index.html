@@ -331,15 +331,16 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors active:scale-95 active:opacity-80">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
-                <!-- Ver 3.3 (Beta) -->
+                <!-- Ver 3.3 -->
                 <div class="border-l-4 border-emerald-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span class="text-emerald-700">Ver. 3.3-beta (家長端手札與查詢小卡版)</span>
-                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/10/16 (Beta)</span>
+                        <span class="text-emerald-700">Ver. 3.3 (家長手札與 LINE 智慧推播正式版)</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/10/17 (正式發布)</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
-                        <li><strong>👨‍👩‍👧 新增第 8 個分頁【8. 家長手札與專屬查詢小卡】：</strong>全新獨立分頁，整合 A4 小卡批次列印中心（每頁 4/6/8 張）、全班查詢 Token 代碼表，以及<strong>「家長端手機即時畫面模擬器」</strong>，教師在電腦端就能直接秒選學生檢視家長手札畫面！</li>
-                        <li><strong>🐞 解決更換設備匯入名單失敗錯誤（核心修復）：</strong>修復在本地無班級設定時點擊「從雲端匯入」出現「找不到名為學生名單的分頁」的問題。升級雲端引擎智慧掃描機制，自動讀取所有帶有班級前綴（如 <code>[115下-六年5班（beta）] 學生名單</code>）之分頁，更換設備貼上 GAS 網址即自動還原全班級清單與學生！</li>
+                        <li><strong>👨‍👩‍👧 新增第 8 個分頁【8. 家長手札與專屬查詢小卡】：</strong>全新獨立分頁，整合 A4 小卡批次列印中心（每頁 4/6/8 張彈性密度）、全班查詢 Token 代碼表，以及<strong>「家長端手機即時畫面模擬器」</strong>，教師在電腦端就能直接秒選學生檢視家長手札畫面！</li>
+                        <li><strong>📱 隆重推出「LINE 官方帳號智慧推播中心」：</strong>教師可在 Tab 8 一鍵連接班級 LINE 官方帳號（輸入 Basic ID 與 Channel Access Token 自動存入試算表雲端設定）。放學點名完畢後，點擊<strong>「🚀 一鍵發送 LINE 缺交通知」</strong>，系統即自動篩選當日有缺交且家長已綁定 LINE 的學生發送 1 對 1 私訊提醒，附帶專屬手札連結，作業全齊之家庭絕不打擾！</li>
+                        <li><strong>💬 家長一秒免打字綁定與主動查詢：</strong>家長使用手機開啟手札時，頂部橫幅點擊即可一秒跳轉 LINE 並自動帶入專屬代碼完成綁定；平時在 LINE 中傳送「查詢」隨時秒回孩子手札網址，傳送「取消綁定」即可自主解除通知；教師端亦提供直覺「✕解除」管理按鈕。</li>
                         <li><strong>🌱 獨立家長端查詢手札 (parent.html)：</strong>比照 MPScore 雙端設計，家長掃描小卡 QR Code 免密碼直達孩子專屬手札，SWR 秒級快取載入，即時掌握作業繳交進度。</li>
                         <li><strong>📊 各科目習慣橫向長條圖與展開明細：</strong>以直觀彩色長條圖呈現各科準時率，<strong>點擊各科目卡片可向下展開</strong>該科各項具體作業簿冊（如國習、甲本、乙本）的詳細繳交比率與次數。</li>
                         <li><strong>⚠️ 常遲到作業警示排行：</strong>自動統計本學期孩子最常遲交、拖延的作業 Top 3，精準抓出弱點作業與拖延瓶頸，方便親師即時引導。</li>
@@ -347,7 +348,8 @@
                         <li><strong>🎯 智慧過濾未清點作業（準時率精準化）：</strong>自動過濾班級中尚未開始清點（全班無紀錄且未指派範圍）的作業項目，避免預設簿冊（如數卷）因尚未派發而誤計為缺交，確保各科總準時率 100% 精準真實呈現！</li>
                         <li><strong>🧮 準時率與繳交率狀態判定大重構：</strong>全面重構家長端與手機模擬器之作業狀態判定邏輯，導入通用分類器（涵蓋雲端時間戳記、<code>[遲交]</code>、未交、沒帶、退回需訂正及假別免計），徹底解決缺交或遲交被誤算為準時繳交、待補交遺漏、以及總準時率與各科明細呈現矛盾的統計漏洞！</li>
                         <li><strong>🔒 家長端高隱私防窺設計（純 QR Code 掃碼登入）：</strong>家長端手札全面移除姓名與代碼文字輸入框，防止他人猜測座號或姓名窺探學生隱私；改為內建<strong>「相機鏡頭即時掃碼」</strong>與<strong>「相簿照片 QR Code 辨識」</strong>雙引擎，家長只要對準小卡掃碼即可秒速登入！</li>
-                        <li><strong>📅 頂部連線狀態完整顯示日期、星期與時間：</strong>家長手札與手機模擬器英雄卡之同步徽章升級完整標註連線時間（例如 <code>即時同步 2026/10/17 (六) 上午07:28</code>），並支援離線快取時間還原，讓親師隨時精確掌握資料時效！</li>
+                        <li><strong>📅 頂部連線狀態完整顯示日期、星期與時間：</strong>家長手札與手機模擬器英雄卡之同步徽章升級完整標註連線時間（例如 <code>即時同步 2026/10/17 (六) 上午08:10</code>），並支援離線快取時間還原，讓親師隨時精確掌握資料時效！</li>
+                        <li><strong>🐞 解決更換設備匯入名單失敗錯誤（核心修復）：</strong>修復在本地無班級設定時點擊「從雲端匯入」出現「找不到名為學生名單的分頁」的問題。升級雲端引擎智慧掃描機制，自動讀取所有帶有班級前綴（如 <code>[115下-六年5班] 學生名單</code>）之分頁，更換設備貼上 GAS 網址即自動還原全班級清單與學生！</li>
                     </ul>
                 </div>
 
