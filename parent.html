@@ -104,6 +104,23 @@
         <input type="file" id="qrFileInput" accept="image/*" onchange="handleFileScan(event)" class="hidden">
       </div>
 
+      <!-- 手動輸入專屬 6 碼代碼備用區塊 -->
+      <div class="pt-2">
+        <button type="button" onclick="toggleManualCodeInput()" class="text-xs font-bold text-slate-500 hover:text-emerald-700 transition flex items-center justify-center gap-1 mx-auto cursor-pointer">
+          <span id="manualToggleIcon">⌨️</span>
+          <span id="manualToggleText">鏡頭無法使用？點此手動輸入小卡代碼</span>
+        </button>
+        <div id="manualCodeBox" class="hidden mt-3 max-w-sm mx-auto p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+          <div class="text-[11px] font-bold text-slate-500 text-left">請輸入孩子小卡上的專屬代碼（例如：U4HZIG）：</div>
+          <div class="flex gap-2">
+            <input type="text" id="manualTokenInput" placeholder="輸入 6 碼代碼" maxlength="10" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono font-bold uppercase tracking-wider text-center focus:ring-2 focus:ring-emerald-400 focus:outline-none" onkeyup="if(event.key==='Enter') submitManualToken()">
+            <button type="button" onclick="submitManualToken()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black px-4 py-2 rounded-xl shadow-sm transition cursor-pointer">
+              查詢
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- 相機鏡頭預覽區塊 (點擊開啟相機後展開) -->
       <div id="qr-scanner-wrapper" class="hidden space-y-3 pt-2">
         <div class="relative max-w-sm mx-auto overflow-hidden rounded-3xl border-4 border-emerald-500 shadow-xl bg-black">
@@ -545,6 +562,33 @@
       }
     }
 
+    function toggleManualCodeInput() {
+      const box = document.getElementById('manualCodeBox');
+      const text = document.getElementById('manualToggleText');
+      if (!box) return;
+      const isHidden = box.classList.contains('hidden');
+      if (isHidden) {
+        box.classList.remove('hidden');
+        if (text) text.innerText = '收起手動輸入小卡代碼';
+        const input = document.getElementById('manualTokenInput');
+        if (input) setTimeout(() => input.focus(), 100);
+      } else {
+        box.classList.add('hidden');
+        if (text) text.innerText = '鏡頭無法使用？點此手動輸入小卡代碼';
+      }
+    }
+
+    function submitManualToken() {
+      const input = document.getElementById('manualTokenInput');
+      if (!input) return;
+      const val = input.value.trim().toUpperCase();
+      if (!val) {
+        alert('請先輸入 6 碼學生代碼');
+        return;
+      }
+      doParentQuery(val);
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('t') || urlParams.get('token') || sessionStorage.getItem('rp_parent_token');
@@ -643,7 +687,7 @@
           // 本機 LocalStorage 離線相容模式 (僅依 token 查詢)
           freshData = queryFromLocalStorage(query);
           if (!freshData) {
-            throw new Error('查無此專屬代碼之學生資料，請確認小卡是否正確。');
+            throw new Error('此手札尚未連結班級雲端 API。請點擊 LINE 官方帳號最新發送之專屬手札連結，或使用相機重新掃描小卡 QR Code 登入。');
           }
         }
 
@@ -810,6 +854,36 @@
       }
     }
 
+    function parseDateForCompare(dStr) {
+      if (!dStr) return null;
+      const s = dStr.toString().trim().replace(/\//g, '-');
+      const mYMD = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (mYMD) {
+        return new Date(parseInt(mYMD[1], 10), parseInt(mYMD[2], 10) - 1, parseInt(mYMD[3], 10), 23, 59, 59);
+      }
+      const mMD = s.match(/(\d{1,2})-(\d{1,2})/);
+      if (mMD) {
+        const curY = new Date().getFullYear();
+        return new Date(curY, parseInt(mMD[1], 10) - 1, parseInt(mMD[2], 10), 23, 59, 59);
+      }
+      return null;
+    }
+
+    function parseScanTime(tsStr) {
+      if (!tsStr) return null;
+      const s = tsStr.toString().trim().replace(/\//g, '-');
+      const mYMDTime = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (mYMDTime) {
+        return new Date(parseInt(mYMDTime[1], 10), parseInt(mYMDTime[2], 10) - 1, parseInt(mYMDTime[3], 10), parseInt(mYMDTime[4], 10), parseInt(mYMDTime[5], 10));
+      }
+      const mMDTime = s.match(/(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (mMDTime) {
+        const curY = new Date().getFullYear();
+        return new Date(curY, parseInt(mMDTime[1], 10) - 1, parseInt(mMDTime[2], 10), parseInt(mMDTime[4], 10), parseInt(mMDTime[5], 10));
+      }
+      return null;
+    }
+
     // ==========================================
     // 通用家長端作業狀態分類器
     // ==========================================
@@ -876,20 +950,12 @@
       let isLate = false;
       if (s === '遲交' || s === 'late' || s.includes('[遲交]') || s.includes('遲交')) {
         isLate = true;
-      } else if (deadline && ts) {
-        try {
-          const dl = new Date(deadline + 'T23:59:59');
-          let scDate = null;
-          if (ts.includes('T') || ts.includes('-')) {
-            scDate = new Date(ts);
-          } else {
-            const year = new Date().getFullYear();
-            scDate = new Date(`${year}/${ts}`);
-          }
-          if (scDate && !isNaN(scDate.getTime()) && scDate > dl) {
-            isLate = true;
-          }
-        } catch(e) {}
+      } else if (deadline || ts) {
+        const dlDate = parseDateForCompare(deadline);
+        const scDate = parseScanTime(ts) || parseDateForCompare(ts) || parseScanTime(s) || parseDateForCompare(s);
+        if (dlDate && scDate && scDate.getTime() > dlDate.getTime()) {
+          isLate = true;
+        }
       }
 
       if (isLate) {
@@ -966,7 +1032,7 @@
       const lateCountsPerTask = {}; // 常遲到統計 { '作業名稱': 次數 }
 
       tasks.forEach(t => {
-        const c = classifyTaskStatus(t.status, t.timestamp, t.deadline);
+        const c = classifyTaskStatus(t.status, t.timestamp || t.status, t.deadline || t.date || t.range);
 
         if (c.type === 'ontime') {
           onTimeCount++;
@@ -1153,7 +1219,7 @@
           }
           tasksMap[tName].total++;
 
-          const c = classifyTaskStatus(st.status, st.timestamp, st.deadline);
+          const c = classifyTaskStatus(st.status, st.timestamp || st.status, st.deadline || st.date || st.range);
           if (c.type === 'ontime') {
             subOnTime++;
             tasksMap[tName].ontime++;
@@ -1258,7 +1324,7 @@
         logsContainer.innerHTML = '<div class="py-4 text-center text-xs text-slate-400">尚無近期打卡紀錄</div>';
       } else {
         recentLogs.forEach(l => {
-          const c = classifyTaskStatus(l.status, l.timestamp, l.deadline);
+          const c = classifyTaskStatus(l.status, l.timestamp, l.deadline || l.range);
           const badge = `<span class="text-xs font-bold px-2 py-0.5 rounded-full border ${c.badgeClass}">${c.badge}</span>`;
 
           logsContainer.innerHTML += `

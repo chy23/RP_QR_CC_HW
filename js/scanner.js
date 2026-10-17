@@ -126,6 +126,28 @@
             const deltaPayload = (newRecordsArray || []).map(r => {
                 const student = db.students.find(s => s.id === r.studentId);
                 const task = db.tasks.find(t => t.id === r.taskId);
+                
+                let recStatus = '已繳交';
+                if (r.manualStatus === 'late') {
+                    recStatus = '遲交';
+                } else if (r.manualStatus === 'missing') {
+                    recStatus = (task && task.subject === '聯絡簿') ? '沒帶' : '缺交';
+                } else if (isLeaveStatus(r.manualStatus) || ['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他'].includes(r.manualStatus)) {
+                    recStatus = getLeaveName(r.manualStatus) || r.manualStatus;
+                } else if (task && task.deadline) {
+                    const dl = new Date(task.deadline + 'T23:59:59');
+                    let sc = null;
+                    if (r.timestamp && (r.timestamp.includes('T') || r.timestamp.includes('-'))) {
+                        sc = new Date(r.timestamp);
+                    } else if (r.timestamp) {
+                        const curYear = new Date().getFullYear();
+                        sc = new Date(`${curYear}/${r.timestamp}`);
+                    }
+                    if (dl && sc && !isNaN(sc.getTime()) && !isNaN(dl.getTime()) && sc > dl) {
+                        recStatus = '遲交';
+                    }
+                }
+
                 return {
                     timestamp: r.timestamp || r.fullTimestamp,
                     className: (() => {
@@ -136,7 +158,7 @@
                     subject: task ? task.subject : '',
                     taskName: task ? task.name : '未知作業',
                     range: r.noticeName || '',
-                    status: '已繳交'
+                    status: recStatus
                 };
             });
             

@@ -2367,11 +2367,12 @@ function previewLinePushModal() {
         return;
     }
 
-    const first = targets[0];
-    const taskLines = first.missingTasks.map(mt => `‧ 【${mt.subject}】${mt.taskName}${mt.range ? ' (' + mt.range + ')' : ''}`).join('<br>');
-    const currentPath = window.location.pathname;
-    const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
-    const demoUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(first.token)}`;
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+    const demoUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(first.token)}${apiParam ? '&a=' + apiParam : ''}`;
 
     const targetListHtml = targets.map(t => `
         <span class="inline-block bg-white border border-rose-200 text-rose-800 text-[11px] font-bold px-2 py-0.5 rounded-md">
