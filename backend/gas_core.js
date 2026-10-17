@@ -93,6 +93,12 @@ function(e, ss, getSheetNames) {
         }
       }
 
+      function getPortalUrl(classLabel, token) {
+        var isBeta = (classLabel || "").toLowerCase().indexOf("beta") !== -1;
+        var base = isBeta ? "https://chy23.github.io/RP_QR_CC_HW/beta/parent.html" : "https://chy23.github.io/RP_QR_CC_HW/parent.html";
+        return base + "?t=" + encodeURIComponent(token);
+      }
+
       for (var evIdx = 0; evIdx < payload.events.length; evIdx++) {
         var ev = payload.events[evIdx];
         if (ev.type === "message" && ev.message && ev.message.type === "text") {
@@ -128,7 +134,7 @@ function(e, ss, getSheetNames) {
               var replyLines = ["📖 【孩子專屬作業手札連結】\n"];
               for (var bs = 0; bs < boundStudents.length; bs++) {
                 var stu = boundStudents[bs];
-                var portalUrl = "https://chy23.github.io/RP_QR_CC_HW/parent.html?t=" + encodeURIComponent(stu.token);
+                var portalUrl = getPortalUrl(stu.className, stu.token);
                 replyLines.push("👦 " + stu.className + " " + stu.id + "號 " + stu.name + "\n🔗 手札網址：" + portalUrl + "\n");
               }
               replyLines.push("👉 點擊上方連結即可秒開孩子作業繳交率、待補交清單與常遲到排行！");
@@ -139,7 +145,53 @@ function(e, ss, getSheetNames) {
             continue;
           }
 
-          // (2) 代碼綁定
+          // (2) 取消綁定 / 解除綁定指令
+          var lowerMsg = userMsg.toLowerCase();
+          if (userMsg === "取消綁定" || userMsg === "解除綁定" || userMsg === "解綁" || lowerMsg === "unbind" ||
+              userMsg.indexOf("取消綁定") === 0 || userMsg.indexOf("解除綁定") === 0 || userMsg.indexOf("解綁") === 0) {
+            var param = userMsg.replace(/^(取消綁定|解除綁定|解綁|unbind)\s*/i, "").trim().toUpperCase();
+            var allSheets = ss.getSheets();
+            var unboundStudents = [];
+
+            for (var sIdx = 0; sIdx < allSheets.length; sIdx++) {
+              var sName = allSheets[sIdx].getName();
+              if (sName.indexOf("LINE用戶綁定") !== -1) {
+                var bSheet = allSheets[sIdx];
+                var bData = bSheet.getDataRange().getDisplayValues();
+                var sPrefix = sName.replace("LINE用戶綁定", "").replace(/\[|\]/g, "").trim();
+
+                for (var bRow = 1; bRow < bData.length; bRow++) {
+                  var rowUid = bData[bRow][3] ? bData[bRow][3].trim() : "";
+                  var rowSid = bData[bRow][0] ? bData[bRow][0].trim() : "";
+                  var rowTok = bData[bRow][2] ? bData[bRow][2].trim().toUpperCase() : "";
+
+                  if (rowUid === userId) {
+                    if (param && param !== rowSid && param !== (rowSid + "號") && param !== rowTok) {
+                      continue;
+                    }
+                    unboundStudents.push({
+                      className: sPrefix || "本班",
+                      id: bData[bRow][0],
+                      name: bData[bRow][1]
+                    });
+                    bSheet.getRange(bRow + 1, 4, 1, 3).setValues([["", Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/MM/dd HH:mm:ss"), "已解除"]]);
+                  }
+                }
+              }
+            }
+
+            if (unboundStudents.length > 0) {
+              var stuListStr = unboundStudents.map(function(u) {
+                return "👦 【" + u.className + "】" + u.id + "號 " + u.name;
+              }).join("\n");
+              replyLine(replyToken, "✅ 【LINE 綁定已成功解除】\n\n已為您解除以下學生之通知綁定：\n" + stuListStr + "\n\n日後系統將不再向您發送該生的缺交私訊通知。\n若日後欲重新綁定，隨時傳送孩子的小卡代碼即可重新綁定！");
+            } else {
+              replyLine(replyToken, "ℹ️ 您目前沒有符合條件的已綁定學生紀錄。\n\n若欲綁定，請直接傳送孩子的專屬查詢代碼（例如：V9UPK4）。");
+            }
+            continue;
+          }
+
+          // (3) 代碼綁定
           var codeToMatch = userMsg.replace(/^綁定\s*/i, "").trim().toUpperCase();
           var allSheets = ss.getSheets();
           var matchedStudent = null;
@@ -185,7 +237,7 @@ function(e, ss, getSheetNames) {
             var bValues = bindSheet.getDataRange().getDisplayValues();
             var existingRow = -1;
             for (var b = 1; b < bValues.length; b++) {
-              if (bValues[b][0].toString().trim() === matchedStudent.id.toString() || (bValues[b][3] && bValues[b][3].trim() === userId)) {
+              if (bValues[b][0].toString().trim() === matchedStudent.id.toString()) {
                 existingRow = b + 1;
                 break;
               }
@@ -201,7 +253,7 @@ function(e, ss, getSheetNames) {
             }
 
             var cLabel = matchedClassPrefix.replace(/\[|\]/g, "").trim() || "本班";
-            var directUrl = "https://chy23.github.io/RP_QR_CC_HW/parent.html?t=" + encodeURIComponent(matchedStudent.token);
+            var directUrl = getPortalUrl(cLabel, matchedStudent.token);
             var successMsg = "🎉 【LINE 綁定成功通知】\n\n" +
               "家長您好，您已成功綁定：\n" +
               "👦 學生：【" + cLabel + "】" + matchedStudent.id + "號 " + matchedStudent.name + "\n\n" +
@@ -340,7 +392,7 @@ function(e, ss, getSheetNames) {
         });
         if (taskLines.length === 0) taskLines.push("‧ 請參閱作業手札待補交清單");
 
-        var portalUrl = "https://chy23.github.io/RP_QR_CC_HW/parent.html?t=" + encodeURIComponent(tgt.token);
+        var portalUrl = getPortalUrl(prefix, tgt.token);
         var msgText = "🚨 【作業待補交提醒】\n\n" +
           tgt.studentName + " 家長您好：\n" +
           "今日學校清點作業，孩子尚有 " + tgt.missingTasks.length + " 項作業待補交：\n" +
@@ -380,6 +432,23 @@ function(e, ss, getSheetNames) {
         failCount: failCount,
         skippedCount: skippedCount
       })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (payload.action === 'line_unbind_student') {
+      var bindSheetName = prefix + "LINE用戶綁定";
+      var bindSheet = ss.getSheetByName(bindSheetName);
+      var studentId = (payload.studentId || "").toString().trim();
+      var unboundName = "";
+      if (bindSheet && bindSheet.getLastRow() > 1) {
+        var bData = bindSheet.getDataRange().getDisplayValues();
+        for (var b = 1; b < bData.length; b++) {
+          if (bData[b][0].toString().trim() === studentId) {
+            unboundName = bData[b][1];
+            bindSheet.getRange(b + 1, 4, 1, 3).setValues([["", Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/MM/dd HH:mm:ss"), "教師手動解除"]]);
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', studentName: unboundName })).setMimeType(ContentService.MimeType.JSON);
     }
 
     function getColorForPrefix(p) {

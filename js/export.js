@@ -2300,9 +2300,12 @@ async function fetchLineBindingStatus() {
                     }`;
                     pill.innerHTML = `
                         <span>${String(s.id).padStart(2, '0')} ${s.name}</span>
-                        <span class="${isBound ? 'text-emerald-600' : 'text-slate-300'} font-black text-xs">
-                            ${isBound ? '✓ 已綁定' : '未綁定'}
-                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="${isBound ? 'text-emerald-600' : 'text-slate-300'} font-black text-xs">
+                                ${isBound ? '✓ 已綁定' : '未綁定'}
+                            </span>
+                            ${isBound ? `<button type="button" onclick="unbindLineStudent('${s.id}', '${s.name}')" class="text-[10px] text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded px-1 transition cursor-pointer" title="解除此學生綁定">✕解除</button>` : ''}
+                        </div>
                     `;
                     gridEl.appendChild(pill);
                 });
@@ -2469,4 +2472,48 @@ async function sendLinePushMissing() {
         hideLoading();
     }
 }
+
+// 教師端手動解除某學生的 LINE 綁定
+async function unbindLineStudent(studentId, studentName) {
+    const confirmRes = await showConfirm(
+        '解除 LINE 綁定確認',
+        `確定要解除 ${studentName} 的 LINE 官方帳號綁定嗎？\n解除後家長將不再接收自動缺交通知。`,
+        'warning',
+        '解除綁定',
+        '取消'
+    );
+    if (!confirmRes || !confirmRes.isConfirmed) return;
+
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    if (!gasUrl) {
+        showAlert('提示', '尚未設定 GAS 網址！');
+        return;
+    }
+
+    showLoading();
+    try {
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'line_unbind_student',
+                classPrefix: getActiveClassPrefix(),
+                studentId: studentId
+            })
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+            showToast(`已解除 ${studentName} 的 LINE 綁定！`, 'success');
+            fetchLineBindingStatus();
+        } else {
+            showAlert('解除失敗', res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        showAlert('連線錯誤', '解除失敗，請確認網路連線');
+    } finally {
+        hideLoading();
+    }
+}
+
 
