@@ -138,6 +138,7 @@ function(e, ss, getSheetNames) {
       if (gasId) {
         url += "&a=" + encodeURIComponent(gasId);
       }
+      url += "&lb=1";
       return url;
     }
 
@@ -1035,6 +1036,26 @@ function(e, ss, getSheetNames) {
         } catch(e) {}
       }
 
+      // 檢查此學生是否已經有 LINE 家長綁定
+      var isLineBound = false;
+      var bindSheetName = matchedPrefix + "LINE用戶綁定";
+      var bindSheet = ss.getSheetByName(bindSheetName);
+      if (bindSheet && bindSheet.getLastRow() > 1) {
+        var bData = bindSheet.getDataRange().getDisplayValues();
+        for (var b = 1; b < bData.length; b++) {
+          var bSid = (bData[b][0] || '').toString().trim();
+          var bTok = (bData[b][2] || '').toString().trim().toUpperCase();
+          var bUid = (bData[b][3] || '').toString().trim();
+          var bStatus = (bData[b][5] || '').toString().trim();
+          var isMatchStudent = (bSid === targetStudent.id.toString().trim()) || 
+                               (bTok && targetStudent.token && bTok === targetStudent.token.toString().trim().toUpperCase());
+          if (isMatchStudent && bUid !== '' && bStatus !== '已解除' && bStatus !== '教師手動解除') {
+            isLineBound = true;
+            break;
+          }
+        }
+      }
+
       return ContentService.createTextOutput(JSON.stringify({
         status: 'success',
         syncedAt: new Date().toISOString(),
@@ -1045,6 +1066,7 @@ function(e, ss, getSheetNames) {
         },
         className: classLabel,
         lineBotBasicId: botBasicId,
+        isLineBound: isLineBound,
         tasks: summary.tasks,
         recentLogs: recentLogs
       })).setMimeType(ContentService.MimeType.JSON);

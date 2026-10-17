@@ -207,7 +207,6 @@
           <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
             <div id="metricRateBar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
           </div>
-          <div class="text-[11px] text-slate-500 mt-1 font-medium">總繳交率 <span id="metricSubmittedRate" class="font-bold text-slate-700">0%</span></div>
         </div>
 
         <!-- 累計準時/總次數 -->
@@ -1020,16 +1019,39 @@
       const nowStr = `${y}/${m}/${d} (${weekDay}) ${timeStr}`;
       document.getElementById('lastSyncTime').innerText = (isFromCache ? '快取秒開 ' : '即時同步 ') + nowStr;
 
-      // LINE 官方帳號一秒綁定橫幅
+      // LINE 官方帳號一秒綁定橫幅 (若已綁定或已從 LINE 訊息打開，則完全隱藏)
       const lineBanner = document.getElementById('lineBindBanner');
       const botId = data.lineBotBasicId || localStorage.getItem('rp_line_bot_id') || '';
+      const urlParams = new URLSearchParams(window.location.search);
+      const isLineUA = typeof navigator !== 'undefined' && navigator.userAgent && /Line\//i.test(navigator.userAgent);
+      const isAlreadyBound = data.isLineBound === true ||
+                             urlParams.get('lb') === '1' ||
+                             isLineUA ||
+                             localStorage.getItem('rp_line_bound_' + (student ? student.token : '')) === '1';
+
+      if (data.isLineBound === true || urlParams.get('lb') === '1') {
+        if (student && student.token) {
+          try { localStorage.setItem('rp_line_bound_' + student.token, '1'); } catch(e) {}
+        }
+      } else if (data.isLineBound === false && urlParams.get('lb') !== '1') {
+        if (student && student.token) {
+          try { localStorage.removeItem('rp_line_bound_' + student.token); } catch(e) {}
+        }
+      }
+
       if (lineBanner) {
-        if (botId && student && student.token) {
+        if (!isAlreadyBound && botId && student && student.token) {
           try { localStorage.setItem('rp_line_bot_id', botId); } catch(e) {}
           const cleanBotId = botId.startsWith('@') ? botId : ('@' + botId);
           const deepLink = `https://line.me/R/oaMessage/${encodeURIComponent(cleanBotId)}/?${encodeURIComponent(student.token)}`;
           const btnLink = document.getElementById('btnLineBindDeepLink');
-          if (btnLink) btnLink.href = deepLink;
+          if (btnLink) {
+            btnLink.href = deepLink;
+            btnLink.onclick = () => {
+              try { localStorage.setItem('rp_line_bound_' + student.token, '1'); } catch(e) {}
+              setTimeout(() => { if (lineBanner) lineBanner.classList.add('hidden'); }, 1000);
+            };
+          }
           lineBanner.classList.remove('hidden');
         } else {
           lineBanner.classList.add('hidden');
@@ -1115,9 +1137,6 @@
       document.getElementById('metricTotal').innerText = effectiveTotal;
       document.getElementById('metricLate').innerText = lateCount;
       document.getElementById('metricMissing').innerText = totalMissing;
-
-      const subRateEl = document.getElementById('metricSubmittedRate');
-      if (subRateEl) subRateEl.innerText = submittedRate + '%';
 
       const pendingCount = pendingItems.length;
       document.getElementById('metricPendingCount').innerText = pendingCount;

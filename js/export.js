@@ -1974,8 +1974,7 @@ function updateParentSimulator(studentId) {
         <div class="grid grid-cols-3 gap-1.5 text-center">
             <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
                 <div class="text-[10px] text-slate-400 font-bold">準時率</div>
-                <div class="text-base font-black ${onTimeRate >= 90 ? 'text-emerald-600' : (onTimeRate >= 80 ? 'text-amber-600' : 'text-rose-600')}">${onTimeRate}%</div>
-                <div class="text-[9px] text-slate-400">總繳交 ${submittedRate}%</div>
+                <div class="text-base font-black ${onTimeRate >= 90 ? 'text-emerald-600' : (onTimeRate >= 80 ? 'text-amber-600' : 'text-rose-600')} mt-0.5">${onTimeRate}%</div>
             </div>
             <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
                 <div class="text-[10px] text-slate-400 font-bold">已準時交</div>
