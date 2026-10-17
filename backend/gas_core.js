@@ -274,11 +274,6 @@ function(e, ss, getSheetNames) {
               "🔗 隨時查看作業學習手札：\n" + directUrl;
 
             replyLine(replyToken, successMsg);
-          } else {
-            // 只有明確輸入「綁定 XXX」或標準 6 碼英數代碼但查無該生時，才提示代碼錯誤
-            if (isExplicitBind || /^[A-Z0-9]{6}$/.test(codeToMatch) || /^STU\d{1,4}$/.test(codeToMatch)) {
-              replyLine(replyToken, "⚠️ 查無此作業查詢代碼【" + codeToMatch + "】！\n\n請核對聯絡簿作業查詢小卡上的專屬代碼（如：V9UPK4），並重新傳送代碼完成綁定。\n（若您是向老師傳送日常訊息，導師看到後會親自回覆您。）");
-            }
           }
         }
       }
