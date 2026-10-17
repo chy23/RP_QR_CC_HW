@@ -1505,7 +1505,7 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
                 <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 mb-1.5">
                     <div>
                         <span class="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">${classLabel}</span>
-                        <span class="text-xs font-black text-slate-800 ml-1">作業繳交查詢卡</span>
+                        <span class="text-xs font-black text-slate-800 ml-1">作業繳交狀況查詢卡</span>
                     </div>
                     <span class="text-[10px] text-slate-400 font-mono">✂️ 裁切發放</span>
                 </div>
@@ -1515,7 +1515,7 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
                         <div class="text-base font-black text-slate-900">${st.name}</div>
                         <div class="text-xs font-bold text-slate-600">座號：${String(st.id).padStart(2, '0')}</div>
                         <div class="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-block font-bold">
-                            代碼：${token}
+                            查詢代碼：${token}
                         </div>
                     </div>
                     <div class="flex-shrink-0 flex items-center justify-center p-1 bg-white border border-slate-200 rounded-xl shadow-2xs">

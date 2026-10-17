@@ -84,9 +84,16 @@
       }
     }
 
+    /* Modal 毛玻璃背景 */
+    .apple-modal-scrim {
+      background-color: rgba(0, 0, 0, 0.45) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+    }
+
     /* Accessibility: 降低透明度 (Reduced Transparency) */
     @media (prefers-reduced-transparency: reduce) {
-      .apple-glass, header {
+      .apple-glass, header, .apple-modal-scrim {
         background: #ffffff !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
@@ -372,9 +379,50 @@
     <footer class="text-center text-xs text-slate-400 pt-6 space-y-1">
       <p>🔒 本系統僅供個別家長查閱自己孩子之學習狀況 ‧ 請妥善保管專屬代碼</p>
       <p>QRcode 自動清點作業系統 (家長手札端)</p>
-    </footer>
-
   </main>
+
+  <!-- LINE 官方帳號每日自動提醒綁定詢問 Modal (Apple HIG Style) -->
+  <div id="lineBindPromptModal" class="apple-modal-scrim fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300" style="display: none;">
+    <div class="apple-glass bg-white/95 backdrop-blur-2xl rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border border-emerald-100/80 flex flex-col items-center">
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center text-3xl mb-3 shadow-md shadow-emerald-500/20">
+        💬
+      </div>
+      <h3 class="text-lg font-black text-slate-900 mb-1">
+        開啟 LINE 每日缺交自動提醒？
+      </h3>
+      <div class="text-xs text-emerald-800 font-bold mb-3">
+        為 <span id="promptModalStudentName" class="text-emerald-900 underline font-black">孩子</span> 開啟放學守護
+      </div>
+      
+      <p class="text-xs text-slate-600 leading-relaxed mb-4 text-left bg-emerald-50/70 p-3 rounded-2xl border border-emerald-100/80">
+        親愛的家長您好！綁定班級 LINE 官方帳號後，若孩子放學有<strong>缺交或待補作業</strong>，系統將於放學後自動傳送即時推播通知，讓您免每天主動查詢也能即時掌握！
+      </p>
+      
+      <div class="w-full space-y-2 mb-5 text-left text-xs">
+        <div class="flex items-center gap-2">
+          <span class="text-emerald-600 font-bold flex-shrink-0">⚡️ 免手動打字</span>
+          <span class="text-slate-500">一秒自動帶入孩子查詢代碼</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-emerald-600 font-bold flex-shrink-0">🔔 放學即時通知</span>
+          <span class="text-slate-500">有缺交或需訂正時主動推播</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-emerald-600 font-bold flex-shrink-0">🔒 隱私安全保護</span>
+          <span class="text-slate-500">僅發送您孩子的專屬作業狀況</span>
+        </div>
+      </div>
+
+      <div class="w-full flex flex-col gap-2">
+        <a id="btnPromptModalBind" href="#" target="_blank" class="w-full min-h-[44px] flex items-center justify-center text-center bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer">
+          一秒前往 LINE 綁定 (推薦)
+        </a>
+        <button type="button" onclick="dismissLineBindPrompt()" class="w-full min-h-[40px] flex items-center justify-center text-center text-slate-500 hover:text-slate-700 text-xs font-bold transition-all active:scale-95 cursor-pointer">
+          稍後再說
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // ==========================================
@@ -1110,13 +1158,23 @@
           if (btnLink) {
             btnLink.href = deepLink;
             btnLink.onclick = () => {
-              try { localStorage.setItem('rp_line_bound_' + student.token, '1'); } catch(e) {}
+              try {
+                localStorage.setItem('rp_line_prompted_' + student.token, '1');
+                localStorage.setItem('rp_line_bound_' + student.token, '1');
+              } catch(e) {}
               setTimeout(() => { if (lineBanner) lineBanner.classList.add('hidden'); }, 1000);
             };
           }
           lineBanner.classList.remove('hidden');
+
+          // 第一次進入家長端網頁時主動詢問是否綁定自動提醒 (Apple HIG Modal)
+          const promptedKey = 'rp_line_prompted_' + student.token;
+          if (!localStorage.getItem(promptedKey)) {
+            showLineBindPromptModal(deepLink, student);
+          }
         } else {
           lineBanner.classList.add('hidden');
+          hideLineBindPromptModal();
         }
       }
 
@@ -1460,6 +1518,47 @@
         el.classList.add('open');
         if (arrow) arrow.style.transform = 'rotate(180deg)';
       }
+    }
+
+    // LINE 官方帳號每日自動提醒綁定 Modal 控制 (首次進入詢問)
+    function showLineBindPromptModal(deepLink, student) {
+      const modal = document.getElementById('lineBindPromptModal');
+      if (!modal) return;
+      const btnBind = document.getElementById('btnPromptModalBind');
+      if (btnBind) {
+        btnBind.href = deepLink;
+        btnBind.onclick = () => {
+          try {
+            if (student && student.token) {
+              localStorage.setItem('rp_line_prompted_' + student.token, '1');
+              localStorage.setItem('rp_line_bound_' + student.token, '1');
+            }
+          } catch(e) {}
+          modal.style.display = 'none';
+          const lineBanner = document.getElementById('lineBindBanner');
+          if (lineBanner) lineBanner.classList.add('hidden');
+        };
+      }
+      const stuNameEl = document.getElementById('promptModalStudentName');
+      if (stuNameEl && student && student.name) {
+        stuNameEl.innerText = maskStudentName(student.name);
+      }
+      modal.style.display = 'flex';
+    }
+
+    function dismissLineBindPrompt() {
+      const modal = document.getElementById('lineBindPromptModal');
+      if (modal) modal.style.display = 'none';
+      if (currentStudentToken) {
+        try {
+          localStorage.setItem('rp_line_prompted_' + currentStudentToken, '1');
+        } catch(e) {}
+      }
+    }
+
+    function hideLineBindPromptModal() {
+      const modal = document.getElementById('lineBindPromptModal');
+      if (modal) modal.style.display = 'none';
     }
   </script>
 </body>
