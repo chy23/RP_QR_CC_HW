@@ -1444,15 +1444,28 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
         apiParam = gas.split('/macros/s/')[1].split('/')[0];
     }
 
-    let gridClass = 'grid-cols-2 grid-rows-3 gap-3';
-    let qrPixelSize = 160;
-    let qrDisplaySize = 78;
+    let gridClass = 'grid-cols-2 grid-rows-3 gap-3.5';
+    let qrPixelSize = 240;
+    let qrDisplaySize = 100;
+    let cardPadding = 'p-3.5';
+    let nameSize = 'text-2xl';
+    let stepPadding = 'p-2';
+    let stepTextSize = 'text-[10px]';
+
     if (cardsPerPage === 8) {
-        gridClass = 'grid-cols-2 grid-rows-4 gap-2';
-        qrDisplaySize = 62;
+        gridClass = 'grid-cols-2 grid-rows-4 gap-2.5';
+        qrDisplaySize = 82;
+        cardPadding = 'p-2.5';
+        nameSize = 'text-xl';
+        stepPadding = 'p-1.5';
+        stepTextSize = 'text-[9px]';
     } else if (cardsPerPage === 4) {
-        gridClass = 'grid-cols-2 grid-rows-2 gap-4';
-        qrDisplaySize = 96;
+        gridClass = 'grid-cols-2 grid-rows-2 gap-5';
+        qrDisplaySize = 125;
+        cardPadding = 'p-5';
+        nameSize = 'text-3xl';
+        stepPadding = 'p-3';
+        stepTextSize = 'text-xs';
     }
 
     container.innerHTML = '';
@@ -1500,37 +1513,53 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
             }
 
             const card = document.createElement('div');
-            card.className = 'border-2 border-dashed border-slate-300 rounded-2xl p-3 bg-white flex flex-col justify-between relative';
+            card.className = `border-2 border-dashed border-slate-300 rounded-2xl ${cardPadding} bg-white flex flex-col justify-between relative shadow-2xs`;
             card.innerHTML = `
-                <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 mb-1.5">
-                    <div>
-                        <span class="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">${classLabel}</span>
-                        <span class="text-xs font-black text-slate-800 ml-1">作業繳交狀況查詢卡</span>
+                <!-- 頂部標頭 -->
+                <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 mb-1 flex-shrink-0">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">${classLabel}</span>
+                        <span class="text-sm font-black text-slate-800 tracking-tight">作業繳交狀況查詢卡</span>
                     </div>
-                    <span class="text-[10px] text-slate-400 font-mono">✂️ 裁切發放</span>
+                    <span class="text-[10px] text-slate-400 font-mono flex items-center gap-0.5">✂️ 裁切發放</span>
                 </div>
                 
-                <div class="flex items-center justify-between gap-2 flex-1">
-                    <div class="space-y-1">
-                        <div class="text-base font-black text-slate-900">${st.name}</div>
-                        <div class="text-xs font-bold text-slate-600">座號：${String(st.id).padStart(2, '0')}</div>
-                        <div class="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-block font-bold">
-                            查詢代碼：${token}
+                <!-- 中間核心資訊 (學生姓名、座號、查詢代碼與大 QR Code) -->
+                <div class="flex items-center justify-between gap-3 my-auto py-1">
+                    <div class="space-y-1.5 flex-1 min-w-0">
+                        <div class="${nameSize} font-black text-slate-900 tracking-tight leading-none truncate">${st.name}</div>
+                        <div class="text-sm font-bold text-slate-600 flex items-center gap-1">
+                            <span>座號：</span>
+                            <span class="font-mono text-base font-black text-slate-900">${String(st.id).padStart(2, '0')}</span>
+                        </div>
+                        <div class="bg-emerald-50/90 border border-emerald-300 rounded-xl px-2.5 py-1 inline-block shadow-2xs">
+                            <div class="text-[9.5px] text-emerald-800 font-bold leading-tight">專屬查詢代碼</div>
+                            <div class="text-sm font-mono font-black text-emerald-950 tracking-wider leading-tight">${token}</div>
                         </div>
                     </div>
-                    <div class="flex-shrink-0 flex items-center justify-center p-1 bg-white border border-slate-200 rounded-xl shadow-2xs">
-                        <img src="${qrDataUrl}" width="${qrDisplaySize}" height="${qrDisplaySize}" alt="QR" class="rounded">
+                    <div class="flex-shrink-0 flex flex-col items-center justify-center p-1.5 bg-white border border-slate-200 rounded-2xl shadow-xs">
+                        <img src="${qrDataUrl}" width="${qrDisplaySize}" height="${qrDisplaySize}" alt="QR" class="rounded-lg">
+                        <span class="text-[9px] text-slate-400 font-bold mt-1 select-none">手機相機掃描</span>
                     </div>
                 </div>
 
-                <div class="mt-2 pt-1.5 border-t border-slate-100 space-y-1 text-[9px] text-slate-600 leading-tight">
-                    <div class="flex items-start gap-1.5">
-                        <span class="font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 flex-shrink-0 text-[8.5px] leading-none">📱 如何查詢</span>
-                        <span>手機相機直接對準右側 <strong>QR Code</strong> 掃描，免密碼即可隨時查閱孩子作業繳交狀況與待補交明細。</span>
+                <!-- 底部指引：如何查詢與如何綁定 -->
+                <div class="pt-2 border-t border-slate-100 space-y-1.5 flex-shrink-0">
+                    <div class="bg-slate-50/90 border border-slate-200/80 rounded-xl ${stepPadding} flex items-start gap-2">
+                        <div class="w-5 h-5 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs">
+                            1
+                        </div>
+                        <div class="${stepTextSize} text-slate-700 leading-snug">
+                            <strong class="text-emerald-950">手機掃描查詢：</strong>直接開啟手機相機對準 QR Code 掃描，免密碼秒查孩子作業繳交狀況、各科明細與待補交清單。
+                        </div>
                     </div>
-                    <div class="flex items-start gap-1.5">
-                        <span class="font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 flex-shrink-0 text-[8.5px] leading-none">🔔 如何綁定</span>
-                        <span>進入網頁後點擊<strong>「一秒綁定 LINE」</strong>，放學有缺交主動發送推播通知！（亦可直接回傳查詢代碼至班級 LINE 完成綁定）</span>
+                    <div class="bg-slate-50/90 border border-slate-200/80 rounded-xl ${stepPadding} flex items-start gap-2">
+                        <div class="w-5 h-5 rounded-lg bg-blue-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs">
+                            2
+                        </div>
+                        <div class="${stepTextSize} text-slate-700 leading-snug">
+                            <strong class="text-blue-950">LINE 自動通知：</strong>進入網頁點擊<strong>「一秒綁定 LINE」</strong>，放學有缺交主動發送推播通知！（亦可直接回傳查詢代碼至班級 LINE 完成綁定）
+                        </div>
                     </div>
                 </div>
             `;
