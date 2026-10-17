@@ -162,6 +162,25 @@
         </div>
       </div>
 
+      <!-- LINE 官方帳號一秒綁定橫幅 -->
+      <div id="lineBindBanner" class="hidden apple-glass rounded-2xl p-3.5 border border-emerald-200 bg-gradient-to-r from-emerald-50/90 to-teal-50/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-xl font-bold flex-shrink-0 shadow-2xs">
+            💬
+          </div>
+          <div>
+            <div class="text-sm font-black text-emerald-950 flex items-center gap-1.5">
+              <span>開啟 LINE 每日缺交自動提醒</span>
+              <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">免打字</span>
+            </div>
+            <div class="text-xs text-emerald-700 mt-0.5">點擊一秒跳轉至班級 LINE，自動帶入代碼完成綁定，放學有缺交即時通知！</div>
+          </div>
+        </div>
+        <a id="btnLineBindDeepLink" href="#" target="_blank" class="w-full sm:w-auto text-center flex-shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-black shadow-xs transition active:scale-95 cursor-pointer">
+          一秒綁定 LINE
+        </a>
+      </div>
+
       <!-- 2. 三大核心指標卡 (總覽數據) -->
       <div class="grid grid-cols-3 gap-3">
         <!-- 準時繳交率 -->
@@ -917,6 +936,22 @@
       const timeStr = syncDate.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
       const nowStr = `${y}/${m}/${d} (${weekDay}) ${timeStr}`;
       document.getElementById('lastSyncTime').innerText = (isFromCache ? '快取秒開 ' : '即時同步 ') + nowStr;
+
+      // LINE 官方帳號一秒綁定橫幅
+      const lineBanner = document.getElementById('lineBindBanner');
+      const botId = data.lineBotBasicId || localStorage.getItem('rp_line_bot_id') || '';
+      if (lineBanner) {
+        if (botId && student && student.token) {
+          try { localStorage.setItem('rp_line_bot_id', botId); } catch(e) {}
+          const cleanBotId = botId.startsWith('@') ? botId : ('@' + botId);
+          const deepLink = `https://line.me/R/oaMessage/${encodeURIComponent(cleanBotId)}/?${encodeURIComponent(student.token)}`;
+          const btnLink = document.getElementById('btnLineBindDeepLink');
+          if (btnLink) btnLink.href = deepLink;
+          lineBanner.classList.remove('hidden');
+        } else {
+          lineBanner.classList.add('hidden');
+        }
+      }
 
       // 2. 統計數據計算 (採用通用分類標準)
       let totalAssigned = tasks.length;

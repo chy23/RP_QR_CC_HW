@@ -1617,6 +1617,11 @@ function renderParentTab() {
             if (frame) frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">目前班級尚無學生資料</div>';
         }
     }
+
+    // 4. 自動載入 LINE 官方帳號推播與綁定狀態
+    if (typeof fetchLineBindingStatus === 'function') {
+        fetchLineBindingStatus();
+    }
 }
 
 function updateParentTabSelectedCount() {
@@ -2025,3 +2030,443 @@ function openSelectedStudentParentPage() {
     const directUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
     window.open(directUrl, '_blank');
 }
+
+// ==========================================
+// LINE 官方帳號推播中心邏輯 (Beta)
+// ==========================================
+let currentLineBindings = [];
+
+// 取得單一生目前待補交之作業清單
+function getStudentPendingTasks(student) {
+    if (!student) return [];
+    const tasks = db.tasks || [];
+    const records = db.records || [];
+    const ranges = db.ranges || [];
+
+    const pendingList = [];
+    tasks.forEach(t => {
+        const hasAnyRecord = (records || []).some(r => r.taskId === t.id);
+        const hasAnyRange = (ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
+        if (!hasAnyRecord && !hasAnyRange) return;
+
+        let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
+        if (ranges) {
+            const rangeNotices = ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
+            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
+        }
+        if (noticeNames.length === 0) noticeNames = [''];
+
+        noticeNames.forEach(nn => {
+            const subHasRecord = (records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
+            if (!subHasRecord && !subHasRange) return;
+
+            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+                status = rec.manualStatus || '已交';
+                timestamp = rec.timestamp || rec.fullTimestamp || '';
+            }
+            let range = '';
+            const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            if (rObj) range = rObj.range || '';
+
+            const c = classifyParentTaskStatus(status, timestamp, t.deadline);
+            if (c.type === 'missing' || c.type === 'forgot' || c.type === 'returned') {
+                pendingList.push({
+                    subject: t.subject || '其他',
+                    taskName: t.name,
+                    range: range,
+                    date: nn || '近期',
+                    status: status,
+                    badge: c.badge
+                });
+            }
+        });
+    });
+    return pendingList;
+}
+
+// 篩選出今日有缺交且已綁定 LINE 的學生名單
+function getBoundStudentsWithMissing(boundMap) {
+    if (!boundMap) {
+        boundMap = {};
+        (currentLineBindings || []).forEach(b => {
+            if (b.isBound) boundMap[b.studentId.toString()] = b;
+        });
+    }
+
+    const targets = [];
+    (db.students || []).forEach(s => {
+        const binding = boundMap[s.id.toString()];
+        if (!binding) return; // 家長尚未綁定 LINE，跳過
+
+        const missingTasks = getStudentPendingTasks(s);
+        if (missingTasks.length > 0) {
+            targets.push({
+                studentId: s.id,
+                studentName: s.name,
+                token: s.token || ('STU' + String(s.id).padStart(3, '0')),
+                lineUserId: binding.lineUserId,
+                missingTasks: missingTasks
+            });
+        }
+    });
+    return targets;
+}
+
+// 切換 Token 密碼/明文顯示
+function toggleLineTokenVisibility() {
+    const input = document.getElementById('line-access-token');
+    const btn = event ? event.target : null;
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (btn) btn.innerText = '隱藏';
+    } else {
+        input.type = 'password';
+        if (btn) btn.innerText = '顯示';
+    }
+}
+
+// 複製邀請文案供導師發送至班群
+function copyLineInviteText() {
+    const botIdInput = document.getElementById('line-bot-id');
+    const botId = (botIdInput && botIdInput.value.trim()) || (appConfig.lineBotBasicId || '');
+    const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+    const classLabel = cls ? cls.label : '班級';
+    
+    const botText = botId ? `LINE ID 搜尋：${botId.startsWith('@') ? botId : ('@' + botId)}` : '【請向導師洽詢班級 LINE 帳號】';
+
+    const text = `📢 【${classLabel} LINE 智慧作業通知服務】家長邀請函\n\n` +
+      `親愛的家長您好：\n` +
+      `為了讓您能第一時間掌握孩子的每日作業繳交進度，本班已啟用 LINE 官方帳號作業提醒服務！\n\n` +
+      `📱 【兩步驟輕鬆綁定】：\n` +
+      `1. 請加入班級官方 LINE：\n` +
+      `   ${botText}\n` +
+      `2. 加入好友後，請直接傳送孩子的「專屬代碼」（請參考隨聯絡簿發放的作業查詢小卡，例如：V9UPK4）。\n\n` +
+      `🎉 綁定完成後，若放學有點名缺交，系統將於放學後自動發送私訊提醒您；您也可以隨時在 LINE 中傳送「查詢」查看孩子完整的作業手札。\n` +
+      `感謝各位家長的配合與支持！`;
+
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('已複製家長加好友與綁定說明文案！', 'success');
+    }).catch(() => {
+        showToast('複製失敗，請手動複製', 'error');
+    });
+}
+
+// 儲存 LINE 設定至雲端試算表 SystemConfig
+async function saveLineSettings() {
+    const botIdInput = document.getElementById('line-bot-id');
+    const tokenInput = document.getElementById('line-access-token');
+    const botId = botIdInput ? botIdInput.value.trim() : '';
+    const token = tokenInput ? tokenInput.value.trim() : '';
+
+    if (!botId && !token) {
+        showAlert('提示', '請至少填寫 LINE Bot Basic ID 或 Channel Access Token！');
+        return;
+    }
+
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    if (!gasUrl) {
+        showAlert('提示', '尚未設定 Google Apps Script (GAS) 網址，請先至【系統設定】設定！');
+        return;
+    }
+
+    if (botId) {
+        appConfig.lineBotBasicId = botId;
+        try { localStorage.setItem('line_bot_id', botId); } catch(e) {}
+    }
+    if (token) {
+        appConfig.lineChannelAccessToken = token;
+        try { localStorage.setItem('line_access_token', token); } catch(e) {}
+    }
+    if (typeof saveData === 'function') saveData();
+
+    showLoading();
+    const loadText = document.getElementById('loading-text');
+    if (loadText) loadText.innerText = '正在同步 LINE 設定至雲端...';
+
+    try {
+        const payload = {
+            action: 'line_save_config',
+            classPrefix: getActiveClassPrefix(),
+            lineBotBasicId: botId,
+            lineChannelAccessToken: token
+        };
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+            showToast('LINE 設定已成功儲存並同步至雲端！', 'success');
+            fetchLineBindingStatus();
+        } else {
+            showAlert('儲存失敗', res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        showAlert('連線錯誤', '無法連線至 GAS，請檢查網路或 GAS 發布狀態！');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 讀取全班 LINE 綁定狀態並刷新介面
+async function fetchLineBindingStatus() {
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    const badge = document.getElementById('line-config-status-badge');
+    const botIdInput = document.getElementById('line-bot-id');
+    const tokenInput = document.getElementById('line-access-token');
+    const statsEl = document.getElementById('line-bound-stats');
+    const progressEl = document.getElementById('line-bound-progress');
+    const gridEl = document.getElementById('line-students-bound-grid');
+    const targetCountEl = document.getElementById('line-missing-target-count');
+
+    // 預先帶入本機暫存
+    if (botIdInput && !botIdInput.value) {
+        botIdInput.value = appConfig.lineBotBasicId || localStorage.getItem('line_bot_id') || '';
+    }
+    if (tokenInput && !tokenInput.value) {
+        tokenInput.value = appConfig.lineChannelAccessToken || localStorage.getItem('line_access_token') || '';
+    }
+
+    if (!gasUrl) {
+        if (badge) {
+            badge.innerText = '未設定 GAS';
+            badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200';
+        }
+        if (statsEl) statsEl.innerText = '請先設定 GAS 網址';
+        return;
+    }
+
+    if (statsEl) statsEl.innerText = '檢查連線中...';
+
+    try {
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'line_get_status',
+                classPrefix: getActiveClassPrefix()
+            })
+        });
+        const res = await resp.json();
+
+        if (res.status === 'success') {
+            if (res.config && res.config.isConfigured) {
+                if (badge) {
+                    badge.innerText = '已連線 (金鑰有效)';
+                    badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300';
+                }
+                if (res.config.botBasicId && botIdInput && !botIdInput.value) {
+                    botIdInput.value = res.config.botBasicId;
+                    appConfig.lineBotBasicId = res.config.botBasicId;
+                }
+            } else {
+                if (badge) {
+                    badge.innerText = '未設定金鑰';
+                    badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
+                }
+            }
+
+            currentLineBindings = res.bindings || [];
+
+            // 建立已綁定的 ID map
+            const boundMap = {};
+            currentLineBindings.forEach(b => {
+                if (b.isBound) {
+                    boundMap[b.studentId.toString()] = b;
+                }
+            });
+
+            const totalStudents = db.students ? db.students.length : 0;
+            let boundCount = 0;
+
+            if (gridEl) {
+                gridEl.innerHTML = '';
+                (db.students || []).forEach(s => {
+                    const isBound = !!boundMap[s.id.toString()];
+                    if (isBound) boundCount++;
+
+                    const pill = document.createElement('div');
+                    pill.className = `flex items-center justify-between p-1.5 rounded-lg border text-[11px] ${
+                        isBound
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800 font-bold'
+                            : 'bg-white border-slate-200 text-slate-400'
+                    }`;
+                    pill.innerHTML = `
+                        <span>${String(s.id).padStart(2, '0')} ${s.name}</span>
+                        <span class="${isBound ? 'text-emerald-600' : 'text-slate-300'} font-black text-xs">
+                            ${isBound ? '✓ 已綁定' : '未綁定'}
+                        </span>
+                    `;
+                    gridEl.appendChild(pill);
+                });
+            } else {
+                (db.students || []).forEach(s => {
+                    if (boundMap[s.id.toString()]) boundCount++;
+                });
+            }
+
+            const percent = totalStudents > 0 ? Math.round((boundCount / totalStudents) * 100) : 0;
+            if (statsEl) statsEl.innerText = `${boundCount} / ${totalStudents} 人 (${percent}%)`;
+            if (progressEl) progressEl.style.width = `${percent}%`;
+
+            // 計算今日缺交且已綁定的學生名單
+            const targetMissing = getBoundStudentsWithMissing(boundMap);
+            if (targetCountEl) targetCountEl.innerText = targetMissing.length;
+
+        } else {
+            if (statsEl) statsEl.innerText = '讀取失敗：' + (res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        if (statsEl) statsEl.innerText = '連線失敗，請檢查網路';
+        if (badge) {
+            badge.innerText = '連線異常';
+            badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300';
+        }
+    }
+}
+
+// 預覽 LINE 推播私訊樣式
+function previewLinePushModal() {
+    const targets = getBoundStudentsWithMissing();
+    if (targets.length === 0) {
+        Swal.fire({
+            title: '📱 LINE 訊息預覽',
+            html: `
+                <div class="text-left text-xs space-y-3">
+                    <div class="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 font-bold">
+                        🎉 太棒了！今日目前全班沒有任何已綁定且缺交作業的學生。
+                    </div>
+                    <div class="text-slate-500">
+                        若有學生缺交，系統將會為每位家長生成客製化私訊如下範例：
+                    </div>
+                    <div class="p-3 bg-slate-100 rounded-xl font-mono text-[11px] text-slate-800 leading-relaxed border border-slate-200">
+                        🚨 【作業待補交提醒】<br><br>
+                        王小明 家長您好：<br>
+                        今日學校清點作業，孩子尚有 1 項作業待補交：<br>
+                        ‧ 【國語】甲本 P.10~12<br><br>
+                        請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！<br><br>
+                        🔗 點此秒開專屬手札查看明細：<br>
+                        https://chy23.github.io/RP_QR_CC_HW/parent.html?t=DEMO<br><br>
+                        （由 班級作業管理系統 自動推播）
+                    </div>
+                </div>
+            `,
+            confirmButtonText: '關閉'
+        });
+        return;
+    }
+
+    const first = targets[0];
+    const taskLines = first.missingTasks.map(mt => `‧ 【${mt.subject}】${mt.taskName}${mt.range ? ' (' + mt.range + ')' : ''}`).join('<br>');
+    const currentPath = window.location.pathname;
+    const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const demoUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(first.token)}`;
+
+    const targetListHtml = targets.map(t => `
+        <span class="inline-block bg-white border border-rose-200 text-rose-800 text-[11px] font-bold px-2 py-0.5 rounded-md">
+            ${String(t.studentId).padStart(2, '0')} ${t.studentName} (${t.missingTasks.length}項)
+        </span>
+    `).join(' ');
+
+    Swal.fire({
+        title: '📱 LINE 訊息預覽',
+        html: `
+            <div class="text-left text-xs space-y-3">
+                <div class="p-2.5 bg-rose-50 text-rose-800 rounded-xl border border-rose-200">
+                    <div class="font-bold">今日預計發送對象共 ${targets.length} 人：</div>
+                    <div class="mt-1 flex flex-wrap gap-1 max-h-24 overflow-y-auto">${targetListHtml}</div>
+                </div>
+                <div class="font-bold text-slate-700">私訊內容範例（以 ${first.studentName} 為例）：</div>
+                <div class="p-3 bg-slate-100 rounded-xl font-mono text-[11px] text-slate-800 leading-relaxed border border-slate-200">
+                    🚨 【作業待補交提醒】<br><br>
+                    ${first.studentName} 家長您好：<br>
+                    今日學校清點作業，孩子尚有 ${first.missingTasks.length} 項作業待補交：<br>
+                    ${taskLines}<br><br>
+                    請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！<br><br>
+                    🔗 點此秒開專屬手札查看明細：<br>
+                    ${demoUrl}<br><br>
+                    （由 班級作業管理系統 自動推播）
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '🚀 立即發送推播',
+        cancelButtonText: '關閉預覽',
+        confirmButtonColor: '#e11d48'
+    }).then(r => {
+        if (r && r.isConfirmed) {
+            sendLinePushMissing();
+        }
+    });
+}
+
+// 一鍵發送今日缺交私訊推播
+async function sendLinePushMissing() {
+    const targets = getBoundStudentsWithMissing();
+    if (targets.length === 0) {
+        showAlert('提示', '目前沒有任何已綁定 LINE 且有缺交作業的學生！');
+        return;
+    }
+
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    if (!gasUrl) {
+        showAlert('提示', '尚未設定 Google Apps Script (GAS) 網址！');
+        return;
+    }
+
+    const tokenInput = document.getElementById('line-access-token');
+    const token = (tokenInput && tokenInput.value.trim()) || appConfig.lineChannelAccessToken || localStorage.getItem('line_access_token') || '';
+
+    const confirmResult = await showConfirm(
+        '確認發送 LINE 缺交通知',
+        `即將發送 LINE 私訊通知給 ${targets.length} 位缺交學生的家長，確定送出嗎？`,
+        'question',
+        '立即發送',
+        '取消'
+    );
+    if (!confirmResult.isConfirmed) return;
+
+    showLoading();
+    const loadText = document.getElementById('loading-text');
+    if (loadText) loadText.innerText = `正在透過 LINE 官方帳號發送 ${targets.length} 則通知...`;
+
+    try {
+        const payload = {
+            action: 'line_push_missing',
+            classPrefix: getActiveClassPrefix(),
+            lineChannelAccessToken: token,
+            targets: targets
+        };
+
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+
+        if (res.status === 'success') {
+            showAlert(
+                '推播發送完成！',
+                `成功發送：${res.successCount} 位\n失敗：${res.failCount} 位\n未綁定跳過：${res.skippedCount} 位`,
+                'success'
+            );
+        } else {
+            showAlert('發送失敗', res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        showAlert('連線錯誤', '發送失敗，請確認網路連線與金鑰有效性！');
+    } finally {
+        hideLoading();
+    }
+}
+
