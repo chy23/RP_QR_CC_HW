@@ -306,8 +306,6 @@ function(e, ss, getSheetNames) {
                 isLate = true;
               } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他'].indexOf(cleanStatus) !== -1) {
                 isExcused = true;
-              } else if (isLateCheck(cleanStatus, tDate || tRange)) {
-                isLate = true;
               } else {
                 onTimeCount++;
               }
@@ -981,18 +979,20 @@ function(e, ss, getSheetNames) {
               }
             }
 
+            // 狀態判定優先權：
+            // 1. 若該科目分頁中老師有登記或判定為「[遲交]」，連動校正為遲交（解決老師在分頁標記遲交後足跡顯示不一致問題）
+            // 2. 若該科目分頁為假別（事假、病假等），顯示假別
+            // 3. 若「所有掃描紀錄」中打卡狀態登記為「遲交」，則為遲交
+            // 4. 其餘正常打卡紀錄皆為「已繳交」(準時)
             var finalStatus = lRow[6] || '已繳交';
-            var finalDeadline = '';
             
-            if (matchTask) {
-              finalDeadline = matchTask.date || '';
-              if (matchTask.status && (matchTask.status.indexOf('遲') !== -1 || matchTask.status.toLowerCase().indexOf('late') !== -1)) {
+            if (matchTask && matchTask.status) {
+              if (matchTask.status.indexOf('遲') !== -1 || matchTask.status.toLowerCase().indexOf('late') !== -1) {
                 finalStatus = '遲交';
+              } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他'].indexOf(matchTask.status) !== -1) {
+                finalStatus = matchTask.status;
               }
-            }
-            
-            var dlToCheck = finalDeadline || lRow[4];
-            if (isLateCheck(lRow[0], dlToCheck)) {
+            } else if (finalStatus.indexOf('遲') !== -1 || finalStatus.toLowerCase().indexOf('late') !== -1) {
               finalStatus = '遲交';
             }
 
@@ -1001,8 +1001,7 @@ function(e, ss, getSheetNames) {
               subject: lRow[2],
               taskName: lRow[3],
               range: lRow[4],
-              status: finalStatus,
-              deadline: finalDeadline
+              status: finalStatus
             });
             if (recentLogs.length >= 25) break;
           }
