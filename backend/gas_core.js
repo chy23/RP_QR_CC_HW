@@ -192,7 +192,20 @@ function(e, ss, getSheetNames) {
           }
 
           // (3) 代碼綁定
+          var isExplicitBind = /^綁定\s*/i.test(userMsg);
           var codeToMatch = userMsg.replace(/^綁定\s*/i, "").trim().toUpperCase();
+
+          // 判斷是否為「疑似代碼」：
+          // a. 家長主動輸入「綁定 XXX」
+          // b. 或者是純 5~8 碼純英數字（例如 V9UPK4、STU012），且不含中文、空格或標點符號
+          var isLikelyCode = isExplicitBind || (/^[A-Z0-9]{5,8}$/.test(codeToMatch));
+
+          if (!isLikelyCode) {
+            // 家長傳送的是一般問候、日常請假或親師提問（如：「老師好」、「今天小明發燒請假」、「明天要帶水壺嗎？」）
+            // 系統完全靜默不回覆，絕不亂回「查無此代碼」，保留給導師親自與家長 1 對 1 溝通！
+            continue;
+          }
+
           var allSheets = ss.getSheets();
           var matchedStudent = null;
           var matchedClassPrefix = "";
@@ -262,7 +275,10 @@ function(e, ss, getSheetNames) {
 
             replyLine(replyToken, successMsg);
           } else {
-            replyLine(replyToken, "⚠️ 查無此代碼【" + userMsg + "】！\n\n請核對作業查詢小卡上的專屬代碼（如：V9UPK4），並重新傳送代碼以完成綁定。");
+            // 只有明確輸入「綁定 XXX」或標準 6 碼英數代碼但查無該生時，才提示代碼錯誤
+            if (isExplicitBind || /^[A-Z0-9]{6}$/.test(codeToMatch) || /^STU\d{1,4}$/.test(codeToMatch)) {
+              replyLine(replyToken, "⚠️ 查無此作業查詢代碼【" + codeToMatch + "】！\n\n請核對聯絡簿作業查詢小卡上的專屬代碼（如：V9UPK4），並重新傳送代碼完成綁定。\n（若您是向老師傳送日常訊息，導師看到後會親自回覆您。）");
+            }
           }
         }
       }
