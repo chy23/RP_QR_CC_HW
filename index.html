@@ -178,7 +178,26 @@
             position: relative;
         }
 
+        /* ===== 卡片文字即時編輯樣式 ===== */
+        [contenteditable="true"] {
+            outline: 1px dashed transparent;
+            border-radius: 4px;
+            transition: outline-color 0.15s, background-color 0.15s;
+        }
+        [contenteditable="true"]:hover {
+            outline: 1.5px dashed #10b981;
+            background-color: rgba(16, 185, 129, 0.06);
+        }
+        [contenteditable="true"]:focus {
+            outline: 2px solid #059669;
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+
         @media print {
+            [contenteditable="true"] {
+                outline: none !important;
+                background-color: transparent !important;
+            }
             body {
                 background: white !important;
                 margin: 0 !important;
@@ -1492,6 +1511,42 @@
                                 <button onclick="previewParentCardsFromTab8()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
                                     <span>🖨️ 開啟 A4 預覽並列印</span>
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- 自訂查詢小卡文字摺疊區 -->
+                        <div class="mb-4 border border-emerald-200/80 bg-emerald-50/30 rounded-xl overflow-hidden transition-all">
+                            <button type="button" onclick="toggleParentTabCustomTextPanel()" class="w-full px-3.5 py-2.5 flex justify-between items-center text-left font-bold text-xs text-emerald-900 hover:bg-emerald-100/50 transition cursor-pointer">
+                                <span class="flex items-center gap-1.5">
+                                    <span>✏️</span> 自訂查詢卡文字與導師叮嚀 (教師可自由編輯)
+                                </span>
+                                <span id="parent-tab-custom-toggle-icon" class="text-xs text-emerald-600 font-bold">▼ 展開設定</span>
+                            </button>
+                            <div id="parent-tab-custom-panel" class="hidden p-3.5 border-t border-emerald-100 space-y-2.5 bg-white text-xs">
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">小卡標題：</label>
+                                    <input type="text" id="parent-card-cfg-title" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none" oninput="saveParentCardCustomTextFromUI()" placeholder="預設：作業繳交狀況查詢卡">
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">步驟一 (查詢說明)：</label>
+                                        <textarea id="parent-card-cfg-step1" rows="2" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none" oninput="saveParentCardCustomTextFromUI()"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">步驟二 (LINE 綁定說明)：</label>
+                                        <textarea id="parent-card-cfg-step2" rows="2" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none" oninput="saveParentCardCustomTextFromUI()"></textarea>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">導師叮嚀 / 親師配合叮嚀：</label>
+                                    <input type="text" id="parent-card-cfg-note" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none" oninput="saveParentCardCustomTextFromUI()">
+                                </div>
+                                <div class="flex justify-between items-center pt-1 border-t border-slate-100">
+                                    <span class="text-[11px] text-slate-400">💡 提示：在 A4 預覽畫面上亦可「直接點擊卡片文字」即時編輯！</span>
+                                    <button type="button" onclick="resetParentCardCustomText()" class="text-xs text-rose-600 hover:text-rose-800 font-bold px-2 py-1 rounded hover:bg-rose-50 transition cursor-pointer">
+                                        恢復預設文字
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

@@ -1348,8 +1348,184 @@
 // ==========================================
 // 家長端專屬查詢小卡預覽與列印模組 (比照 MPScore)
 // ==========================================
-async function previewParentCardsModal() {
-    let studentIds = getCheckedStudentIds('tab4-student-checkboxes');
+// ==========================================
+// 家長端查詢小卡自訂文字與設定模組
+// ==========================================
+const DEFAULT_PARENT_CARD_CONFIG = {
+    title: '作業繳交狀況查詢卡',
+    step1: '手機掃描查詢：直接開啟手機相機對準 QR Code 掃描，免密碼秒查孩子作業繳交狀況、各科明細與待補交清單。',
+    step2: 'LINE 自動通知：進入網頁點擊「一秒綁定 LINE」，放學有缺交主動發送推播通知！（亦可直接回傳查詢代碼至班級 LINE 完成綁定）',
+    note: '導師叮嚀：請家長每日協助督促孩子按時完成作業並落實訂正，親師攜手共創良好學習習慣！'
+};
+
+function getParentCardConfig() {
+    try {
+        const saved = localStorage.getItem('hw_parent_card_config');
+        if (saved) {
+            return Object.assign({}, DEFAULT_PARENT_CARD_CONFIG, JSON.parse(saved));
+        }
+    } catch(e) {}
+    return Object.assign({}, DEFAULT_PARENT_CARD_CONFIG);
+}
+
+function saveParentCardConfig(cfg) {
+    try {
+        localStorage.setItem('hw_parent_card_config', JSON.stringify(cfg));
+    } catch(e) {}
+}
+
+function syncParentCardTextsOnCards(cfg) {
+    if (!cfg) cfg = getParentCardConfig();
+    document.querySelectorAll('.card-editable-title').forEach(el => {
+        if (el.innerText !== cfg.title) el.innerText = cfg.title;
+    });
+    document.querySelectorAll('.card-editable-step1').forEach(el => {
+        if (el.innerText !== cfg.step1) el.innerText = cfg.step1;
+    });
+    document.querySelectorAll('.card-editable-step2').forEach(el => {
+        if (el.innerText !== cfg.step2) el.innerText = cfg.step2;
+    });
+    document.querySelectorAll('.card-editable-note').forEach(el => {
+        if (el.innerText !== cfg.note) el.innerText = cfg.note;
+    });
+}
+
+function syncTab8CustomInputs(cfg) {
+    if (!cfg) cfg = getParentCardConfig();
+    const t = document.getElementById('parent-card-cfg-title');
+    const s1 = document.getElementById('parent-card-cfg-step1');
+    const s2 = document.getElementById('parent-card-cfg-step2');
+    const n = document.getElementById('parent-card-cfg-note');
+    if (t) t.value = cfg.title || '';
+    if (s1) s1.value = cfg.step1 || '';
+    if (s2) s2.value = cfg.step2 || '';
+    if (n) n.value = cfg.note || '';
+}
+
+function syncModalCustomInputs(cfg) {
+    if (!cfg) cfg = getParentCardConfig();
+    const t = document.getElementById('modal-card-cfg-title');
+    const s1 = document.getElementById('modal-card-cfg-step1');
+    const s2 = document.getElementById('modal-card-cfg-step2');
+    const n = document.getElementById('modal-card-cfg-note');
+    if (t) t.value = cfg.title || '';
+    if (s1) s1.value = cfg.step1 || '';
+    if (s2) s2.value = cfg.step2 || '';
+    if (n) n.value = cfg.note || '';
+}
+
+function saveParentCardCustomTextFromUI() {
+    const cfg = {
+        title: document.getElementById('parent-card-cfg-title')?.value || DEFAULT_PARENT_CARD_CONFIG.title,
+        step1: document.getElementById('parent-card-cfg-step1')?.value || DEFAULT_PARENT_CARD_CONFIG.step1,
+        step2: document.getElementById('parent-card-cfg-step2')?.value || DEFAULT_PARENT_CARD_CONFIG.step2,
+        note: document.getElementById('parent-card-cfg-note')?.value || DEFAULT_PARENT_CARD_CONFIG.note,
+    };
+    saveParentCardConfig(cfg);
+    syncParentCardTextsOnCards(cfg);
+    syncModalCustomInputs(cfg);
+}
+
+function saveParentCardCustomTextFromModalUI() {
+    const cfg = {
+        title: document.getElementById('modal-card-cfg-title')?.value || DEFAULT_PARENT_CARD_CONFIG.title,
+        step1: document.getElementById('modal-card-cfg-step1')?.value || DEFAULT_PARENT_CARD_CONFIG.step1,
+        step2: document.getElementById('modal-card-cfg-step2')?.value || DEFAULT_PARENT_CARD_CONFIG.step2,
+        note: document.getElementById('modal-card-cfg-note')?.value || DEFAULT_PARENT_CARD_CONFIG.note,
+    };
+    saveParentCardConfig(cfg);
+    syncParentCardTextsOnCards(cfg);
+    syncTab8CustomInputs(cfg);
+}
+
+function handleCardDirectEdit(field, el) {
+    const text = el.innerText.trim();
+    const cfg = getParentCardConfig();
+    cfg[field] = text;
+    saveParentCardConfig(cfg);
+
+    // 同步到預覽頁面上的其他所有小卡
+    const selectorMap = {
+        title: '.card-editable-title',
+        step1: '.card-editable-step1',
+        step2: '.card-editable-step2',
+        note: '.card-editable-note'
+    };
+    const targetClass = selectorMap[field];
+    if (targetClass) {
+        document.querySelectorAll(targetClass).forEach(target => {
+            if (target !== el && target.innerText !== text) {
+                target.innerText = text;
+            }
+        });
+    }
+
+    // 同步更新設定面板中的輸入框
+    syncTab8CustomInputs(cfg);
+    syncModalCustomInputs(cfg);
+}
+
+function resetParentCardCustomText() {
+    saveParentCardConfig(DEFAULT_PARENT_CARD_CONFIG);
+    syncParentCardTextsOnCards(DEFAULT_PARENT_CARD_CONFIG);
+    syncTab8CustomInputs(DEFAULT_PARENT_CARD_CONFIG);
+    syncModalCustomInputs(DEFAULT_PARENT_CARD_CONFIG);
+    if (typeof showToast === 'function') {
+        showToast('已重設為預設文字內容！', 'success');
+    }
+}
+
+function toggleParentTabCustomTextPanel() {
+    const panel = document.getElementById('parent-tab-custom-panel');
+    const icon = document.getElementById('parent-tab-custom-toggle-icon');
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+        panel.classList.remove('hidden');
+        if (icon) icon.innerText = '▲ 收合設定';
+        syncTab8CustomInputs();
+    } else {
+        panel.classList.add('hidden');
+        if (icon) icon.innerText = '▼ 展開設定';
+    }
+}
+
+function toggleModalCardCustomPanel() {
+    const panel = document.getElementById('modal-card-custom-panel');
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+        panel.classList.remove('hidden');
+        syncModalCustomInputs();
+    } else {
+        panel.classList.add('hidden');
+    }
+}
+
+function changeParentCardDensityInModal(val) {
+    const density = parseInt(val, 10) || 6;
+    window._currentParentCardsDensity = density;
+    const tab8Density = document.getElementById('parent-tab-card-density');
+    if (tab8Density) tab8Density.value = String(density);
+    const tab4Density = document.getElementById('parent-card-density');
+    if (tab4Density) tab4Density.value = String(density);
+    const studentIds = window._currentParentCardStudentIds || db.students.map(s => s.id);
+    renderParentCardsContent(studentIds, density);
+}
+
+// ==========================================
+// 家長端專屬查詢小卡預覽與列印模組 (比照 MPScore)
+// ==========================================
+async function previewParentCardsModal(explicitStudentIds, explicitDensity) {
+    let studentIds = explicitStudentIds;
+    if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+        const tab8Checked = Array.from(document.querySelectorAll('.parent-tab-stu-cb:checked')).map(cb => parseInt(cb.value, 10));
+        if (tab8Checked.length > 0) {
+            studentIds = tab8Checked;
+        } else {
+            studentIds = getCheckedStudentIds('tab4-student-checkboxes');
+        }
+    }
     if (!studentIds || studentIds.length === 0) {
         studentIds = db.students.map(s => s.id);
     }
@@ -1358,8 +1534,14 @@ async function previewParentCardsModal() {
         return;
     }
 
-    const densitySelect = document.getElementById('parent-card-density');
-    const cardsPerPage = densitySelect ? parseInt(densitySelect.value, 10) || 6 : 6;
+    let cardsPerPage = explicitDensity;
+    if (!cardsPerPage) {
+        const densitySelect = document.getElementById('parent-tab-card-density') || document.getElementById('parent-card-density');
+        cardsPerPage = densitySelect ? parseInt(densitySelect.value, 10) || 6 : 6;
+    }
+
+    window._currentParentCardStudentIds = studentIds;
+    window._currentParentCardsDensity = cardsPerPage;
 
     let modal = document.getElementById('parent-cards-modal');
     if (!modal) {
@@ -1369,19 +1551,61 @@ async function previewParentCardsModal() {
         modal.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-5xl max-h-[92vh] mx-auto overflow-hidden">
                 <!-- 模態框標頭 -->
-                <div class="p-4 bg-emerald-600 text-white flex justify-between items-center no-print">
+                <div class="p-3.5 bg-emerald-600 text-white flex flex-wrap justify-between items-center gap-2 no-print shadow-xs">
                     <div class="flex items-center gap-2">
                         <span class="text-xl">👨‍👩‍👧</span>
                         <div>
-                            <h3 class="font-bold text-lg">家長專屬查詢小卡列印預覽 (A4 排版)</h3>
-                            <p class="text-xs text-emerald-100">支援手機相機一鍵掃碼直達孩子手札 ‧ 裁切後夾於聯絡簿發放</p>
+                            <h3 class="font-bold text-base sm:text-lg leading-tight">家長專屬查詢小卡列印預覽 (A4 排版)</h3>
+                            <p class="text-xs text-emerald-100">支援手機相機一鍵掃碼 ‧ 點擊卡片文字可直接線上編輯修改</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        <!-- 密度切換 -->
+                        <div class="flex items-center gap-1.5 bg-emerald-700/80 px-2.5 py-1 rounded-xl border border-emerald-500/50 text-xs">
+                            <span class="text-emerald-100 font-bold hidden sm:inline">每頁密度：</span>
+                            <select id="modal-parent-card-density" onchange="changeParentCardDensityInModal(this.value)" class="bg-emerald-800 text-white text-xs font-bold rounded-lg px-2 py-1 border border-emerald-500 outline-none cursor-pointer">
+                                <option value="6">每頁 6 張 (3x2 推薦)</option>
+                                <option value="8">每頁 8 張 (4x2 經濟)</option>
+                                <option value="4">每頁 4 張 (2x2 大字)</option>
+                            </select>
+                        </div>
+                        <!-- 自訂文字開關 -->
+                        <button onclick="toggleModalCardCustomPanel()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3 py-1.5 rounded-xl text-xs border border-emerald-500/60 transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                            <span>✏️ 自訂文字</span>
+                        </button>
                         <button onclick="window.print()" class="bg-white text-emerald-800 hover:bg-emerald-50 font-bold px-4 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
                             <span>🖨️ 直接列印 (A4)</span>
                         </button>
-                        <button onclick="closeParentCardsModal()" class="text-white hover:bg-white/20 p-2 rounded-full text-xl transition active:scale-95 cursor-pointer">&times;</button>
+                        <button onclick="closeParentCardsModal()" class="text-white hover:bg-white/20 p-2 rounded-full text-xl transition active:scale-95 cursor-pointer leading-none">&times;</button>
+                    </div>
+                </div>
+
+                <!-- 模態框內的自訂文字面板 (預設隱藏，點擊按鈕展開) -->
+                <div id="modal-card-custom-panel" class="hidden p-3.5 bg-emerald-50 border-b border-emerald-200 no-print">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs mb-2">
+                        <div>
+                            <label class="block font-bold text-emerald-950 mb-0.5">小卡標題：</label>
+                            <input type="text" id="modal-card-cfg-title" class="w-full border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-800 bg-white outline-none focus:ring-1 focus:ring-emerald-500" oninput="saveParentCardCustomTextFromModalUI()">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-emerald-950 mb-0.5">導師叮嚀 / 親師配合叮嚀：</label>
+                            <input type="text" id="modal-card-cfg-note" class="w-full border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-800 bg-white outline-none focus:ring-1 focus:ring-emerald-500" oninput="saveParentCardCustomTextFromModalUI()">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-emerald-950 mb-0.5">步驟一 (查詢說明)：</label>
+                            <textarea id="modal-card-cfg-step1" rows="2" class="w-full border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-800 bg-white outline-none focus:ring-1 focus:ring-emerald-500" oninput="saveParentCardCustomTextFromModalUI()"></textarea>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-emerald-950 mb-0.5">步驟二 (LINE 綁定說明)：</label>
+                            <textarea id="modal-card-cfg-step2" rows="2" class="w-full border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-800 bg-white outline-none focus:ring-1 focus:ring-emerald-500" oninput="saveParentCardCustomTextFromModalUI()"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-emerald-800 font-medium">💡 亦可直接在下方卡片點選文字即時編輯（會自動同步至全班卡片並儲存）</span>
+                        <div class="space-x-2">
+                            <button onclick="resetParentCardCustomText()" class="text-rose-600 hover:text-rose-800 font-bold px-2 py-1 rounded hover:bg-rose-100 transition cursor-pointer">恢復預設文字</button>
+                            <button onclick="toggleModalCardCustomPanel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded-lg transition active:scale-95 cursor-pointer">完成收合</button>
+                        </div>
                     </div>
                 </div>
 
@@ -1399,6 +1623,12 @@ async function previewParentCardsModal() {
         `;
         document.body.appendChild(modal);
     }
+
+    const modalDensitySelect = document.getElementById('modal-parent-card-density');
+    if (modalDensitySelect) {
+        modalDensitySelect.value = String(cardsPerPage);
+    }
+    syncModalCustomInputs();
 
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
@@ -1444,27 +1674,31 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
         apiParam = gas.split('/macros/s/')[1].split('/')[0];
     }
 
+    const cfg = getParentCardConfig();
+
     let gridClass = 'grid-cols-2 grid-rows-3 gap-3.5';
     let qrPixelSize = 240;
-    let qrDisplaySize = 100;
+    let qrDisplaySize = 105;
     let cardPadding = 'p-3.5';
     let nameSize = 'text-2xl';
     let stepPadding = 'p-2';
     let stepTextSize = 'text-[10px]';
 
     if (cardsPerPage === 8) {
-        gridClass = 'grid-cols-2 grid-rows-4 gap-2.5';
+        gridClass = 'grid-cols-2 grid-rows-4 gap-2';
+        qrPixelSize = 200;
         qrDisplaySize = 82;
-        cardPadding = 'p-2.5';
+        cardPadding = 'p-2';
         nameSize = 'text-xl';
         stepPadding = 'p-1.5';
         stepTextSize = 'text-[9px]';
     } else if (cardsPerPage === 4) {
-        gridClass = 'grid-cols-2 grid-rows-2 gap-5';
-        qrDisplaySize = 125;
-        cardPadding = 'p-5';
+        gridClass = 'grid-cols-2 grid-rows-2 gap-4';
+        qrPixelSize = 300;
+        qrDisplaySize = 130;
+        cardPadding = 'p-4';
         nameSize = 'text-3xl';
-        stepPadding = 'p-3';
+        stepPadding = 'p-2.5';
         stepTextSize = 'text-xs';
     }
 
@@ -1513,52 +1747,60 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
             }
 
             const card = document.createElement('div');
-            card.className = `border-2 border-dashed border-slate-300 rounded-2xl ${cardPadding} bg-white flex flex-col justify-between relative shadow-2xs`;
+            card.className = `border-2 border-dashed border-slate-300 rounded-2xl ${cardPadding} bg-white flex flex-col justify-between relative shadow-2xs h-full`;
             card.innerHTML = `
                 <!-- 頂部標頭 -->
-                <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 mb-1 flex-shrink-0">
+                <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 flex-shrink-0">
                     <div class="flex items-center gap-1.5">
-                        <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">${classLabel}</span>
-                        <span class="text-sm font-black text-slate-800 tracking-tight">作業繳交狀況查詢卡</span>
+                        <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 select-none">${classLabel}</span>
+                        <span class="card-editable-title text-sm font-black text-slate-800 tracking-tight cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改全班標題" oninput="handleCardDirectEdit('title', this)">${cfg.title}</span>
                     </div>
-                    <span class="text-[10px] text-slate-400 font-mono flex items-center gap-0.5">✂️ 裁切發放</span>
+                    <span class="text-[10px] text-slate-400 font-mono flex items-center gap-0.5 select-none">✂️ 裁切發放</span>
                 </div>
                 
                 <!-- 中間核心資訊 (學生姓名、座號、查詢代碼與大 QR Code) -->
-                <div class="flex items-center justify-between gap-3 my-auto py-1">
-                    <div class="space-y-1.5 flex-1 min-w-0">
-                        <div class="${nameSize} font-black text-slate-900 tracking-tight leading-none truncate">${st.name}</div>
+                <div class="flex items-center justify-between gap-3 py-2 flex-1">
+                    <div class="space-y-1.5 flex-1 min-w-0 flex flex-col justify-center">
+                        <div class="${nameSize} font-black text-slate-900 tracking-tight leading-tight truncate">${st.name}</div>
                         <div class="text-sm font-bold text-slate-600 flex items-center gap-1">
                             <span>座號：</span>
-                            <span class="font-mono text-base font-black text-slate-900">${String(st.id).padStart(2, '0')}</span>
+                            <span class="font-mono text-base font-black text-slate-900">${String(st.id).padStart(2, '0')} 號</span>
                         </div>
-                        <div class="bg-emerald-50/90 border border-emerald-300 rounded-xl px-2.5 py-1 inline-block shadow-2xs">
+                        <div class="bg-emerald-50/90 border border-emerald-300 rounded-xl px-2.5 py-1 inline-block shadow-2xs self-start">
                             <div class="text-[9.5px] text-emerald-800 font-bold leading-tight">專屬查詢代碼</div>
                             <div class="text-sm font-mono font-black text-emerald-950 tracking-wider leading-tight">${token}</div>
                         </div>
                     </div>
                     <div class="flex-shrink-0 flex flex-col items-center justify-center p-1.5 bg-white border border-slate-200 rounded-2xl shadow-xs">
                         <img src="${qrDataUrl}" width="${qrDisplaySize}" height="${qrDisplaySize}" alt="QR" class="rounded-lg">
-                        <span class="text-[9px] text-slate-400 font-bold mt-1 select-none">手機相機掃描</span>
+                        <span class="text-[9px] text-slate-400 font-bold mt-1 select-none">相機掃描免帳密</span>
                     </div>
                 </div>
 
-                <!-- 底部指引：如何查詢與如何綁定 -->
+                <!-- 底部指引：如何查詢、如何綁定與導師叮嚀 -->
                 <div class="pt-2 border-t border-slate-100 space-y-1.5 flex-shrink-0">
                     <div class="bg-slate-50/90 border border-slate-200/80 rounded-xl ${stepPadding} flex items-start gap-2">
-                        <div class="w-5 h-5 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs">
+                        <div class="w-5 h-5 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
                             1
                         </div>
-                        <div class="${stepTextSize} text-slate-700 leading-snug">
-                            <strong class="text-emerald-950">手機掃描查詢：</strong>直接開啟手機相機對準 QR Code 掃描，免密碼秒查孩子作業繳交狀況、各科明細與待補交清單。
+                        <div class="${stepTextSize} text-slate-700 leading-snug card-editable-step1 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟一說明" oninput="handleCardDirectEdit('step1', this)">
+                            ${cfg.step1}
                         </div>
                     </div>
                     <div class="bg-slate-50/90 border border-slate-200/80 rounded-xl ${stepPadding} flex items-start gap-2">
-                        <div class="w-5 h-5 rounded-lg bg-blue-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs">
+                        <div class="w-5 h-5 rounded-lg bg-blue-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
                             2
                         </div>
-                        <div class="${stepTextSize} text-slate-700 leading-snug">
-                            <strong class="text-blue-950">LINE 自動通知：</strong>進入網頁點擊<strong>「一秒綁定 LINE」</strong>，放學有缺交主動發送推播通知！（亦可直接回傳查詢代碼至班級 LINE 完成綁定）
+                        <div class="${stepTextSize} text-slate-700 leading-snug card-editable-step2 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟二說明" oninput="handleCardDirectEdit('step2', this)">
+                            ${cfg.step2}
+                        </div>
+                    </div>
+                    <div class="bg-amber-50/70 border border-amber-200/70 rounded-xl ${stepPadding} flex items-start gap-2">
+                        <div class="w-5 h-5 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
+                            💡
+                        </div>
+                        <div class="${stepTextSize} text-amber-950 leading-snug card-editable-note font-medium cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改導師叮嚀" oninput="handleCardDirectEdit('note', this)">
+                            ${cfg.note}
                         </div>
                     </div>
                 </div>
@@ -1658,6 +1900,9 @@ function renderParentTab() {
     if (typeof fetchLineBindingStatus === 'function') {
         fetchLineBindingStatus();
     }
+
+    // 5. 同步小卡自訂文字至 Tab 8 面板輸入框
+    syncTab8CustomInputs();
 }
 
 function updateParentTabSelectedCount() {
