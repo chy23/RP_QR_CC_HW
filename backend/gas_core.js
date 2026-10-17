@@ -52,8 +52,40 @@ function(e, ss, getSheetNames) {
     }
 
     // ==========================================
-    // 全域共用輔助函式：網址產生、日期時序比對、學生代碼檢索、現況摘要計算
+    // 全域共用輔助函式：網址產生、日期時序比對、學生代碼檢索、現況摘要計算、分頁色彩管理
     // ==========================================
+
+    function getColorForPrefix(p) {
+      if (!p) return null;
+      var clean = p.toString().replace(/\[|\]/g, '').trim();
+      if (!clean) return null;
+      var colors = ['#ea4335', '#fbbc04', '#34a853', '#4285f4', '#ff6d01', '#46bdc6', '#7baaf7', '#d01884', '#00bfa5', '#9c27b0', '#e91e63', '#673ab7'];
+      var hash = 0;
+      for (var i = 0; i < clean.length; i++) {
+        hash = clean.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      hash = Math.abs(hash);
+      return colors[hash % colors.length];
+    }
+
+    function ensureSheetAndColor(sheetName) {
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        sheet = ss.insertSheet(sheetName);
+      }
+      var p = "";
+      var m = sheetName.match(/^\[([^\]]+)\]/);
+      if (m) {
+        p = m[1];
+      } else if (payload && payload.classPrefix) {
+        p = payload.classPrefix;
+      }
+      var tabColor = getColorForPrefix(p);
+      if (tabColor) {
+        try { if (sheet.getTabColor() !== tabColor) sheet.setTabColor(tabColor); } catch(err) {}
+      }
+      return sheet;
+    }
 
     function getGasWebAppId() {
       var gasId = "";
@@ -484,9 +516,8 @@ function(e, ss, getSheetNames) {
             var cLabel = matchedClassPrefix.replace(/\[|\]/g, "").trim() || "本班";
 
             var bindSheetName = matchedClassPrefix + "LINE用戶綁定";
-            var bindSheet = ss.getSheetByName(bindSheetName);
-            if (!bindSheet) {
-              bindSheet = ss.insertSheet(bindSheetName);
+            var bindSheet = ensureSheetAndColor(bindSheetName);
+            if (bindSheet.getLastRow() === 0) {
               bindSheet.appendRow(["座號", "姓名", "防偽代碼", "LINE User ID", "綁定時間", "狀態"]);
               bindSheet.getRange("A1:F1").setBackground("#34a853").setFontColor("#ffffff").setFontWeight("bold");
             }
@@ -556,6 +587,20 @@ function(e, ss, getSheetNames) {
         }
       }
       var disc = discoverAllClasses(config);
+
+      // 自動同步為試算表內所有班級分頁加上色彩 (包含 LINE用戶綁定、各科分頁等)
+      var allSh = ss.getSheets();
+      for (var si = 0; si < allSh.length; si++) {
+        var curSh = allSh[si];
+        var shM = curSh.getName().match(/^\[([^\]]+)\]/);
+        if (shM) {
+          var tCol = getColorForPrefix(shM[1]);
+          if (tCol) {
+            try { if (curSh.getTabColor() !== tCol) curSh.setTabColor(tCol); } catch(err) {}
+          }
+        }
+      }
+
       return ContentService.createTextOutput(JSON.stringify({
         status: 'success',
         sheetUrl: ss.getUrl(),
@@ -602,6 +647,12 @@ function(e, ss, getSheetNames) {
 
       var bindSheetName = prefix + "LINE用戶綁定";
       var bindSheet = ss.getSheetByName(bindSheetName);
+      if (bindSheet) {
+        var tCol = getColorForPrefix(prefix);
+        if (tCol) {
+          try { if (bindSheet.getTabColor() !== tCol) bindSheet.setTabColor(tCol); } catch(e) {}
+        }
+      }
       var bindings = [];
       if (bindSheet && bindSheet.getLastRow() > 1) {
         var bData = bindSheet.getDataRange().getDisplayValues();
@@ -639,6 +690,12 @@ function(e, ss, getSheetNames) {
 
       var bindSheetName = prefix + "LINE用戶綁定";
       var bindSheet = ss.getSheetByName(bindSheetName);
+      if (bindSheet) {
+        var tCol = getColorForPrefix(prefix);
+        if (tCol) {
+          try { if (bindSheet.getTabColor() !== tCol) bindSheet.setTabColor(tCol); } catch(e) {}
+        }
+      }
       var userMap = {};
       if (bindSheet && bindSheet.getLastRow() > 1) {
         var bData = bindSheet.getDataRange().getDisplayValues();
@@ -714,6 +771,12 @@ function(e, ss, getSheetNames) {
     if (payload.action === 'line_unbind_student') {
       var bindSheetName = prefix + "LINE用戶綁定";
       var bindSheet = ss.getSheetByName(bindSheetName);
+      if (bindSheet) {
+        var tCol = getColorForPrefix(prefix);
+        if (tCol) {
+          try { if (bindSheet.getTabColor() !== tCol) bindSheet.setTabColor(tCol); } catch(e) {}
+        }
+      }
       var studentId = (payload.studentId || "").toString().trim();
       var unboundName = "";
       if (bindSheet && bindSheet.getLastRow() > 1) {
@@ -726,29 +789,6 @@ function(e, ss, getSheetNames) {
         }
       }
       return ContentService.createTextOutput(JSON.stringify({ status: 'success', studentName: unboundName })).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    function getColorForPrefix(p) {
-      if (!p) return null;
-      var colors = ['#ea4335', '#fbbc04', '#34a853', '#4285f4', '#ff6d01', '#46bdc6', '#7baaf7', '#d01884', '#00bfa5', '#9c27b0', '#e91e63', '#673ab7'];
-      var hash = 0;
-      for (var i = 0; i < p.length; i++) {
-        hash = p.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      hash = Math.abs(hash);
-      return colors[hash % colors.length];
-    }
-    
-    function ensureSheetAndColor(sheetName) {
-      var sheet = ss.getSheetByName(sheetName);
-      if (!sheet) {
-        sheet = ss.insertSheet(sheetName);
-      }
-      var tabColor = getColorForPrefix(payload.classPrefix || "");
-      if (tabColor) {
-        try { if (sheet.getTabColor() !== tabColor) sheet.setTabColor(tabColor); } catch(err) {}
-      }
-      return sheet;
     }
 
     if (payload.action === 'hide_class_tabs') {
@@ -769,10 +809,14 @@ function(e, ss, getSheetNames) {
       if (!prefix) return ContentService.createTextOutput(JSON.stringify({status: 'error', message: 'No prefix provided'})).setMimeType(ContentService.MimeType.JSON);
       var sheets = ss.getSheets();
       var count = 0;
+      var tCol = getColorForPrefix(prefix);
       for (var i = 0; i < sheets.length; i++) {
         var s = sheets[i];
         if (s.getName().indexOf(prefix) === 0) {
           s.showSheet();
+          if (tCol) {
+            try { if (s.getTabColor() !== tCol) s.setTabColor(tCol); } catch(err) {}
+          }
           count++;
         }
       }
@@ -799,6 +843,18 @@ function(e, ss, getSheetNames) {
       config = disc.config;
       var discovered = disc.discovered;
       var allSheets = ss.getSheets();
+
+      // 自動檢查並為所有班級分頁加上色彩標籤 (包含 LINE用戶綁定 等分頁)
+      for (var si = 0; si < allSheets.length; si++) {
+        var curSh = allSheets[si];
+        var shM = curSh.getName().match(/^\[([^\]]+)\]/);
+        if (shM) {
+          var scCol = getColorForPrefix(shM[1]);
+          if (scCol) {
+            try { if (curSh.getTabColor() !== scCol) curSh.setTabColor(scCol); } catch(err) {}
+          }
+        }
+      }
 
       // 3. 尋找目標學生名單分頁
       var studentSheet = null;
