@@ -1646,6 +1646,24 @@ function previewParentCardsFromTab8() {
     previewParentCardsModal(checkedIds, density);
 }
 
+// 學生姓名去識別化函式（個資法保護規範：三個字中間變圈圈，兩個字第二個字變圈圈）
+function maskStudentName(name) {
+    if (!name) return '';
+    const s = name.toString().trim();
+    if (s.length <= 1) return s;
+    if (s.length === 2) {
+        return s.charAt(0) + '○';
+    }
+    if (s.length === 3) {
+        return s.charAt(0) + '○' + s.charAt(2);
+    }
+    let mid = '';
+    for (let i = 1; i < s.length - 1; i++) {
+        mid += '○';
+    }
+    return s.charAt(0) + mid + s.charAt(s.length - 1);
+}
+
 // 通用家長端作業狀態分類器
 function classifyParentTaskStatus(statusStr, timestamp, deadline) {
     const s = (statusStr || '').toString().trim();
@@ -1941,7 +1959,7 @@ function updateParentSimulator(studentId) {
                     ${String(student.id).padStart(2, '0')}
                 </div>
                 <div>
-                    <div class="text-sm font-black text-slate-900">${student.name}</div>
+                    <div class="text-sm font-black text-slate-900">${maskStudentName(student.name)}</div>
                 </div>
             </div>
             <div class="text-right">

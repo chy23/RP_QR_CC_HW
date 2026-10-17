@@ -52,8 +52,25 @@ function(e, ss, getSheetNames) {
     }
 
     // ==========================================
-    // 全域共用輔助函式：網址產生、日期時序比對、學生代碼檢索、現況摘要計算、分頁色彩管理
+    // 全域共用輔助函式：網址產生、學生姓名去識別化、學生代碼檢索、現況摘要計算、分頁色彩管理
     // ==========================================
+
+    function maskStudentName(name) {
+      if (!name) return "";
+      var s = name.toString().trim();
+      if (s.length <= 1) return s;
+      if (s.length === 2) {
+        return s.charAt(0) + "○";
+      }
+      if (s.length === 3) {
+        return s.charAt(0) + "○" + s.charAt(2);
+      }
+      var mid = "";
+      for (var i = 1; i < s.length - 1; i++) {
+        mid += "○";
+      }
+      return s.charAt(0) + mid + s.charAt(s.length - 1);
+    }
 
     function getColorForPrefix(p) {
       if (!p) return null;
@@ -423,7 +440,7 @@ function(e, ss, getSheetNames) {
                 var summary = getStudentStatusSummary(stu.classPrefix, stu);
                 var portalUrl = getPortalUrl(stu.className, stu.token);
 
-                replyLines.push("👦 學生：【" + stu.className + "】" + stu.id + "號 " + stu.name);
+                replyLines.push("👦 學生：【" + stu.className + "】" + stu.id + "號 " + maskStudentName(stu.name));
                 if (summary.missingTasks.length > 0) {
                   replyLines.push("🚨 待補交（共 " + summary.missingTasks.length + " 項）：");
                   for (var m = 0; m < summary.missingTasks.length; m++) {
@@ -544,7 +561,7 @@ function(e, ss, getSheetNames) {
             var replyLines = [
               "🎉 【LINE 綁定成功・作業現況回報】\n",
               "家長您好，已成功為您綁定：",
-              "👦 學生：【" + cLabel + "】" + matchedStudent.id + "號 " + matchedStudent.name + "\n"
+              "👦 學生：【" + cLabel + "】" + matchedStudent.id + "號 " + maskStudentName(matchedStudent.name) + "\n"
             ];
 
             if (summary.missingTasks.length > 0) {
@@ -726,7 +743,7 @@ function(e, ss, getSheetNames) {
 
         var portalUrl = getPortalUrl(prefix, tgt.token);
         var msgText = "🚨 【作業待補交提醒】\n\n" +
-          tgt.studentName + " 家長您好：\n" +
+          maskStudentName(tgt.studentName) + " 家長您好：\n" +
           "今日學校清點作業，孩子尚有 " + tgt.missingTasks.length + " 項作業待補交：\n" +
           taskLines.join("\n") + "\n\n" +
           "請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！\n\n" +
@@ -1021,7 +1038,11 @@ function(e, ss, getSheetNames) {
       return ContentService.createTextOutput(JSON.stringify({
         status: 'success',
         syncedAt: new Date().toISOString(),
-        student: targetStudent,
+        student: {
+          id: targetStudent.id,
+          name: maskStudentName(targetStudent.name),
+          token: targetStudent.token
+        },
         className: classLabel,
         lineBotBasicId: botBasicId,
         tasks: summary.tasks,

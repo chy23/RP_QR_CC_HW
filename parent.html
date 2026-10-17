@@ -885,6 +885,29 @@
     }
 
     // ==========================================
+    // 學生姓名去識別化函式（依個人資料保護法規範）
+    // 三個字名字：中間的字變圈圈（例如：陳小明 -> 陳○明）
+    // 兩個字名字：第二個字變圈圈（例如：李明 -> 李○）
+    // 四個字以上：首尾保留，中間全部變圈圈（例如：歐陽大華 -> 歐○○華）
+    // ==========================================
+    function maskStudentName(name) {
+      if (!name) return '';
+      const s = name.toString().trim();
+      if (s.length <= 1) return s;
+      if (s.length === 2) {
+        return s.charAt(0) + '○';
+      }
+      if (s.length === 3) {
+        return s.charAt(0) + '○' + s.charAt(2);
+      }
+      let mid = '';
+      for (let i = 1; i < s.length - 1; i++) {
+        mid += '○';
+      }
+      return s.charAt(0) + mid + s.charAt(s.length - 1);
+    }
+
+    // ==========================================
     // 通用家長端作業狀態分類器
     // ==========================================
     function classifyTaskStatus(statusStr, timestamp, deadline) {
@@ -981,7 +1004,7 @@
       const recentLogs = data.recentLogs || [];
 
       // 1. 學生身分英雄卡
-      document.getElementById('heroStudentName').innerText = student.name;
+      document.getElementById('heroStudentName').innerText = maskStudentName(student.name);
       document.getElementById('heroClassName').innerText = data.className || '目前班級';
       document.getElementById('heroToken').innerText = student.token;
       document.getElementById('studentAvatar').innerText = String(student.id).padStart(2, '0');
