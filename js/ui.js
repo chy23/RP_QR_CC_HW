@@ -289,16 +289,31 @@ function deleteClass(id) {
 }
 
 // ==========================================
+        function toggleMobileMenu() {
+            const tabs = document.getElementById('main-tabs');
+            if (!tabs) return;
+            tabs.classList.toggle('hidden');
+            tabs.classList.toggle('flex');
+        }
+
         function switchTab(tabIndex) {
             try {
+                // 行動裝置切換分頁後自動收合分頁選單 (Apple HIG Sheet / Drawer Dismiss)
+                if (window.innerWidth < 768) {
+                    const tabs = document.getElementById('main-tabs');
+                    if (tabs) {
+                        tabs.classList.add('hidden');
+                        tabs.classList.remove('flex');
+                    }
+                }
 
-            document.querySelectorAll('.tab-content').forEach(el => {
-                el.classList.toggle('active', el.id === 'tab-' + tabIndex);
-            });
-            document.querySelectorAll('.tab-btn').forEach(el => {
-                const onClickAttr = el.getAttribute('onclick');
-                el.classList.toggle('active', onClickAttr && onClickAttr.includes(`switchTab(${tabIndex})`));
-            });
+                document.querySelectorAll('.tab-content').forEach(el => {
+                    el.classList.toggle('active', el.id === 'tab-' + tabIndex);
+                });
+                document.querySelectorAll('.tab-btn').forEach(el => {
+                    const onClickAttr = el.getAttribute('onclick');
+                    el.classList.toggle('active', onClickAttr && onClickAttr.includes(`switchTab(${tabIndex})`));
+                });
             if(tabIndex === 1) {
                 initScanner();
                 document.body.classList.add('scanning-mode');

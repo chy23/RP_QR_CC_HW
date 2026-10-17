@@ -2,7 +2,10 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#F8F9FA">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>學生作業繳交與學習習慣手札 ‧ 親師同心伴讀</title>
   
   <!-- Tailwind CSS -->
@@ -14,13 +17,23 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
     :root {
-      --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang TC", "Noto Sans TC", sans-serif;
+      --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+    }
+    html {
+      -webkit-text-size-adjust: 100%;
     }
     body {
       font-family: var(--font-system);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       background-color: #F8F9FA;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: max(4rem, env(safe-area-inset-bottom));
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+    h1, h2, h3 {
+      letter-spacing: -0.02em;
     }
     button, .touch-target {
       -webkit-tap-highlight-color: transparent;
@@ -29,41 +42,90 @@
     button:active, .touch-target:active {
       transform: scale(0.97);
     }
-    .apple-glass {
-      background: rgba(255, 255, 255, 0.94);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(226, 232, 240, 0.85);
-      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+    /* iOS Safari 輸入框防自動放大 (小於16px會強制縮放) */
+    @media screen and (max-width: 768px) {
+      input, select, textarea {
+        font-size: 16px !important;
+      }
     }
-    /* 平滑展開動畫 */
-    .accordion-content {
-      transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    /* Apple HIG Vibrancy 半透明材質 */
+    .apple-glass {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+    }
+    /* 平滑物理折疊展開動畫 (CSS Grid) */
+    .accordion-panel {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+      opacity: 0;
+    }
+    .accordion-panel.open {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+    .accordion-panel > div {
+      overflow: hidden;
+    }
+
+    /* Accessibility: 減弱動態效果 (Reduced Motion) */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .accordion-panel {
+        transition: none !important;
+      }
+    }
+
+    /* Accessibility: 降低透明度 (Reduced Transparency) */
+    @media (prefers-reduced-transparency: reduce) {
+      .apple-glass, header {
+        background: #ffffff !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+    }
+
+    /* Accessibility: 高對比度 (High Contrast) */
+    @media (prefers-contrast: more) {
+      .apple-glass {
+        border: 2px solid #0f172a !important;
+      }
+      .text-slate-400, .text-slate-500 {
+        color: #0f172a !important;
+      }
     }
   </style>
 </head>
-<body class="text-slate-800 min-h-screen pb-16 selection:bg-amber-500 selection:text-slate-950">
+<body class="text-slate-800 min-h-screen selection:bg-amber-500 selection:text-slate-950">
 
   <!-- ==================== 頂部導覽列 ==================== -->
-  <header class="apple-glass sticky top-0 z-40 text-slate-800 border-b border-slate-200/70">
-    <div class="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
+  <header class="apple-glass sticky top-0 z-40 text-slate-800 border-b border-slate-200/70 pt-[max(0.75rem,env(safe-area-inset-top))]">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-black text-lg shadow-sm">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-black text-lg shadow-sm">
           🌱
         </div>
         <div>
-          <h1 class="text-base font-black text-slate-900 tracking-tight flex items-center gap-1">
+          <h1 class="text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5">
             <span>學生作業學習手札</span>
-            <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-bold">家長端</span>
+            <span class="text-[11px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold tracking-wide">家長端</span>
           </h1>
           <p class="text-xs text-slate-500 font-medium hidden sm:block">看見孩子的每一步累積 ‧ 親師同心伴讀</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button id="btnScanStudent" onclick="openScanModal()" class="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full transition active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-2xs">
+        <button id="btnScanStudent" onclick="openScanModal()" class="min-h-[44px] text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-2xs">
           <span>📷 掃描換人</span>
         </button>
-        <button id="btnRefresh" onclick="doParentQuery(currentStudentToken, true)" class="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-full border border-emerald-200 transition active:scale-95 flex items-center gap-1 shadow-2xs cursor-pointer">
+        <button id="btnRefresh" onclick="doParentQuery(currentStudentToken, true)" class="min-h-[44px] text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2 rounded-xl border border-emerald-200 transition active:scale-95 flex items-center gap-1 shadow-2xs cursor-pointer">
           <span id="refreshIcon">🔄</span>
           <span class="hidden sm:inline">重新整理</span>
         </button>
@@ -91,13 +153,13 @@
       <!-- 掃描動作按鈕組 -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
         <!-- 開啟相機掃描 -->
-        <button id="btnStartCamera" type="button" onclick="startCameraScan()" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-black px-6 py-3.5 rounded-2xl text-base transition shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer">
+        <button id="btnStartCamera" type="button" onclick="startCameraScan()" class="w-full sm:w-auto min-h-[48px] bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-black px-6 py-3.5 rounded-2xl text-base transition shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer">
           <span class="text-xl">📷</span>
           <span>開啟相機鏡頭掃描</span>
         </button>
 
         <!-- 從相簿選取照片 -->
-        <label for="qrFileInput" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold px-5 py-3.5 rounded-2xl text-sm transition border border-slate-200 flex items-center justify-center gap-2 cursor-pointer">
+        <label for="qrFileInput" class="w-full sm:w-auto min-h-[48px] bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold px-5 py-3.5 rounded-2xl text-sm transition border border-slate-200 flex items-center justify-center gap-2 cursor-pointer">
           <span class="text-lg">🖼️</span>
           <span>從相簿選擇小卡照片</span>
         </label>
@@ -106,15 +168,15 @@
 
       <!-- 手動輸入專屬 6 碼代碼備用區塊 -->
       <div class="pt-2">
-        <button type="button" onclick="toggleManualCodeInput()" class="text-xs font-bold text-slate-500 hover:text-emerald-700 transition flex items-center justify-center gap-1 mx-auto cursor-pointer">
+        <button type="button" onclick="toggleManualCodeInput()" class="min-h-[44px] text-xs font-bold text-slate-600 hover:text-emerald-700 transition flex items-center justify-center gap-1.5 mx-auto cursor-pointer px-3">
           <span id="manualToggleIcon">⌨️</span>
           <span id="manualToggleText">鏡頭無法使用？點此手動輸入小卡代碼</span>
         </button>
-        <div id="manualCodeBox" class="hidden mt-3 max-w-sm mx-auto p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-          <div class="text-[11px] font-bold text-slate-500 text-left">請輸入孩子小卡上的專屬代碼（例如：U4HZIG）：</div>
+        <div id="manualCodeBox" class="hidden mt-3 max-w-sm mx-auto p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+          <div class="text-xs font-bold text-slate-600 text-left">請輸入孩子小卡上的專屬代碼（例如：U4HZIG）：</div>
           <div class="flex gap-2">
-            <input type="text" id="manualTokenInput" placeholder="輸入 6 碼代碼" maxlength="10" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono font-bold uppercase tracking-wider text-center focus:ring-2 focus:ring-emerald-400 focus:outline-none" onkeyup="if(event.key==='Enter') submitManualToken()">
-            <button type="button" onclick="submitManualToken()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black px-4 py-2 rounded-xl shadow-sm transition cursor-pointer">
+            <input type="text" id="manualTokenInput" placeholder="輸入 6 碼代碼" maxlength="10" class="flex-1 min-h-[44px] bg-white border border-slate-300 rounded-xl px-3 py-2 text-base font-mono font-bold uppercase tracking-wider text-center focus:ring-2 focus:ring-emerald-400 focus:outline-none" onkeyup="if(event.key==='Enter') submitManualToken()">
+            <button type="button" onclick="submitManualToken()" class="min-h-[44px] bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-black px-5 py-2 rounded-xl shadow-sm transition cursor-pointer flex items-center justify-center">
               查詢
             </button>
           </div>
@@ -130,7 +192,7 @@
           </div>
         </div>
         <p class="text-xs text-slate-500 font-medium">請將相機鏡頭對準小卡上的 QR Code，對焦後將自動載入</p>
-        <button type="button" onclick="stopCameraScan()" class="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-full transition active:scale-95 cursor-pointer">
+        <button type="button" onclick="stopCameraScan()" class="min-h-[44px] text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-5 py-2 rounded-full transition active:scale-95 cursor-pointer inline-flex items-center justify-center">
           ✖️ 關閉相機
         </button>
       </div>
@@ -140,7 +202,7 @@
 
       <!-- 當前已有載入學生時，允許返回目前的畫面 -->
       <div id="btnCancelScan" class="hidden pt-2">
-        <button type="button" onclick="cancelScanAndReturn()" class="text-xs font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer">
+        <button type="button" onclick="cancelScanAndReturn()" class="min-h-[44px] text-xs font-bold text-slate-600 hover:text-slate-900 underline cursor-pointer inline-flex items-center justify-center px-4">
           ← 返回目前學生作業畫面
         </button>
       </div>
@@ -193,7 +255,7 @@
             <div class="text-xs text-emerald-700 mt-0.5">點擊一秒跳轉至班級 LINE，自動帶入代碼完成綁定，放學有缺交即時通知！</div>
           </div>
         </div>
-        <a id="btnLineBindDeepLink" href="#" target="_blank" class="w-full sm:w-auto text-center flex-shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-black shadow-xs transition active:scale-95 cursor-pointer">
+        <a id="btnLineBindDeepLink" href="#" target="_blank" class="w-full sm:w-auto min-h-[44px] flex items-center justify-center text-center flex-shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-xs transition active:scale-95 cursor-pointer">
           一秒綁定 LINE
         </a>
       </div>
@@ -1295,7 +1357,7 @@
             <div class="p-2.5 bg-slate-50/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border border-slate-100">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-bold text-slate-800">${tName}</span>
-                <span class="text-[11px] text-slate-400">(${stats.ontime}/${tEff} 次)</span>
+                <span class="text-[11px] text-slate-500 font-medium">(${stats.ontime}/${tEff} 次)</span>
               </div>
               <div class="flex items-center gap-3">
                 <div class="w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden">
@@ -1304,9 +1366,9 @@
                 <div class="text-xs font-mono font-bold ${tRate >= 90 ? 'text-emerald-700' : (tRate >= 80 ? 'text-amber-700' : 'text-rose-700')} min-w-[36px] text-right">
                   ${tRate}%
                 </div>
-                ${stats.late > 0 ? '<span class="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-bold">遲交 ' + stats.late + '</span>' : ''}
-                ${stats.missing > 0 ? '<span class="text-[10px] text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded font-bold">缺交 ' + stats.missing + '</span>' : ''}
-                ${stats.excused > 0 ? '<span class="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">免計 ' + stats.excused + '</span>' : ''}
+                ${stats.late > 0 ? '<span class="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded font-bold border border-amber-200">遲交 ' + stats.late + '</span>' : ''}
+                ${stats.missing > 0 ? '<span class="text-[10px] text-rose-800 bg-rose-50 px-1.5 py-0.5 rounded font-bold border border-rose-200">缺交 ' + stats.missing + '</span>' : ''}
+                ${stats.excused > 0 ? '<span class="text-[10px] text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">免計 ' + stats.excused + '</span>' : ''}
               </div>
             </div>
           `;
@@ -1320,13 +1382,13 @@
                 <div class="flex items-center gap-2">
                   <span class="text-xl">${icon}</span>
                   <span class="text-base font-bold text-slate-900">${sub}</span>
-                  <span class="text-xs text-slate-400 font-medium">(${Object.keys(tasksMap).length} 項作業)</span>
+                  <span class="text-xs text-slate-500 font-medium">(${Object.keys(tasksMap).length} 項作業)</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="text-xs font-bold px-2 py-0.5 rounded-full border ${badgeColor}">
                     ${subRate}% 準時
                   </span>
-                  <svg id="${accId}-arrow" class="w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg id="${accId}-arrow" class="w-4 h-4 text-slate-500 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                   </svg>
                 </div>
@@ -1337,16 +1399,20 @@
                 <div class="${barColor} h-2 rounded-full transition-all duration-500" style="width: ${subRate}%"></div>
               </div>
 
-              <div class="flex justify-between items-center text-[11px] text-slate-400 pt-0.5">
+              <div class="flex justify-between items-center text-[11px] text-slate-500 font-medium pt-0.5">
                 <span>應繳 ${subTotal} 次 ‧ 準時 ${subOnTime} 次${subExcused > 0 ? ' ‧ 免計 ' + subExcused + ' 次' : ''}</span>
                 <span>${subLate > 0 ? '遲交 ' + subLate + ' 次 ‧ ' : ''}${subMissing > 0 ? '缺交 ' + subMissing + ' 次' : '無缺交'}</span>
               </div>
             </button>
 
-            <!-- 點開後展開的各項作業清單 -->
-            <div id="${accId}" class="hidden p-3 pt-0 border-t border-slate-100 space-y-1.5 bg-slate-50/30">
-              <div class="text-[11px] font-bold text-slate-400 px-1 py-1">該科各項作業詳細繳交狀況：</div>
-              ${detailsHtml}
+            <!-- 點開後展開的各項作業清單 (CSS Grid 物理平滑展開) -->
+            <div id="${accId}" class="accordion-panel border-t border-transparent">
+              <div>
+                <div class="p-3 pt-2 border-t border-slate-100 space-y-1.5 bg-slate-50/40">
+                  <div class="text-xs font-bold text-slate-600 px-1 py-1">該科各項作業詳細繳交狀況：</div>
+                  ${detailsHtml}
+                </div>
+              </div>
             </div>
           </div>
         `;
@@ -1357,7 +1423,7 @@
       logsContainer.innerHTML = '';
 
       if (recentLogs.length === 0) {
-        logsContainer.innerHTML = '<div class="py-4 text-center text-xs text-slate-400">尚無近期打卡紀錄</div>';
+        logsContainer.innerHTML = '<div class="py-4 text-center text-xs text-slate-500 font-medium">尚無近期打卡紀錄</div>';
       } else {
         recentLogs.forEach(l => {
           const c = classifyTaskStatus(l.status, l.timestamp);
@@ -1366,9 +1432,9 @@
           logsContainer.innerHTML += `
             <div class="py-2.5 flex items-center justify-between text-xs hover:bg-slate-50/50 px-1 rounded-lg transition">
               <div class="flex items-center gap-2">
-                <span class="text-slate-400 font-mono text-[11px]">${l.timestamp || '-'}</span>
+                <span class="text-slate-500 font-mono text-[11px]">${l.timestamp || '-'}</span>
                 <span class="font-bold text-slate-800">[${l.subject}] ${l.taskName}</span>
-                ${l.range ? '<span class="text-slate-500 font-mono text-[11px]">(' + l.range + ')</span>' : ''}
+                ${l.range ? '<span class="text-slate-600 font-mono text-[11px]">(' + l.range + ')</span>' : ''}
               </div>
               <div>${badge}</div>
             </div>
@@ -1380,19 +1446,19 @@
       document.getElementById('parentResultArea').classList.remove('hidden');
     }
 
-    // 各科目點開折疊 Accordion 切換
+    // 各科目點開折疊 Accordion 切換 (Apple Fluid Motion)
     function toggleSubjectAccordion(id) {
       const el = document.getElementById(id);
       const arrow = document.getElementById(id + '-arrow');
       if (!el) return;
 
-      const isHidden = el.classList.contains('hidden');
-      if (isHidden) {
-        el.classList.remove('hidden');
-        if (arrow) arrow.style.transform = 'rotate(180deg)';
-      } else {
-        el.classList.add('hidden');
+      const isOpen = el.classList.contains('open');
+      if (isOpen) {
+        el.classList.remove('open');
         if (arrow) arrow.style.transform = 'rotate(0deg)';
+      } else {
+        el.classList.add('open');
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
       }
     }
   </script>

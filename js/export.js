@@ -1930,17 +1930,21 @@ function updateParentSimulator(studentId) {
 
         subjectsHtml += `
             <div class="border border-slate-200 rounded-xl overflow-hidden bg-white">
-                <button type="button" onclick="toggleSimAccordion('${simAccId}')" class="w-full p-2.5 flex flex-col gap-1 text-left hover:bg-slate-50 transition cursor-pointer">
+                <button type="button" onclick="toggleSimAccordion('${simAccId}')" class="w-full p-2.5 flex flex-col gap-1 text-left hover:bg-slate-50 transition active:scale-[0.99] cursor-pointer">
                     <div class="flex justify-between items-center text-xs">
                         <span class="font-black text-slate-800">${sub}</span>
                         <span class="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">${sRate}% 準時</span>
                     </div>
                     <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div class="${sRate >= 90 ? 'bg-emerald-500' : (sRate >= 80 ? 'bg-amber-500' : 'bg-rose-500')} h-1.5 rounded-full" style="width: ${sRate}%"></div>
+                        <div class="${sRate >= 90 ? 'bg-emerald-500' : (sRate >= 80 ? 'bg-amber-500' : 'bg-rose-500')} h-1.5 rounded-full transition-all duration-500" style="width: ${sRate}%"></div>
                     </div>
                 </button>
-                <div id="${simAccId}" class="hidden p-2 pt-0 space-y-1 bg-slate-50/50 border-t border-slate-100">
-                    ${details}
+                <div id="${simAccId}" class="accordion-panel border-t border-transparent">
+                    <div>
+                        <div class="p-2 pt-1.5 space-y-1 bg-slate-50/50 border-t border-slate-100">
+                            ${details}
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -2025,7 +2029,8 @@ function updateParentSimulator(studentId) {
 
 function toggleSimAccordion(id) {
     const el = document.getElementById(id);
-    if (el) el.classList.toggle('hidden');
+    if (!el) return;
+    el.classList.toggle('open');
 }
 
 function openSelectedStudentParentPage() {
