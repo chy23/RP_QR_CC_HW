@@ -3205,8 +3205,8 @@ function toggleAllLineMissingTargets(check) {
     updateLineMissingSelectedCount();
 }
 
-// 單獨發送指定學生的 LINE 通知（支援有缺交提醒或自訂親師留言）
-function openSingleStudentLinePushModal(studentId) {
+// 單獨發送指定學生的 LINE 通知（支援有缺交提醒或自訂親師留言，具備對象核對防呆機制）
+function openSingleStudentLinePushModal(studentId, initialMsg = null) {
     const s = (db.students || []).find(st => st.id.toString() === studentId.toString());
     if (!s) return;
 
@@ -3227,22 +3227,24 @@ function openSingleStudentLinePushModal(studentId) {
     let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
     const portalUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
 
-    let defaultMsg = '';
-    if (missingTasks.length > 0) {
-        const taskLines = missingTasks.map(mt => `‧ 【${mt.subject}】${mt.taskName}${mt.range ? ' (' + mt.range + ')' : ''}`).join('\n');
-        defaultMsg = `🚨 【作業待補交提醒】\n\n` +
-            `${maskStudentName(s.name)} 家長您好：\n` +
-            `今日學校清點作業，孩子尚有 ${missingTasks.length} 項作業待補交：\n` +
-            `${taskLines}\n\n` +
-            `請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！\n\n` +
-            `🔗 點此秒開專屬手札查看明細：\n${portalUrl}\n\n` +
-            `（由 班級作業管理系統 自動推播）`;
-    } else {
-        defaultMsg = `🌱 【班級作業手札與親師通知】\n\n` +
-            `${maskStudentName(s.name)} 家長您好：\n` +
-            `孩子目前的應交作業皆已按時完成，表現非常棒！🎉\n\n` +
-            `🔗 點此可隨時查看孩子最新作業手札與各科明細：\n${portalUrl}\n\n` +
-            `（由 班級作業管理系統 推播）`;
+    let defaultMsg = initialMsg;
+    if (!defaultMsg) {
+        if (missingTasks.length > 0) {
+            const taskLines = missingTasks.map(mt => `‧ 【${mt.subject}】${mt.taskName}${mt.range ? ' (' + mt.range + ')' : ''}`).join('\n');
+            defaultMsg = `🚨 【作業待補交提醒】\n\n` +
+                `${maskStudentName(s.name)} 家長您好：\n` +
+                `今日學校清點作業，孩子尚有 ${missingTasks.length} 項作業待補交：\n` +
+                `${taskLines}\n\n` +
+                `請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！\n\n` +
+                `🔗 點此秒開專屬手札查看明細：\n${portalUrl}\n\n` +
+                `（由 班級作業管理系統 自動推播）`;
+        } else {
+            defaultMsg = `🌱 【班級作業手札與親師通知】\n\n` +
+                `${maskStudentName(s.name)} 家長您好：\n` +
+                `孩子目前的應交作業皆已按時完成，表現非常棒！🎉\n\n` +
+                `🔗 點此可隨時查看孩子最新作業手札與各科明細：\n${portalUrl}\n\n` +
+                `（由 班級作業管理系統 推播）`;
+        }
     }
 
     Swal.fire({
@@ -3259,7 +3261,7 @@ function openSingleStudentLinePushModal(studentId) {
             </div>
         `,
         showCancelButton: true,
-        confirmButtonText: `🚀 單獨發送給 ${s.name} 家長`,
+        confirmButtonText: '下一步：核對發送對象 ➜',
         cancelButtonText: '取消',
         confirmButtonColor: '#059669',
         preConfirm: () => {
@@ -3268,13 +3270,59 @@ function openSingleStudentLinePushModal(studentId) {
         }
     }).then(async (res) => {
         if (!res || !res.isConfirmed || !res.value) return;
+        const customMsg = res.value;
+
+        // 第二步：核對發送對象確認對話窗
+        const taskLinesHtml = missingTasks.length > 0
+            ? missingTasks.map(mt => `‧ 【${escapeCardHtml(mt.subject)}】${escapeCardHtml(mt.taskName)}${mt.range ? ' (' + escapeCardHtml(mt.range) + ')' : ''}`).join('<br>')
+            : '無缺交作業（一般親師通知）';
+
+        const confirmRes = await Swal.fire({
+            title: '🔍 確認發送對象是否正確',
+            html: `
+                <div class="text-left text-xs space-y-3">
+                    <div class="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-7 h-7 rounded-md bg-emerald-600 text-white font-mono font-bold flex items-center justify-center text-xs">
+                                    ${String(s.id).padStart(2, '0')}
+                                </span>
+                                <span class="font-bold text-slate-800 text-base">${escapeCardHtml(s.name)} 家長</span>
+                            </div>
+                            <span class="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">LINE 已綁定</span>
+                        </div>
+                        <div class="text-[11px] text-slate-600 font-mono pl-1">
+                            ${taskLinesHtml}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-700 mb-1">即將送出的私訊內容：</div>
+                        <div class="p-2.5 bg-slate-100 rounded-xl font-mono text-[11px] text-slate-700 max-h-36 overflow-y-auto whitespace-pre-wrap leading-relaxed border border-slate-200">${escapeCardHtml(customMsg)}</div>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '✅ 正確，立即送出提醒',
+            cancelButtonText: '❌ 有誤，回前一頁修改',
+            confirmButtonColor: '#059669',
+            cancelButtonColor: '#64748b',
+            reverseButtons: true
+        });
+
+        if (!confirmRes.isConfirmed) {
+            // 點擊錯誤則回前一頁確認錯誤（帶著原本輸入的訊息重新開啟）
+            openSingleStudentLinePushModal(studentId, customMsg);
+            return;
+        }
+
+        // 點擊正確後才送出提醒
         await executeLinePushRequest([{
             studentId: s.id,
             studentName: s.name,
             token: token,
             lineUserId: binding.lineUserId,
             missingTasks: missingTasks,
-            customMessage: res.value
+            customMessage: customMsg
         }]);
     });
 }
@@ -3634,24 +3682,95 @@ async function executeLinePushRequest(targets) {
     }
 }
 
-// 一鍵發送今日缺交私訊推播（支援僅發送勾選之指定學生）
+// 一鍵發送今日缺交私訊推播（支援核對確認發送對象機制）
 async function sendLinePushMissing() {
     const targets = getBoundStudentsWithMissing(null, true);
     if (targets.length === 0) {
-        showAlert('提示', '請至少勾選一位待補交且已綁定 LINE 的學生！（或使用上方名單中的「📨推播」單獨傳訊）');
+        showAlert('提示', '目前沒有勾選任何「待補交且已綁定 LINE」的學生！請先於清單中勾選欲提醒的學生。');
         return;
     }
 
-    const namesStr = targets.map(t => `${String(t.studentId).padStart(2, '0')} ${t.studentName}`).join('、');
-    const confirmResult = await showConfirm(
-        '確認發送 LINE 缺交通知',
-        `即將發送 LINE 缺交私訊給已勾選的 ${targets.length} 位學生家長：\n【${namesStr}】\n\n未缺交或未勾選之學生不會收到通知，確定送出嗎？`,
-        'question',
-        '立即發送',
-        '取消'
-    );
-    if (!confirmResult.isConfirmed) return;
+    const targetCardsHtml = targets.map(t => {
+        const taskNames = (t.missingTasks || []).map(m => `‧ 【${escapeCardHtml(m.subject)}】${escapeCardHtml(m.taskName)}${m.range ? ' (' + escapeCardHtml(m.range) + ')' : ''}`).join('<br>');
+        return `
+            <div class="p-2.5 bg-white rounded-xl border border-rose-200/90 shadow-2xs text-left">
+                <div class="flex items-center justify-between border-b border-rose-100 pb-1.5 mb-1.5">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-md bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-xs flex-shrink-0">
+                            ${String(t.studentId).padStart(2, '0')}
+                        </span>
+                        <span class="font-bold text-slate-800 text-sm">${escapeCardHtml(t.studentName)}</span>
+                    </div>
+                    <span class="text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full flex-shrink-0">
+                        待補交 ${t.missingTasks.length} 項
+                    </span>
+                </div>
+                <div class="text-[11px] text-slate-600 leading-relaxed font-mono pl-1">
+                    ${taskNames}
+                </div>
+            </div>
+        `;
+    }).join('');
 
+    const confirmHtml = `
+        <div class="text-left text-xs space-y-3">
+            <div class="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-900 font-bold flex items-start gap-2.5">
+                <span class="text-2xl flex-shrink-0">⚠️</span>
+                <div>
+                    <div class="text-sm font-black text-amber-950">即將發送 LINE 缺交私訊給以下學生家長：</div>
+                    <div class="text-[11px] text-amber-800 font-normal mt-0.5 leading-relaxed">請核對發送名單與缺交作業是否正確。點擊「正確」後才正式送出提醒；若有誤請點擊「回前一頁檢查」重新調整！</div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center px-1">
+                <span class="font-bold text-slate-700">📋 本次發送對象清單 (共 ${targets.length} 位)：</span>
+                <span class="text-[11px] text-emerald-700 font-bold">已全數綁定 LINE</span>
+            </div>
+
+            <div class="max-h-60 overflow-y-auto space-y-2 pr-1 p-1 bg-slate-50/80 rounded-xl border border-slate-200">
+                ${targetCardsHtml}
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-[11px] text-slate-500 leading-relaxed">
+                🛡️ <strong>防呆機制保護</strong>：未缺交、未勾選或未綁定 LINE 的學生<strong>絕不會收到任何私訊打擾</strong>。
+            </div>
+        </div>
+    `;
+
+    const confirmResult = await Swal.fire({
+        title: '🔍 核對 LINE 缺交通知發送對象',
+        html: confirmHtml,
+        icon: null,
+        showCancelButton: true,
+        confirmButtonText: '✅ 正確，立即送出提醒',
+        cancelButtonText: '❌ 有誤，回前一頁檢查',
+        confirmButtonColor: '#059669',
+        cancelButtonColor: '#64748b',
+        reverseButtons: true,
+        focusCancel: false,
+        customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'font-bold text-sm px-4 py-2.5 rounded-xl shadow',
+            cancelButton: 'font-bold text-sm px-4 py-2.5 rounded-xl'
+        }
+    });
+
+    if (!confirmResult.isConfirmed) {
+        // 點擊錯誤則回前一頁確認錯誤
+        const targetBox = document.getElementById('line-missing-targets-box');
+        if (targetBox) {
+            targetBox.classList.remove('hidden');
+            targetBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetBox.classList.add('ring-2', 'ring-rose-400', 'transition-all');
+            setTimeout(() => {
+                targetBox.classList.remove('ring-2', 'ring-rose-400');
+            }, 2500);
+        }
+        showToast('已取消發送。請於清單中確認並勾選正確對象！', 'info');
+        return;
+    }
+
+    // 點擊正確後才送出提醒
     await executeLinePushRequest(targets);
 }
 
