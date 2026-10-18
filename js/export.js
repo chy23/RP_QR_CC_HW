@@ -2107,14 +2107,20 @@ function updateParentSimulator(studentId) {
                 timestamp = rec.timestamp || rec.fullTimestamp || '';
             }
             let range = '';
+            let dueDate = nn || '近期';
             const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
-            if (rObj) range = rObj.range || '';
+            if (rObj) {
+                range = rObj.range || nn || '';
+                if (rObj.date) dueDate = rObj.date;
+            } else if (nn) {
+                range = nn;
+            }
 
             studentTasks.push({
                 subject: t.subject || '其他',
                 taskName: t.name,
                 range: range,
-                date: nn || '近期',
+                date: dueDate,
                 status: status,
                 timestamp: timestamp,
                 deadline: t.deadline || ''
@@ -2132,6 +2138,7 @@ function updateParentSimulator(studentId) {
     let excusedCount = 0;
     const pendingItems = [];
     const lateCountsPerTask = {};
+    const lateDetailsPerTask = {};
 
     studentTasks.forEach(t => {
         const c = classifyParentTaskStatus(t.status, t.timestamp, t.deadline);
@@ -2141,6 +2148,8 @@ function updateParentSimulator(studentId) {
             lateCount++;
             const key = `[${t.subject}] ${t.taskName}`;
             lateCountsPerTask[key] = (lateCountsPerTask[key] || 0) + 1;
+            if (!lateDetailsPerTask[key]) lateDetailsPerTask[key] = [];
+            lateDetailsPerTask[key].push(t.range || (t.date !== '近期' ? t.date : '日常作業'));
         } else if (c.type === 'missing') {
             missingCount++;
             pendingItems.push({ subject: t.subject, taskName: t.taskName, range: t.range, date: t.date, badge: c.badge });
@@ -2181,10 +2190,17 @@ function updateParentSimulator(studentId) {
 
         subTasks.forEach(st => {
             const tn = st.taskName;
-            if (!taskMap[tn]) taskMap[tn] = { total: 0, ontime: 0, late: 0, miss: 0, exc: 0 };
+            if (!taskMap[tn]) taskMap[tn] = { total: 0, ontime: 0, late: 0, miss: 0, exc: 0, items: [] };
             taskMap[tn].total++;
             
             const c = classifyParentTaskStatus(st.status, st.timestamp, st.deadline);
+            taskMap[tn].items.push({
+                range: st.range,
+                date: st.date,
+                status: st.status,
+                timestamp: st.timestamp,
+                c: c
+            });
             if (c.type === 'ontime') {
                 sOnTime++;
                 taskMap[tn].ontime++;
@@ -2205,17 +2221,50 @@ function updateParentSimulator(studentId) {
         const simAccId = 'sim-acc-' + idx;
 
         let details = '';
-        Object.entries(taskMap).forEach(([tn, ts]) => {
+        Object.entries(taskMap).forEach(([tn, ts], tIdx) => {
             const trEff = Math.max(1, ts.total - ts.exc);
             const tr = Math.round((ts.ontime / trEff) * 100);
+            const taskDetailId = `sim-task-detail-${idx}-${tIdx}`;
+
+            // 排序子項目：缺交/沒帶/需訂正 -> 遲交 -> 免計 -> 準時
+            const orderWeight = { missing: 1, forgot: 1, returned: 1, late: 2, excused: 3, ontime: 4 };
+            const sortedItems = ts.items.slice().sort((a, b) => (orderWeight[a.c.type] || 5) - (orderWeight[b.c.type] || 5));
+
+            const itemRowsHtml = sortedItems.map((it, iIdx) => {
+                const labelText = it.range ? `範圍：${escapeCardHtml(it.range)}` : (it.date && it.date !== '近期' ? `日期：${escapeCardHtml(it.date)}` : `第 ${iIdx + 1} 次作業`);
+                const dateSub = (it.range && it.date && it.date !== '近期' && it.date !== it.range) ? ` ‧ 應繳：${escapeCardHtml(it.date)}` : '';
+                const cleanTs = (it.timestamp || '').replace(/\[遲交\]/g, '').trim();
+                const tsSub = (cleanTs && it.c.type !== 'missing' && it.c.type !== 'forgot' && it.c.type !== 'excused') ? `<div class="text-[9px] text-slate-400">登記時間：${escapeCardHtml(cleanTs)}</div>` : '';
+                const rowBg = it.c.type === 'late' ? 'bg-amber-50/70 border-amber-200' : (it.c.isPending ? 'bg-rose-50/70 border-rose-200' : 'bg-slate-50/80 border-slate-100');
+
+                return `
+                    <div class="p-1.5 rounded-lg border ${rowBg} flex items-center justify-between gap-1.5 text-[10px]">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-slate-700 truncate">${labelText}${dateSub}</div>
+                            ${tsSub}
+                        </div>
+                        <span class="px-1.5 py-0.5 rounded border text-[9px] font-bold flex-shrink-0 ${it.c.badgeClass}">${it.c.badge}</span>
+                    </div>
+                `;
+            }).join('');
+
             details += `
-                <div class="flex items-center justify-between text-[11px] p-1.5 bg-white rounded border border-slate-100">
-                    <span class="font-bold text-slate-700">${tn}</span>
-                    <div class="flex items-center gap-1.5">
-                        <span class="font-bold ${tr >= 90 ? 'text-emerald-600' : (tr >= 80 ? 'text-amber-600' : 'text-rose-600')}">${tr}%</span>
-                        ${ts.late > 0 ? '<span class="text-[9px] bg-amber-50 text-amber-700 px-1 rounded font-bold">遲' + ts.late + '</span>' : ''}
-                        ${ts.miss > 0 ? '<span class="text-[9px] bg-rose-50 text-rose-700 px-1 rounded font-bold">缺' + ts.miss + '</span>' : ''}
-                        ${ts.exc > 0 ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded">免' + ts.exc + '</span>' : ''}
+                <div class="bg-white rounded-lg border border-slate-100 overflow-hidden">
+                    <button type="button" onclick="toggleSimTaskDetail('${taskDetailId}')" class="w-full flex items-center justify-between text-[11px] p-1.5 hover:bg-slate-50 transition cursor-pointer text-left">
+                        <div class="flex items-center gap-1">
+                            <span class="font-bold text-slate-700">${escapeCardHtml(tn)}</span>
+                            <span class="text-[9px] text-slate-400">(${ts.ontime}/${trEff})</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-bold ${tr >= 90 ? 'text-emerald-600' : (tr >= 80 ? 'text-amber-600' : 'text-rose-600')}">${tr}%</span>
+                            ${ts.late > 0 ? '<span class="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1 rounded font-bold">遲' + ts.late + '</span>' : ''}
+                            ${ts.miss > 0 ? '<span class="text-[9px] bg-rose-50 text-rose-700 border border-rose-200 px-1 rounded font-bold">缺' + ts.miss + '</span>' : ''}
+                            ${ts.exc > 0 ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded">免' + ts.exc + '</span>' : ''}
+                            <svg id="${taskDetailId}-arrow" class="w-3 h-3 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </button>
+                    <div id="${taskDetailId}" class="hidden p-1.5 pt-1 space-y-1 bg-white border-t border-slate-100">
+                        ${itemRowsHtml}
                     </div>
                 </div>
             `;
@@ -2235,6 +2284,7 @@ function updateParentSimulator(studentId) {
                 <div id="${simAccId}" class="accordion-panel border-t border-transparent">
                     <div>
                         <div class="p-2 pt-1.5 space-y-1 bg-slate-50/50 border-t border-slate-100">
+                            <div class="text-[9px] text-slate-400 px-0.5">💡 點擊下方任一作業可展開查看哪幾份遲交或各次明細：</div>
                             ${details}
                         </div>
                     </div>
@@ -2294,7 +2344,7 @@ function updateParentSimulator(studentId) {
             ${pendingItems.length === 0 ? '<div class="text-[11px] text-emerald-600 font-bold py-1.5 text-center">沒有任何缺交作業，請給孩子一個大大的讚賞與鼓勵！ 🎉</div>' : ''}
             ${pendingItems.map(p => `
                 <div class="flex items-center justify-between text-[11px] py-0.5">
-                    <span class="font-bold text-slate-700">[${p.subject}] ${p.taskName}</span>
+                    <span class="font-bold text-slate-700">[${p.subject}] ${p.taskName}${p.range ? ' (' + escapeCardHtml(p.range) + ')' : ''}</span>
                     <span class="text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold">${p.badge}</span>
                 </div>
             `).join('')}
@@ -2305,16 +2355,19 @@ function updateParentSimulator(studentId) {
             <div class="text-[11px] font-black text-slate-800 border-b pb-1">⚠️ 常遲到作業排行</div>
             ${delayEntries.length === 0 ? '<div class="text-[11px] text-slate-400 py-1 text-center font-bold">目前無任何遲到紀錄 模範生！</div>' : ''}
             ${delayEntries.slice(0, 3).map(([taskKey, count], idx) => `
-                <div class="flex items-center justify-between text-[11px] py-0.5">
-                    <span class="font-bold text-slate-700">#${idx + 1} ${taskKey}</span>
-                    <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">遲交 ${count} 次</span>
+                <div class="flex flex-col text-[11px] py-0.5 border-b border-slate-50 last:border-0">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-slate-700">#${idx + 1} ${taskKey}</span>
+                        <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">遲交 ${count} 次</span>
+                    </div>
+                    ${lateDetailsPerTask[taskKey] && lateDetailsPerTask[taskKey].length > 0 ? `<div class="text-[9.5px] text-amber-700 mt-0.5 pl-2">↳ 遲交項目：${lateDetailsPerTask[taskKey].map(d => escapeCardHtml(d)).join('、')}</div>` : ''}
                 </div>
             `).join('')}
         </div>
 
         <!-- 📊 各科習慣與展開明細 -->
         <div class="space-y-1.5">
-            <div class="text-[11px] font-black text-slate-800 px-1">📊 各科長條圖 (點擊可展開明細)</div>
+            <div class="text-[11px] font-black text-slate-800 px-1">📊 各科長條圖 (點擊科目與作業可查看明細)</div>
             ${subjectsHtml}
         </div>
     `;
@@ -2324,6 +2377,20 @@ function toggleSimAccordion(id) {
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.toggle('open');
+}
+
+function toggleSimTaskDetail(id) {
+    const el = document.getElementById(id);
+    const arrow = document.getElementById(id + '-arrow');
+    if (!el) return;
+    const isHidden = el.classList.contains('hidden');
+    if (isHidden) {
+        el.classList.remove('hidden');
+        if (arrow) arrow.classList.add('rotate-180');
+    } else {
+        el.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
+    }
 }
 
 function openSelectedStudentParentPage() {
@@ -2347,11 +2414,11 @@ function openSelectedStudentParentPage() {
 }
 
 // ==========================================
-// LINE 官方帳號推播中心邏輯 (Beta)
+// LINE 官方帳號推播中心邏輯
 // ==========================================
 let currentLineBindings = [];
 
-// 取得單一生目前待補交之作業清單
+// 取得單一學生目前待補交之作業清單
 function getStudentPendingTasks(student) {
     if (!student) return [];
     const tasks = db.tasks || [];
@@ -2384,8 +2451,14 @@ function getStudentPendingTasks(student) {
                 timestamp = rec.timestamp || rec.fullTimestamp || '';
             }
             let range = '';
+            let dueDate = nn || '近期';
             const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
-            if (rObj) range = rObj.range || '';
+            if (rObj) {
+                range = rObj.range || nn || '';
+                if (rObj.date) dueDate = rObj.date;
+            } else if (nn) {
+                range = nn;
+            }
 
             const c = classifyParentTaskStatus(status, timestamp, t.deadline);
             if (c.type === 'missing' || c.type === 'forgot' || c.type === 'returned') {
@@ -2393,7 +2466,7 @@ function getStudentPendingTasks(student) {
                     subject: t.subject || '其他',
                     taskName: t.name,
                     range: range,
-                    date: nn || '近期',
+                    date: dueDate,
                     status: status,
                     badge: c.badge
                 });
@@ -2403,8 +2476,8 @@ function getStudentPendingTasks(student) {
     return pendingList;
 }
 
-// 篩選出今日有缺交且已綁定 LINE 的學生名單
-function getBoundStudentsWithMissing(boundMap) {
+// 篩選出今日有缺交且已綁定 LINE 的學生名單（onlyChecked 為 true 時僅回傳教師有勾選的學生）
+function getBoundStudentsWithMissing(boundMap, onlyChecked = false) {
     if (!boundMap) {
         boundMap = {};
         (currentLineBindings || []).forEach(b => {
@@ -2412,10 +2485,22 @@ function getBoundStudentsWithMissing(boundMap) {
         });
     }
 
+    let checkedIdSet = null;
+    if (onlyChecked) {
+        const cbs = document.querySelectorAll('.line-missing-stu-cb');
+        if (cbs.length > 0) {
+            checkedIdSet = new Set(
+                Array.from(document.querySelectorAll('.line-missing-stu-cb:checked')).map(cb => cb.value.toString())
+            );
+        }
+    }
+
     const targets = [];
     (db.students || []).forEach(s => {
-        const binding = boundMap[s.id.toString()];
+        const sidStr = s.id.toString();
+        const binding = boundMap[sidStr];
         if (!binding) return; // 家長尚未綁定 LINE，跳過
+        if (checkedIdSet && !checkedIdSet.has(sidStr)) return; // 教師取消勾選，跳過
 
         const missingTasks = getStudentPendingTasks(s);
         if (missingTasks.length > 0) {
@@ -2429,6 +2514,144 @@ function getBoundStudentsWithMissing(boundMap) {
         }
     });
     return targets;
+}
+
+// 渲染待補交且已綁定 LINE 之可勾選學生清單
+function renderLineMissingTargetsSelector(targets) {
+    const box = document.getElementById('line-missing-targets-box');
+    const selector = document.getElementById('line-missing-targets-selector');
+    const badge = document.getElementById('line-missing-selected-badge');
+    if (!box || !selector) return;
+
+    if (!targets || targets.length === 0) {
+        box.classList.add('hidden');
+        selector.innerHTML = '';
+        if (badge) badge.classList.add('hidden');
+        return;
+    }
+
+    box.classList.remove('hidden');
+    selector.innerHTML = '';
+
+    targets.forEach(t => {
+        const summaryStr = t.missingTasks.map(m => `${m.taskName}${m.range ? '(' + m.range + ')' : ''}`).join('、');
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between gap-1.5 p-1.5 bg-white hover:bg-rose-50/60 rounded-lg border border-rose-200/80 transition';
+        item.innerHTML = `
+            <label class="flex items-center gap-1.5 cursor-pointer min-w-0 flex-1">
+                <input type="checkbox" value="${t.studentId}" checked class="line-missing-stu-cb rounded text-rose-600 focus:ring-rose-500 flex-shrink-0" onchange="updateLineMissingSelectedCount()">
+                <div class="min-w-0 flex-1">
+                    <div class="font-bold text-slate-800 truncate">${String(t.studentId).padStart(2, '0')} ${escapeCardHtml(t.studentName)} <span class="text-rose-600 font-black">(${t.missingTasks.length}項)</span></div>
+                    <div class="text-[10px] text-slate-500 truncate" title="${escapeCardHtml(summaryStr)}">${escapeCardHtml(summaryStr)}</div>
+                </div>
+            </label>
+            <button type="button" onclick="openSingleStudentLinePushModal('${t.studentId}')" class="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded text-[10px] font-bold flex-shrink-0 transition active:scale-95 cursor-pointer" title="只單獨發送給這位學生家長">
+                📨 單發
+            </button>
+        `;
+        selector.appendChild(item);
+    });
+
+    updateLineMissingSelectedCount();
+}
+
+function updateLineMissingSelectedCount() {
+    const total = document.querySelectorAll('.line-missing-stu-cb').length;
+    const checked = document.querySelectorAll('.line-missing-stu-cb:checked').length;
+    const badge = document.getElementById('line-missing-selected-badge');
+    const btn = document.getElementById('btn-send-line-push');
+    if (badge) {
+        if (total > 0) {
+            badge.classList.remove('hidden');
+            badge.innerText = `已勾選 ${checked} / ${total} 人`;
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+    if (btn) {
+        btn.innerHTML = checked > 0 && checked < total
+            ? `<span>🚀 發送勾選學生 (${checked}人)</span>`
+            : `<span>🚀 發送 LINE 缺交通知</span>`;
+    }
+}
+
+function toggleAllLineMissingTargets(check) {
+    document.querySelectorAll('.line-missing-stu-cb').forEach(cb => cb.checked = check);
+    updateLineMissingSelectedCount();
+}
+
+// 單獨發送指定學生的 LINE 通知（支援有缺交提醒或自訂親師留言）
+function openSingleStudentLinePushModal(studentId) {
+    const s = (db.students || []).find(st => st.id.toString() === studentId.toString());
+    if (!s) return;
+
+    const binding = (currentLineBindings || []).find(b => b.isBound && b.studentId.toString() === studentId.toString());
+    if (!binding) {
+        showAlert('提示', `${s.name} 的家長尚未綁定 LINE 官方帳號，無法發送私訊！`);
+        return;
+    }
+
+    const missingTasks = getStudentPendingTasks(s);
+    const token = s.token || ('STU' + String(s.id).padStart(3, '0'));
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const portalUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+
+    let defaultMsg = '';
+    if (missingTasks.length > 0) {
+        const taskLines = missingTasks.map(mt => `‧ 【${mt.subject}】${mt.taskName}${mt.range ? ' (' + mt.range + ')' : ''}`).join('\n');
+        defaultMsg = `🚨 【作業待補交提醒】\n\n` +
+            `${maskStudentName(s.name)} 家長您好：\n` +
+            `今日學校清點作業，孩子尚有 ${missingTasks.length} 項作業待補交：\n` +
+            `${taskLines}\n\n` +
+            `請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！\n\n` +
+            `🔗 點此秒開專屬手札查看明細：\n${portalUrl}\n\n` +
+            `（由 班級作業管理系統 自動推播）`;
+    } else {
+        defaultMsg = `🌱 【班級作業手札與親師通知】\n\n` +
+            `${maskStudentName(s.name)} 家長您好：\n` +
+            `孩子目前的應交作業皆已按時完成，表現非常棒！🎉\n\n` +
+            `🔗 點此可隨時查看孩子最新作業手札與各科明細：\n${portalUrl}\n\n` +
+            `（由 班級作業管理系統 推播）`;
+    }
+
+    Swal.fire({
+        title: `📨 指定發送 LINE 通知 — ${String(s.id).padStart(2, '0')} ${s.name}`,
+        html: `
+            <div class="text-left text-xs space-y-2.5">
+                <div class="p-2.5 rounded-xl border ${missingTasks.length > 0 ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'} font-bold">
+                    ${missingTasks.length > 0 ? `⚠️ 該生目前共有 ${missingTasks.length} 項待補交作業，已自動帶入缺交提醒範本。` : `🎉 該生目前無缺交作業，已帶入正面鼓勵與手札通知範本。`}
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">✏️ 推播私訊內容（可直接修改或加註給家長的話）：</label>
+                    <textarea id="single-line-push-textarea" rows="10" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs font-mono text-slate-800 bg-white focus:ring-2 focus:ring-emerald-500 outline-none leading-relaxed">${escapeCardHtml(defaultMsg)}</textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: `🚀 單獨發送給 ${s.name} 家長`,
+        cancelButtonText: '取消',
+        confirmButtonColor: '#059669',
+        preConfirm: () => {
+            const ta = document.getElementById('single-line-push-textarea');
+            return ta ? ta.value.trim() : defaultMsg;
+        }
+    }).then(async (res) => {
+        if (!res || !res.isConfirmed || !res.value) return;
+        await executeLinePushRequest([{
+            studentId: s.id,
+            studentName: s.name,
+            token: token,
+            lineUserId: binding.lineUserId,
+            missingTasks: missingTasks,
+            customMessage: res.value
+        }]);
+    });
 }
 
 // 切換 Token 密碼/明文顯示
@@ -2614,12 +2837,14 @@ async function fetchLineBindingStatus() {
                             : 'bg-white border-slate-200 text-slate-400'
                     }`;
                     pill.innerHTML = `
-                        <span>${String(s.id).padStart(2, '0')} ${s.name}</span>
-                        <div class="flex items-center gap-1.5">
-                            <span class="${isBound ? 'text-emerald-600' : 'text-slate-300'} font-black text-xs">
-                                ${isBound ? '✓ 已綁定' : '未綁定'}
-                            </span>
-                            ${isBound ? `<button type="button" onclick="unbindLineStudent('${s.id}', '${s.name}')" class="text-[10px] text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded px-1 transition cursor-pointer" title="解除此學生綁定">✕解除</button>` : ''}
+                        <span class="truncate">${String(s.id).padStart(2, '0')} ${escapeCardHtml(s.name)}</span>
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            ${isBound ? `
+                                <button type="button" onclick="openSingleStudentLinePushModal('${s.id}')" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white rounded px-1.5 py-0.5 transition cursor-pointer font-bold" title="單獨發送 LINE 通知給此學生家長">📨推播</button>
+                                <button type="button" onclick="unbindLineStudent('${s.id}', '${s.name}')" class="text-[10px] text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded px-1 py-0.5 transition cursor-pointer" title="解除此學生綁定">✕解除</button>
+                            ` : `
+                                <span class="text-slate-300 font-black text-xs">未綁定</span>
+                            `}
                         </div>
                     `;
                     gridEl.appendChild(pill);
@@ -2634,9 +2859,10 @@ async function fetchLineBindingStatus() {
             if (statsEl) statsEl.innerText = `${boundCount} / ${totalStudents} 人 (${percent}%)`;
             if (progressEl) progressEl.style.width = `${percent}%`;
 
-            // 計算今日缺交且已綁定的學生名單
-            const targetMissing = getBoundStudentsWithMissing(boundMap);
+            // 計算今日缺交且已綁定的學生名單並渲染勾選框
+            const targetMissing = getBoundStudentsWithMissing(boundMap, false);
             if (targetCountEl) targetCountEl.innerText = targetMissing.length;
+            renderLineMissingTargetsSelector(targetMissing);
 
         } else {
             if (statsEl) statsEl.innerText = '讀取失敗：' + (res.message || '未知錯誤');
@@ -2653,23 +2879,23 @@ async function fetchLineBindingStatus() {
 
 // 預覽 LINE 推播私訊樣式
 function previewLinePushModal() {
-    const targets = getBoundStudentsWithMissing();
+    const targets = getBoundStudentsWithMissing(null, true);
     if (targets.length === 0) {
         Swal.fire({
             title: '📱 LINE 訊息預覽',
             html: `
                 <div class="text-left text-xs space-y-3">
                     <div class="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 font-bold">
-                        🎉 太棒了！今日目前全班沒有任何已綁定且缺交作業的學生。
+                        🎉 目前沒有勾選任何待補交且已綁定 LINE 的學生（或全班皆已交齊）！
                     </div>
                     <div class="text-slate-500">
-                        若有學生缺交，系統將會為每位家長生成客製化私訊如下範例：
+                        若有勾選缺交學生，系統將會為每位家長生成 1 對 1 客製化私訊如下範例（作業全齊之家庭不會收到打擾）：
                     </div>
                     <div class="p-3 bg-slate-100 rounded-xl font-mono text-[11px] text-slate-800 leading-relaxed border border-slate-200">
                         🚨 【作業待補交提醒】<br><br>
-                        王小明 家長您好：<br>
+                        王○明 家長您好：<br>
                         今日學校清點作業，孩子尚有 1 項作業待補交：<br>
-                        ‧ 【國語】甲本 P.10~12<br><br>
+                        ‧ 【國語】甲本 (P.10~12)<br><br>
                         請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！<br><br>
                         🔗 點此秒開專屬手札查看明細：<br>
                         https://chy23.github.io/RP_QR_CC_HW/parent.html?t=DEMO<br><br>
@@ -2682,31 +2908,35 @@ function previewLinePushModal() {
         return;
     }
 
+    const first = targets[0];
+    const currentPath = window.location.pathname;
+    const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
     const gas = appConfig.gasUrl || '';
     let apiParam = '';
     if (gas && gas.includes('/macros/s/')) {
         apiParam = gas.split('/macros/s/')[1].split('/')[0];
     }
     const demoUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(first.token)}${apiParam ? '&a=' + apiParam : ''}`;
+    const taskLines = (first.missingTasks || []).map(mt => `‧ 【${escapeCardHtml(mt.subject)}】${escapeCardHtml(mt.taskName)}${mt.range ? ' (' + escapeCardHtml(mt.range) + ')' : ''}`).join('<br>');
 
     const targetListHtml = targets.map(t => `
         <span class="inline-block bg-white border border-rose-200 text-rose-800 text-[11px] font-bold px-2 py-0.5 rounded-md">
-            ${String(t.studentId).padStart(2, '0')} ${t.studentName} (${t.missingTasks.length}項)
+            ${String(t.studentId).padStart(2, '0')} ${escapeCardHtml(t.studentName)} (${t.missingTasks.length}項)
         </span>
     `).join(' ');
 
     Swal.fire({
-        title: '📱 LINE 訊息預覽',
+        title: '📱 LINE 缺交通知預覽',
         html: `
             <div class="text-left text-xs space-y-3">
                 <div class="p-2.5 bg-rose-50 text-rose-800 rounded-xl border border-rose-200">
-                    <div class="font-bold">今日預計發送對象共 ${targets.length} 人：</div>
+                    <div class="font-bold">本次已勾選預計發送對象共 ${targets.length} 人（僅發送給以下名單）：</div>
                     <div class="mt-1 flex flex-wrap gap-1 max-h-24 overflow-y-auto">${targetListHtml}</div>
                 </div>
-                <div class="font-bold text-slate-700">私訊內容範例（以 ${first.studentName} 為例）：</div>
+                <div class="font-bold text-slate-700">私訊內容範例（以 ${escapeCardHtml(first.studentName)} 為例）：</div>
                 <div class="p-3 bg-slate-100 rounded-xl font-mono text-[11px] text-slate-800 leading-relaxed border border-slate-200">
                     🚨 【作業待補交提醒】<br><br>
-                    ${first.studentName} 家長您好：<br>
+                    ${escapeCardHtml(maskStudentName(first.studentName))} 家長您好：<br>
                     今日學校清點作業，孩子尚有 ${first.missingTasks.length} 項作業待補交：<br>
                     ${taskLines}<br><br>
                     請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！<br><br>
@@ -2717,7 +2947,7 @@ function previewLinePushModal() {
             </div>
         `,
         showCancelButton: true,
-        confirmButtonText: '🚀 立即發送推播',
+        confirmButtonText: `🚀 立即發送推播 (${targets.length}人)`,
         cancelButtonText: '關閉預覽',
         confirmButtonColor: '#e11d48'
     }).then(r => {
@@ -2727,14 +2957,8 @@ function previewLinePushModal() {
     });
 }
 
-// 一鍵發送今日缺交私訊推播
-async function sendLinePushMissing() {
-    const targets = getBoundStudentsWithMissing();
-    if (targets.length === 0) {
-        showAlert('提示', '目前沒有任何已綁定 LINE 且有缺交作業的學生！');
-        return;
-    }
-
+// 執行 LINE 推播 API 請求共用函式
+async function executeLinePushRequest(targets) {
     const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
     if (!gasUrl) {
         showAlert('提示', '尚未設定 Google Apps Script (GAS) 網址！');
@@ -2743,15 +2967,6 @@ async function sendLinePushMissing() {
 
     const tokenInput = document.getElementById('line-access-token');
     const token = (tokenInput && tokenInput.value.trim()) || appConfig.lineChannelAccessToken || localStorage.getItem('line_access_token') || '';
-
-    const confirmResult = await showConfirm(
-        '確認發送 LINE 缺交通知',
-        `即將發送 LINE 私訊通知給 ${targets.length} 位缺交學生的家長，確定送出嗎？`,
-        'question',
-        '立即發送',
-        '取消'
-    );
-    if (!confirmResult.isConfirmed) return;
 
     showLoading();
     const loadText = document.getElementById('loading-text');
@@ -2787,6 +3002,27 @@ async function sendLinePushMissing() {
     } finally {
         hideLoading();
     }
+}
+
+// 一鍵發送今日缺交私訊推播（支援僅發送勾選之指定學生）
+async function sendLinePushMissing() {
+    const targets = getBoundStudentsWithMissing(null, true);
+    if (targets.length === 0) {
+        showAlert('提示', '請至少勾選一位待補交且已綁定 LINE 的學生！（或使用上方名單中的「📨推播」單獨傳訊）');
+        return;
+    }
+
+    const namesStr = targets.map(t => `${String(t.studentId).padStart(2, '0')} ${t.studentName}`).join('、');
+    const confirmResult = await showConfirm(
+        '確認發送 LINE 缺交通知',
+        `即將發送 LINE 缺交私訊給已勾選的 ${targets.length} 位學生家長：\n【${namesStr}】\n\n未缺交或未勾選之學生不會收到通知，確定送出嗎？`,
+        'question',
+        '立即發送',
+        '取消'
+    );
+    if (!confirmResult.isConfirmed) return;
+
+    await executeLinePushRequest(targets);
 }
 
 // 教師端手動解除某學生的 LINE 綁定

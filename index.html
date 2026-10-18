@@ -446,6 +446,7 @@
                         <li><strong>🔔 首次進入家長端自動引導綁定 LINE 提醒：</strong>家長首次掃碼開啟手札且尚未綁定 LINE 時，系統自動彈出 Apple HIG 原生毛玻璃風格詢問視窗，引導一鍵開啟 LINE 完成自動缺交通知綁定；若已完成雲端綁定則自動隱藏橫幅與提示，並移除冗餘總繳交率指標，版面更清爽。</li>
                         <li><strong>🍎 全面導入 Apple Design &amp; Apple HIG 設計規範：</strong>教師端與家長端全面升級毛玻璃導覽列 (<code>backdrop-blur</code>)、彈簧物理過渡曲線、數據等寬對齊 (<code>tabular-nums</code>)、最小 <code>44×44pt</code> 觸控點擊目標、無障礙 <code>aria-label</code> 標籤，以及 <code>prefers-reduced-motion</code> 減弱動態支援；頂部導覽列 0~8 分頁優化為單行自適應不換行。</li>
                         <li><strong>💬 LINE 官方帳號智慧靜默與即時成績回傳：</strong>家長於 LINE 傳送一般親師對話時機器人完全靜默，保留純粹 1 對 1 親師溝通空間；僅於輸入專屬查詢代碼或「查詢」時秒回學生最新作業繳交摘要與含雲端參數之手札連結。</li>
+                        <li><strong>🎯 LINE 指定學生推播與各科作業歷次明細二階展開：</strong>LINE 推播中心新增「勾選指定缺交學生發送」、「單一學生快速單發」與已綁定學生「📨 1對1 自訂推播」功能，靈活支援群發與個別通知；同時家長手札與手機模擬器之「各科繳交狀況」支援<strong>點擊單項作業（如：作文 75% 遲1）再次展開歷次作業明細</strong>，清楚列出每一份作業範圍/日期與遲交、缺交、準時狀態！</li>
                         <li><strong>🎨 雲端分頁配色與交件足跡精準化：</strong>雲端試算表自動為「LINE 家長綁定名單」套用班級專屬分頁色彩；修正「最近 15 筆交件足跡」遲交判定邏輯，完全對齊教師批改狀態，消除跨日補登造成的誤判遲交；並修復統計表 Excel 匯出按鈕綁定。</li>
                     </ul>
                 </div>
@@ -1668,21 +1669,38 @@
                                 <!-- 動態列出每位學生的綁定狀態標籤 -->
                             </div>
 
-                            <!-- 一鍵發送今日缺交通知 -->
-                            <div class="pt-2 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                <div>
-                                    <div class="text-xs font-bold text-slate-800">
-                                        今日待補交且已綁定 LINE：<span id="line-missing-target-count" class="font-black text-rose-600 text-sm">0</span> 人
+                            <!-- 一鍵發送今日缺交通知與指定學生勾選區 -->
+                            <div class="pt-3 border-t border-slate-100 space-y-2.5">
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                                            <span>🎯 今日待補交且已綁定 LINE：<span id="line-missing-target-count" class="font-black text-rose-600 text-sm">0</span> 人</span>
+                                            <span id="line-missing-selected-badge" class="text-[11px] bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full font-bold hidden">已勾選 0 人</span>
+                                        </div>
+                                        <div class="text-[11px] text-slate-500 mt-0.5">系統自動篩選有缺交的已綁定學生（作業全齊不打擾）；您亦可自由勾選指定發送對象，或於上方名單點「📨推播」單獨傳訊！</div>
                                     </div>
-                                    <div class="text-[11px] text-slate-400">僅針對今日清點有缺交且家長已綁定 LINE 的學生發送私訊提醒</div>
+                                    <div class="flex gap-2 w-full sm:w-auto flex-shrink-0">
+                                        <button onclick="previewLinePushModal()" class="flex-1 sm:flex-none px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition active:scale-95 cursor-pointer text-center">
+                                            <span>👁️ 預覽訊息</span>
+                                        </button>
+                                        <button onclick="sendLinePushMissing()" id="btn-send-line-push" class="flex-1 sm:flex-none px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-black shadow transition active:scale-95 flex items-center justify-center gap-1 cursor-pointer">
+                                            <span>🚀 發送 LINE 缺交通知</span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="flex gap-2 w-full sm:w-auto">
-                                    <button onclick="previewLinePushModal()" class="flex-1 sm:flex-none px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition active:scale-95 cursor-pointer text-center">
-                                        <span>👁️ 預覽訊息</span>
-                                    </button>
-                                    <button onclick="sendLinePushMissing()" id="btn-send-line-push" class="flex-1 sm:flex-none px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-black shadow transition active:scale-95 flex items-center justify-center gap-1 cursor-pointer">
-                                        <span>🚀 一鍵發送 LINE 缺交通知</span>
-                                    </button>
+
+                                <!-- 可勾選之待補交學生清單 -->
+                                <div id="line-missing-targets-box" class="hidden bg-rose-50/40 border border-rose-200/80 rounded-xl p-2.5 space-y-2">
+                                    <div class="flex justify-between items-center text-[11px]">
+                                        <span class="font-bold text-rose-900">勾選要發送缺交通知的指定學生：</span>
+                                        <div class="space-x-1">
+                                            <button type="button" onclick="toggleAllLineMissingTargets(true)" class="px-2 py-0.5 bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 rounded font-bold transition cursor-pointer">全選</button>
+                                            <button type="button" onclick="toggleAllLineMissingTargets(false)" class="px-2 py-0.5 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded font-bold transition cursor-pointer">全不選</button>
+                                        </div>
+                                    </div>
+                                    <div id="line-missing-targets-selector" class="max-h-36 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+                                        <!-- 動態生成待補交學生勾選框與單獨發送按鈕 -->
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1822,15 +1840,15 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=1792249000"></script>
-    <script src="js/audio.js?v=1792249000"></script>
-    <script src="js/db.js?v=1792249000"></script>
-    <script src="js/ui.js?v=1792249000"></script>
-    <script src="js/scanner.js?v=1792249000"></script>
-    <script src="js/export.js?v=1792249000"></script>
-    <script src="js/report.js?v=1792249000"></script>
-    <script src="js/reminders.js?v=1792249000"></script>
-    <script src="js/main.js?v=1792249000"></script>
+    <script src="js/alerts.js?v=1792300000"></script>
+    <script src="js/audio.js?v=1792300000"></script>
+    <script src="js/db.js?v=1792300000"></script>
+    <script src="js/ui.js?v=1792300000"></script>
+    <script src="js/scanner.js?v=1792300000"></script>
+    <script src="js/export.js?v=1792300000"></script>
+    <script src="js/report.js?v=1792300000"></script>
+    <script src="js/reminders.js?v=1792300000"></script>
+    <script src="js/main.js?v=1792300000"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">

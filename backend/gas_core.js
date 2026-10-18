@@ -735,21 +735,26 @@ function(e, ss, getSheetNames) {
           continue;
         }
 
-        var taskLines = [];
-        (tgt.missingTasks || []).forEach(function(mt) {
-          var rg = mt.range ? " (" + mt.range + ")" : "";
-          taskLines.push("‧ 【" + mt.subject + "】" + mt.taskName + rg);
-        });
-        if (taskLines.length === 0) taskLines.push("‧ 請參閱作業手札待補交清單");
-
         var portalUrl = getPortalUrl(prefix, tgt.token);
-        var msgText = "🚨 【作業待補交提醒】\n\n" +
-          maskStudentName(tgt.studentName) + " 家長您好：\n" +
-          "今日學校清點作業，孩子尚有 " + tgt.missingTasks.length + " 項作業待補交：\n" +
-          taskLines.join("\n") + "\n\n" +
-          "請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！\n\n" +
-          "🔗 點此秒開專屬手札查看明細：\n" + portalUrl + "\n\n" +
-          "（由 班級作業管理系統 自動推播）";
+        var msgText = "";
+        if (tgt.customMessage && tgt.customMessage.toString().trim() !== "") {
+          msgText = tgt.customMessage.toString();
+        } else {
+          var taskLines = [];
+          (tgt.missingTasks || []).forEach(function(mt) {
+            var rg = mt.range ? " (" + mt.range + ")" : "";
+            taskLines.push("‧ 【" + mt.subject + "】" + mt.taskName + rg);
+          });
+          if (taskLines.length === 0) taskLines.push("‧ 請參閱作業手札待補交清單");
+
+          msgText = "🚨 【作業待補交提醒】\n\n" +
+            maskStudentName(tgt.studentName) + " 家長您好：\n" +
+            "今日學校清點作業，孩子尚有 " + (tgt.missingTasks ? tgt.missingTasks.length : 0) + " 項作業待補交：\n" +
+            taskLines.join("\n") + "\n\n" +
+            "請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！\n\n" +
+            "🔗 點此秒開專屬手札查看明細：\n" + portalUrl + "\n\n" +
+            "（由 班級作業管理系統 自動推播）";
+        }
 
         try {
           var pushResp = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {

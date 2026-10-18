@@ -916,18 +916,22 @@
               timestamp = rec.timestamp || rec.fullTimestamp || '';
             }
             
-            // 抓取範圍
-            let range = '';
+            // 抓取範圍與指派日期
+            let range = nn || '';
+            let assignedDate = nn || '近期';
             if (db.ranges) {
               const rObj = db.ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
-              if (rObj) range = rObj.range || '';
+              if (rObj) {
+                range = rObj.range || nn || '';
+                assignedDate = rObj.date || nn || '近期';
+              }
             }
 
             studentTasks.push({
               subject: t.subject || '其他',
               taskName: t.name,
               range: range,
-              date: nn || '近期',
+              date: assignedDate,
               status: status,
               timestamp: timestamp
             });
@@ -945,7 +949,7 @@
               timestamp: r.fullTimestamp || r.timestamp || r.timeOnly || '',
               subject: t ? t.subject : '',
               taskName: t ? t.name : '',
-              range: r.range || '',
+              range: r.range || r.noticeName || '',
               status: r.manualStatus || '已交'
             };
           });
@@ -1189,6 +1193,7 @@
 
       const pendingItems = []; // 今晚待辦 (缺交, 沒帶, 退回需訂正)
       const lateCountsPerTask = {}; // 常遲到統計 { '作業名稱': 次數 }
+      const lateDetailsPerTask = {}; // 常遲到明細 { '作業名稱': [範圍/日期...] }
 
       tasks.forEach(t => {
         const c = classifyTaskStatus(t.status, t.timestamp || t.status);
@@ -1199,6 +1204,8 @@
           lateCount++;
           const key = `[${t.subject}] ${t.taskName}`;
           lateCountsPerTask[key] = (lateCountsPerTask[key] || 0) + 1;
+          if (!lateDetailsPerTask[key]) lateDetailsPerTask[key] = [];
+          lateDetailsPerTask[key].push(t.range || t.date || '日常作業');
         } else if (c.type === 'missing') {
           missingCount++;
           pendingItems.push({
@@ -1331,21 +1338,25 @@
       } else {
         const medals = ['🥇 第一名', '🥈 第二名', '🥉 第三名'];
         delayEntries.slice(0, 3).forEach(([taskKey, count], idx) => {
+          const lateList = (lateDetailsPerTask[taskKey] || []).join('、');
           topDelayContainer.innerHTML += `
-            <div class="p-3 bg-white border border-amber-100 rounded-2xl flex items-center justify-between shadow-2xs">
-              <div class="flex items-center gap-2.5">
-                <span class="text-xs font-bold text-amber-900 bg-amber-100 px-2.5 py-1 rounded-full">${medals[idx] || '#' + (idx+1)}</span>
-                <span class="text-sm font-bold text-slate-800">${taskKey}</span>
+            <div class="p-3 bg-white border border-amber-100 rounded-2xl flex flex-col gap-1.5 shadow-2xs">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span class="text-xs font-bold text-amber-900 bg-amber-100 px-2.5 py-1 rounded-full">${medals[idx] || '#' + (idx+1)}</span>
+                  <span class="text-sm font-bold text-slate-800">${taskKey}</span>
+                </div>
+                <div class="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full font-bold">
+                  累計遲交 <span class="text-sm font-black text-amber-900">${count}</span> 次
+                </div>
               </div>
-              <div class="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full font-bold">
-                累計遲交 <span class="text-sm font-black text-amber-900">${count}</span> 次
-              </div>
+              ${lateList ? `<div class="text-xs text-amber-700 font-medium pl-1">↳ 遲交項目：<span class="font-bold">${lateList}</span></div>` : ''}
             </div>
           `;
         });
       }
 
-      // 5. 渲染 📊 模組三：各科目繳交習慣橫向長條圖 (點開展開各項作業明細)
+      // 5. 渲染 📊 模組三：各科目繳交習慣橫向長條圖 (點開展開各項作業明細，再點擊作業可看每份紀錄)
       const subjectsContainer = document.getElementById('subjectsBreakdownContainer');
       subjectsContainer.innerHTML = '';
 
@@ -1365,13 +1376,13 @@
         let subMissing = 0;
         let subExcused = 0;
 
-        // 科目底下的各簿冊個別統計
+        // 科目底下的各簿冊個別統計與每份作業明細
         const tasksMap = {};
 
         subTasks.forEach(st => {
           const tName = st.taskName;
           if (!tasksMap[tName]) {
-            tasksMap[tName] = { total: 0, ontime: 0, late: 0, missing: 0, excused: 0 };
+            tasksMap[tName] = { total: 0, ontime: 0, late: 0, missing: 0, excused: 0, items: [] };
           }
           tasksMap[tName].total++;
 
@@ -1389,6 +1400,13 @@
             subMissing++;
             tasksMap[tName].missing++;
           }
+          tasksMap[tName].items.push({
+            range: st.range,
+            date: st.date,
+            status: st.status,
+            timestamp: st.timestamp,
+            c
+          });
         });
 
         const subEffTotal = Math.max(1, subTotal - subExcused);
@@ -1406,27 +1424,59 @@
           badgeColor = 'text-amber-700 bg-amber-50 border-amber-200';
         }
 
-        // 展開明細的 HTML
+        // 展開明細的 HTML (可點擊單一作業展開每份範圍與遲交/缺交狀態)
         let detailsHtml = '';
-        Object.entries(tasksMap).forEach(([tName, stats]) => {
+        Object.entries(tasksMap).forEach(([tName, stats], tIdx) => {
           const tEff = Math.max(1, stats.total - stats.excused);
           const tRate = Math.round((stats.ontime / tEff) * 100);
-          detailsHtml += `
-            <div class="p-2.5 bg-slate-50/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border border-slate-100">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-slate-800">${tName}</span>
-                <span class="text-[11px] text-slate-500 font-medium">(${stats.ontime}/${tEff} 次)</span>
+          const taskDetailId = `parent-task-detail-${sIdx}-${tIdx}`;
+
+          // 排序：缺交/沒帶/退回 -> 遲交 -> 免計 -> 準時
+          const orderRank = { missing: 0, forgot: 0, returned: 0, late: 1, excused: 2, ontime: 3 };
+          const sortedItems = [...stats.items].sort((a, b) => (orderRank[a.c.type] ?? 9) - (orderRank[b.c.type] ?? 9));
+
+          const itemRowsHtml = sortedItems.map((it, idx) => {
+            const label = it.range && it.date && it.range !== it.date
+              ? `${it.range} <span class="text-slate-400 font-normal">(${it.date})</span>`
+              : (it.range || (it.date && it.date !== '近期' ? it.date : `第 ${idx + 1} 次作業`));
+            const isHighlight = it.c.type === 'late' || it.c.type === 'missing' || it.c.type === 'forgot' || it.c.type === 'returned';
+            const rowBg = it.c.type === 'late' ? 'bg-amber-50/70 border-amber-200' : (isHighlight ? 'bg-rose-50/70 border-rose-200' : 'bg-white border-slate-100');
+            return `
+              <div class="px-2.5 py-1.5 rounded-lg border ${rowBg} flex items-center justify-between gap-2 text-xs">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="font-bold text-slate-700 truncate">📌 ${label}</span>
+                  ${it.timestamp ? `<span class="text-[10px] text-slate-400 font-mono shrink-0">(${it.timestamp})</span>` : ''}
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${it.c.badgeClass} shrink-0">${it.c.badge}</span>
               </div>
-              <div class="flex items-center gap-3">
-                <div class="w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                  <div class="${tRate >= 90 ? 'bg-emerald-500' : (tRate >= 80 ? 'bg-amber-500' : 'bg-rose-500')} h-1.5 rounded-full" style="width: ${tRate}%"></div>
+            `;
+          }).join('');
+
+          detailsHtml += `
+            <div class="bg-slate-50/80 rounded-xl border border-slate-100 overflow-hidden transition-all">
+              <button type="button" onclick="toggleParentTaskDetail('${taskDetailId}')" class="w-full p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-left hover:bg-slate-100/80 transition cursor-pointer">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-slate-800">${tName}</span>
+                  <span class="text-[11px] text-slate-500 font-medium">(${stats.ontime}/${tEff} 次)</span>
                 </div>
-                <div class="text-xs font-mono font-bold ${tRate >= 90 ? 'text-emerald-700' : (tRate >= 80 ? 'text-amber-700' : 'text-rose-700')} min-w-[36px] text-right">
-                  ${tRate}%
+                <div class="flex items-center gap-2.5">
+                  <div class="w-20 sm:w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="${tRate >= 90 ? 'bg-emerald-500' : (tRate >= 80 ? 'bg-amber-500' : 'bg-rose-500')} h-1.5 rounded-full" style="width: ${tRate}%"></div>
+                  </div>
+                  <div class="text-xs font-mono font-bold ${tRate >= 90 ? 'text-emerald-700' : (tRate >= 80 ? 'text-amber-700' : 'text-rose-700')} min-w-[36px] text-right">
+                    ${tRate}%
+                  </div>
+                  ${stats.late > 0 ? '<span class="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded font-bold border border-amber-200">遲交 ' + stats.late + '</span>' : ''}
+                  ${stats.missing > 0 ? '<span class="text-[10px] text-rose-800 bg-rose-50 px-1.5 py-0.5 rounded font-bold border border-rose-200">缺交 ' + stats.missing + '</span>' : ''}
+                  ${stats.excused > 0 ? '<span class="text-[10px] text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">免計 ' + stats.excused + '</span>' : ''}
+                  <svg id="${taskDetailId}-arrow" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
                 </div>
-                ${stats.late > 0 ? '<span class="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded font-bold border border-amber-200">遲交 ' + stats.late + '</span>' : ''}
-                ${stats.missing > 0 ? '<span class="text-[10px] text-rose-800 bg-rose-50 px-1.5 py-0.5 rounded font-bold border border-rose-200">缺交 ' + stats.missing + '</span>' : ''}
-                ${stats.excused > 0 ? '<span class="text-[10px] text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">免計 ' + stats.excused + '</span>' : ''}
+              </button>
+              <div id="${taskDetailId}" class="hidden px-2.5 pb-2.5 pt-1 border-t border-slate-200/60 bg-slate-100/50 space-y-1">
+                <div class="text-[10px] text-slate-500 font-bold px-0.5 pb-0.5">點擊展開「${tName}」歷次作業紀錄（共 ${stats.items.length} 份）：</div>
+                ${itemRowsHtml}
               </div>
             </div>
           `;
@@ -1467,7 +1517,10 @@
             <div id="${accId}" class="accordion-panel border-t border-transparent">
               <div>
                 <div class="p-3 pt-2 border-t border-slate-100 space-y-1.5 bg-slate-50/40">
-                  <div class="text-xs font-bold text-slate-600 px-1 py-1">該科各項作業詳細繳交狀況：</div>
+                  <div class="text-xs font-bold text-slate-600 px-1 py-1 flex items-center justify-between">
+                    <span>該科各項作業詳細繳交狀況：</span>
+                    <span class="text-[11px] text-indigo-600 font-medium">💡 點擊單項作業可查看哪幾份遲交或缺交</span>
+                  </div>
                   ${detailsHtml}
                 </div>
               </div>
@@ -1517,6 +1570,21 @@
       } else {
         el.classList.add('open');
         if (arrow) arrow.style.transform = 'rotate(180deg)';
+      }
+    }
+
+    // 單一作業項目點擊展開歷次作業明細 (查看哪幾份遲交/缺交/準時)
+    function toggleParentTaskDetail(id) {
+      const el = document.getElementById(id);
+      const arrow = document.getElementById(id + '-arrow');
+      if (!el) return;
+      const isHidden = el.classList.contains('hidden');
+      if (isHidden) {
+        el.classList.remove('hidden');
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+      } else {
+        el.classList.add('hidden');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
       }
     }
 
