@@ -138,7 +138,7 @@ function(e, ss, getSheetNames) {
       if (gasId) {
         url += "&a=" + encodeURIComponent(gasId);
       }
-      url += "&lb=1";
+      url += "&lb=1&src=line";
       return url;
     }
 
@@ -274,7 +274,7 @@ function(e, ss, getSheetNames) {
         if (!matchedPrefix && sName2.indexOf("[") === 0) continue;
         
         var baseName = matchedPrefix ? sName2.substring(matchedPrefix.length) : sName2;
-        if (baseName === "學生名單" || baseName === "所有掃描紀錄" || baseName.indexOf("統計") !== -1 || baseName === "SystemConfig" || baseName.indexOf("LINE用戶綁定") !== -1) continue;
+        if (baseName === "學生名單" || baseName === "所有掃描紀錄" || baseName.indexOf("統計") !== -1 || baseName === "SystemConfig" || baseName.indexOf("LINE用戶綁定") !== -1 || baseName.indexOf("家長閱覽紀錄") !== -1) continue;
         
         var sheetValues = sheet.getDataRange().getDisplayValues();
         if (sheetValues.length >= 4) {
@@ -361,6 +361,116 @@ function(e, ss, getSheetNames) {
     }
 
     // ==========================================
+    // 家長閱覽紀錄核心函式 (足跡日誌、節流防刷、統計匯總)
+    // ==========================================
+    function logParentView(classPrefix, student, source, note) {
+      try {
+        var p = classPrefix || "";
+        var sheetName = p + "家長閱覽紀錄";
+        var sheet = ensureSheetAndColor(sheetName);
+        if (!sheet) return;
+
+        if (sheet.getLastRow() === 0) {
+          sheet.appendRow(["時間戳記", "座號", "學生姓名", "查詢代碼", "閱覽管道", "備註"]);
+          sheet.getRange("A1:F1").setBackground("#4f46e5").setFontColor("#ffffff").setFontWeight("bold");
+        }
+
+        var now = new Date();
+        var nowStr = Utilities.formatDate(now, "Asia/Taipei", "yyyy/MM/dd HH:mm:ss");
+        var sId = student.id !== undefined ? student.id.toString().trim() : "";
+        var sName = student.name || "";
+        var sToken = (student.token || "").toString().trim().toUpperCase();
+        var sSource = source || "📱 手機手札 (QR掃碼)";
+        var sNote = note || "";
+
+        // 檢查防抖防刷機制 (Throttle): 若此學生在過去 3 分鐘內曾有紀錄，則更新該筆時間與備註，避免頻繁重新整理灌爆試算表
+        var lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+          var checkStart = Math.max(2, lastRow - 15);
+          var checkRange = sheet.getRange(checkStart, 1, lastRow - checkStart + 1, 6).getDisplayValues();
+          for (var r = checkRange.length - 1; r >= 0; r--) {
+            var rowData = checkRange[r];
+            var rowId = (rowData[1] || "").toString().trim();
+            var rowToken = (rowData[3] || "").toString().trim().toUpperCase();
+            var isMatch = (rowId && sId && rowId === sId) || (sToken && rowToken && rowToken === sToken);
+            if (isMatch) {
+              var rowTimeStr = rowData[0];
+              var rowTime = new Date(rowTimeStr);
+              if (!isNaN(rowTime.getTime()) && (now.getTime() - rowTime.getTime() < 3 * 60 * 1000)) {
+                var targetRowNum = checkStart + r;
+                sheet.getRange(targetRowNum, 1, 1, 6).setValues([[
+                  nowStr, sId, sName, sToken, sSource, sNote
+                ]]);
+                return;
+              }
+              break;
+            }
+          }
+        }
+
+        sheet.appendRow([nowStr, sId, sName, sToken, sSource, sNote]);
+      } catch (err) {}
+    }
+
+    function getParentViewData(classPrefix) {
+      var p = classPrefix || "";
+      var sheetName = p + "家長閱覽紀錄";
+      var sheet = ss.getSheetByName(sheetName);
+      var stats = {};
+      var logs = [];
+
+      if (sheet && sheet.getLastRow() > 1) {
+        var data = sheet.getDataRange().getDisplayValues();
+        for (var i = 1; i < data.length; i++) {
+          var row = data[i];
+          var timeStr = (row[0] || '').toString().trim();
+          var sId = (row[1] || '').toString().trim();
+          var sName = (row[2] || '').toString().trim();
+          var sToken = (row[3] || '').toString().trim().toUpperCase();
+          var source = (row[4] || '').toString().trim();
+          var note = (row[5] || '').toString().trim();
+
+          if (sId) {
+            if (!stats[sId]) {
+              stats[sId] = {
+                studentId: sId,
+                studentName: sName,
+                token: sToken,
+                totalViews: 0,
+                lastViewedAt: timeStr,
+                lastSource: source,
+                lastNote: note
+              };
+            }
+            stats[sId].totalViews++;
+            stats[sId].lastViewedAt = timeStr;
+            stats[sId].lastSource = source;
+            stats[sId].lastNote = note;
+          }
+
+          logs.push({
+            timestamp: timeStr,
+            studentId: sId,
+            studentName: sName,
+            token: sToken,
+            source: source,
+            note: note
+          });
+        }
+      }
+
+      logs.reverse();
+      if (logs.length > 200) {
+        logs = logs.slice(0, 200);
+      }
+
+      return {
+        stats: stats,
+        logs: logs
+      };
+    }
+
+    // ==========================================
     // 0. LINE Webhook 接收器 (連線驗證、傳送代碼自動綁定、輸入查詢回傳手札)
     // ==========================================
     if (payload.events !== undefined) {
@@ -440,6 +550,11 @@ function(e, ss, getSheetNames) {
                 var stu = boundStudents[bs];
                 var summary = getStudentStatusSummary(stu.classPrefix, stu);
                 var portalUrl = getPortalUrl(stu.className, stu.token);
+
+                var qNote = (summary.missingTasks && summary.missingTasks.length > 0)
+                  ? ("待補交 " + summary.missingTasks.length + " 項")
+                  : "作業全數繳齊";
+                logParentView(stu.classPrefix, stu, "💬 LINE 主動查詢", qNote);
 
                 replyLines.push("👦 學生：【" + stu.className + "】" + stu.id + "號 " + maskStudentName(stu.name));
                 if (summary.missingTasks.length > 0) {
@@ -558,6 +673,9 @@ function(e, ss, getSheetNames) {
 
             var directUrl = getPortalUrl(cLabel, matchedStudent.token);
             var summary = getStudentStatusSummary(matchedClassPrefix, matchedStudent);
+
+            var bNote = "LINE綁定成功 (" + (summary.missingTasks.length > 0 ? ("待補交 " + summary.missingTasks.length + " 項") : "作業全齊") + ")";
+            logParentView(matchedClassPrefix, matchedStudent, "💬 LINE 綁定登入", bNote);
 
             var replyLines = [
               "🎉 【LINE 綁定成功・作業現況回報】\n",
@@ -683,10 +801,13 @@ function(e, ss, getSheetNames) {
           });
         }
       }
+      var viewData = getParentViewData(prefix);
       return ContentService.createTextOutput(JSON.stringify({
         status: 'success',
         config: lineCfg,
-        bindings: bindings
+        bindings: bindings,
+        parentViewStats: viewData.stats,
+        parentViewLogs: viewData.logs
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -962,6 +1083,16 @@ function(e, ss, getSheetNames) {
       return ContentService.createTextOutput(JSON.stringify({status: 'success', students: students, config: config})).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 取得家長閱覽即時足跡與歷程
+    if (payload.action === 'get_parent_views') {
+      var viewData = getParentViewData(prefix);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        stats: viewData.stats,
+        logs: viewData.logs
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 家長端專屬查詢 (僅支援小卡專屬 QR Code 代碼，保護學生隱私)
     if (payload.action === 'parent_query') {
       var queryToken = (payload.token || '').toString().trim().toUpperCase();
@@ -981,6 +1112,12 @@ function(e, ss, getSheetNames) {
       
       // 讀取該學生的各科作業紀錄與彙總
       var summary = getStudentStatusSummary(matchedPrefix, targetStudent);
+
+      // 自動記錄家長閱覽足跡
+      var viewNote = (summary.missingTasks && summary.missingTasks.length > 0)
+        ? ("待補交 " + summary.missingTasks.length + " 項")
+        : "作業全數繳齊";
+      logParentView(matchedPrefix, targetStudent, payload.source || "📱 手機手札 (QR掃碼)", viewNote);
       
       // 讀取該學生的近期打卡紀錄 (所有掃描紀錄)，並對照各科目分頁校正遲交與截止日狀態
       var logSheetName = matchedPrefix + "所有掃描紀錄";
@@ -1102,7 +1239,7 @@ function(e, ss, getSheetNames) {
            baseName = sheetName.substring(prefix.length);
         }
         
-        if (baseName === "學生名單" || baseName === "所有掃描紀錄" || baseName.indexOf("統計") !== -1) {
+        if (baseName === "學生名單" || baseName === "所有掃描紀錄" || baseName.indexOf("統計") !== -1 || baseName === "LINE用戶綁定" || baseName === "家長閱覽紀錄") {
           continue;
         }
         

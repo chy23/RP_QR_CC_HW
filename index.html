@@ -1639,15 +1639,20 @@
                         </div>
                     </div>
 
-                    <!-- 卡片 2: 全班防偽查詢代碼列表 -->
+                    <!-- 卡片 2: 全班防偽查詢代碼列表與家長閱覽足跡 -->
                     <div class="border border-slate-200 rounded-2xl p-5 bg-white shadow-xs">
-                        <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
+                        <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3 mb-3">
                             <h3 class="font-black text-slate-800 text-base flex items-center gap-2">
                                 <span>🔐</span> 全班專屬家長查詢代碼表 (Token)
                             </h3>
-                            <button onclick="pushStudentsToGas()" class="text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-lg font-bold transition flex items-center gap-1 active:scale-95 cursor-pointer">
-                                <span>☁️ 備份代碼至雲端</span>
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="openParentViewLogsModal()" class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 active:scale-95 cursor-pointer shadow-2xs">
+                                    <span>📋 家長閱覽即時足跡</span>
+                                </button>
+                                <button type="button" onclick="pushStudentsToGas()" class="text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 active:scale-95 cursor-pointer shadow-2xs">
+                                    <span>☁️ 備份代碼至雲端</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="max-h-64 overflow-y-auto border border-slate-100 rounded-xl">
                             <table class="w-full text-left text-xs text-slate-700">
@@ -1656,7 +1661,8 @@
                                         <th class="p-2 text-center w-12">座號</th>
                                         <th class="p-2">姓名</th>
                                         <th class="p-2 font-mono">查詢代碼</th>
-                                        <th class="p-2 text-center">專屬連結</th>
+                                        <th class="p-2 text-center">👀 家長最後閱覽</th>
+                                        <th class="p-2 text-center w-28">專屬手札連結</th>
                                     </tr>
                                 </thead>
                                 <tbody id="parent-tab-tokens-tbody" class="divide-y divide-slate-100">
@@ -1797,6 +1803,108 @@
             </div>
         </div>
 
+    <!-- 家長閱覽即時足跡與歷程 Modal -->
+    <div id="parent-view-logs-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden justify-center items-center z-50 p-4 transition-all">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col border border-slate-100 overflow-hidden">
+            <!-- Modal 頂部 Header -->
+            <div class="p-5 border-b border-indigo-100 flex justify-between items-center bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                        👀
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                            <span>家長閱覽即時足跡與歷程</span>
+                            <span id="parent-view-class-badge" class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">目前班級</span>
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">即時掌握家長掃描手札與 LINE 查詢作業最新動態</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeParentViewLogsModal()" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center font-bold text-xl transition active:scale-90 cursor-pointer">
+                    &times;
+                </button>
+            </div>
+
+            <!-- Modal 統計面板 (Summary Badges) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-50/70 border-b border-slate-100">
+                <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <div class="text-[11px] font-bold text-slate-400">總閱覽人次</div>
+                    <div class="text-xl font-black text-indigo-600 mt-0.5" id="parent-views-stat-total">0 次</div>
+                </div>
+                <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <div class="text-[11px] font-bold text-slate-400">已閱覽涵蓋率</div>
+                    <div class="text-xl font-black text-emerald-600 mt-0.5" id="parent-views-stat-coverage">0 / 0 人</div>
+                </div>
+                <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <div class="text-[11px] font-bold text-slate-400">LINE 綁定率</div>
+                    <div class="text-xl font-black text-purple-600 mt-0.5" id="parent-views-stat-line">0 人</div>
+                </div>
+                <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <div class="text-[11px] font-bold text-slate-400">最新閱覽時間</div>
+                    <div class="text-xs font-bold text-slate-700 truncate mt-1.5" id="parent-views-stat-last-time">-</div>
+                </div>
+            </div>
+
+            <!-- 篩選列與操作工具列 -->
+            <div class="p-3.5 border-b border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
+                <div class="flex items-center gap-2 flex-grow">
+                    <div class="relative flex-grow sm:flex-grow-0 sm:w-56">
+                        <input type="text" id="parent-views-search-input" oninput="filterParentViewLogsTable()" placeholder="🔍 搜尋學生姓名、座號..." class="w-full pl-3 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition">
+                    </div>
+                    <select id="parent-views-channel-filter" onchange="filterParentViewLogsTable()" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition cursor-pointer">
+                        <option value="ALL">全部閱覽管道</option>
+                        <option value="📱">📱 手機手札 (QR掃碼)</option>
+                        <option value="💬 LINE 連結">💬 LINE 連結開啟</option>
+                        <option value="💬 LINE 主動查詢">💬 LINE 主動查詢</option>
+                        <option value="💬 LINE 綁定">💬 LINE 綁定登入</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto">
+                    <button type="button" onclick="exportParentViewLogsCsv()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 active:scale-95 cursor-pointer">
+                        <span>📥 匯出 CSV</span>
+                    </button>
+                    <button type="button" onclick="fetchParentViewLogs(true)" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 active:scale-95 cursor-pointer">
+                        <span id="parent-views-refresh-icon">🔄</span> 重新整理
+                    </button>
+                </div>
+            </div>
+
+            <!-- 足跡時序資料表 -->
+            <div class="p-4 overflow-y-auto flex-grow bg-slate-50/50">
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-100 sticky top-0">
+                            <tr>
+                                <th class="p-3 w-36">閱覽時間</th>
+                                <th class="p-3 w-28">學生</th>
+                                <th class="p-3 w-40">管道</th>
+                                <th class="p-3">閱覽當下作業現況 / 備註</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parent-views-logs-tbody" class="divide-y divide-slate-100">
+                            <!-- 動態填入足跡紀錄 -->
+                        </tbody>
+                    </table>
+                    <div id="parent-views-empty" class="p-10 text-center text-slate-400 font-bold hidden">
+                        <span class="text-3xl block mb-2">🍃</span>
+                        目前尚無家長閱覽紀錄。<br>
+                        當家長掃描手札 QR Code 或透過 LINE 查詢作業時，系統將自動於此即時記錄足跡！
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal 底部關閉按鈕 -->
+            <div class="p-3.5 border-t border-slate-100 bg-white flex justify-between items-center text-xs text-slate-400">
+                <span class="flex items-center gap-1">
+                    <span>💡</span> 系統具備 3 分鐘防刷機制，同一家長 3 分鐘內重複瀏覽將自動合併更新
+                </span>
+                <button type="button" onclick="closeParentViewLogsModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition active:scale-95 cursor-pointer">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Reminder Modal -->
     <div id="reminder-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">
         <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
@@ -1893,15 +2001,15 @@
         </div>
     </div>
 
-    <script src="js/alerts.js?v=1792302000"></script>
-    <script src="js/audio.js?v=1792302000"></script>
-    <script src="js/db.js?v=1792302000"></script>
-    <script src="js/ui.js?v=1792302000"></script>
-    <script src="js/scanner.js?v=1792302000"></script>
-    <script src="js/export.js?v=1792302000"></script>
-    <script src="js/report.js?v=1792302000"></script>
-    <script src="js/reminders.js?v=1792302000"></script>
-    <script src="js/main.js?v=1792302000"></script>
+    <script src="js/alerts.js?v=1792303000"></script>
+    <script src="js/audio.js?v=1792303000"></script>
+    <script src="js/db.js?v=1792303000"></script>
+    <script src="js/ui.js?v=1792303000"></script>
+    <script src="js/scanner.js?v=1792303000"></script>
+    <script src="js/export.js?v=1792303000"></script>
+    <script src="js/report.js?v=1792303000"></script>
+    <script src="js/reminders.js?v=1792303000"></script>
+    <script src="js/main.js?v=1792303000"></script>
 
     <!-- GAS Tutorial Modal -->
     <div id="gas-tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50 p-4">

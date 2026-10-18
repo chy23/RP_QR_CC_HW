@@ -778,12 +778,20 @@
         let freshData = null;
 
         if (activeApiUrl) {
+          const urlParams = new URLSearchParams(window.location.search);
+          const srcParam = (urlParams.get('src') || urlParams.get('source') || '').toLowerCase();
+          let querySource = '📱 手機手札 (QR掃碼)';
+          if (srcParam === 'line' || (document.referrer && document.referrer.indexOf('line.me') !== -1)) {
+            querySource = '💬 LINE 連結開啟手札';
+          }
+
           const response = await fetch(activeApiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({
               action: 'parent_query',
-              token: query
+              token: query,
+              source: querySource
             })
           });
           const res = await response.json();

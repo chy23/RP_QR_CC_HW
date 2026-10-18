@@ -2443,6 +2443,8 @@ async function printParentCardsA4() {
 // Tab 8: 家長手札與專屬查詢小卡中心
 // ==========================================
 let currentSimulatorStudentId = null;
+let currentParentViewStats = {};
+let currentParentViewLogs = [];
 
 function renderParentTab() {
     const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
@@ -2482,14 +2484,30 @@ function renderParentTab() {
         db.students.forEach(s => {
             const token = s.token || ('STU' + String(s.id).padStart(3, '0'));
             const directUrl = `${parentBaseUrl}?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+            
+            const vStat = currentParentViewStats ? currentParentViewStats[String(s.id)] : null;
+            let viewHtml = '<span class="text-slate-300 font-bold text-[11px]">尚未閱覽</span>';
+            if (vStat && vStat.totalViews > 0) {
+                const shortTime = formatShortViewTime(vStat.lastViewedAt);
+                const isLine = vStat.lastSource && vStat.lastSource.indexOf('LINE') !== -1;
+                const icon = isLine ? '💬' : '📱';
+                viewHtml = `
+                    <button type="button" onclick="openParentViewLogsModal('${s.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition cursor-pointer active:scale-95" title="點擊查看 ${escapeCardHtml(s.name)} 的完整閱覽足跡\n最後管道：${vStat.lastSource}\n最後時間：${vStat.lastViewedAt}\n備註：${vStat.lastNote || '無'}">
+                        <span>${icon} ${shortTime}</span>
+                        <span class="bg-indigo-200/80 text-indigo-900 rounded-full px-1 text-[10px] leading-tight">${vStat.totalViews}次</span>
+                    </button>
+                `;
+            }
+
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-slate-50 transition';
             tr.innerHTML = `
                 <td class="p-2 text-center font-bold text-slate-500">${String(s.id).padStart(2, '0')}</td>
-                <td class="p-2 font-bold text-slate-800">${s.name}</td>
+                <td class="p-2 font-bold text-slate-800">${escapeCardHtml(s.name)}</td>
                 <td class="p-2 font-mono font-bold text-emerald-700 bg-emerald-50/50 rounded px-1.5 py-0.5">${token}</td>
+                <td class="p-2 text-center parent-view-cell" data-student-id="${s.id}">${viewHtml}</td>
                 <td class="p-2 text-center space-x-1">
-                    <button onclick="navigator.clipboard.writeText('${directUrl}').then(() => showToast('已複製 ${s.name} 專屬手札網址！', 'success'))" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-bold active:scale-95 transition cursor-pointer">複製</button>
+                    <button onclick="navigator.clipboard.writeText('${directUrl}').then(() => showToast('已複製 ${escapeCardHtml(s.name)} 專屬手札網址！', 'success'))" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-bold active:scale-95 transition cursor-pointer">複製</button>
                     <a href="${directUrl}" target="_blank" class="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[11px] font-bold transition inline-block">開啟</a>
                 </td>
             `;
@@ -3419,6 +3437,11 @@ async function fetchLineBindingStatus() {
             }
 
             currentLineBindings = res.bindings || [];
+            if (res.parentViewStats) {
+                currentParentViewStats = res.parentViewStats || {};
+                currentParentViewLogs = res.parentViewLogs || [];
+                updateParentViewCellsInTable();
+            }
 
             // 建立已綁定的 ID map
             const boundMap = {};
@@ -3675,4 +3698,262 @@ async function unbindLineStudent(studentId, studentName) {
     }
 }
 
+// ==========================================
+// 家長閱覽即時足跡與歷程管理核心函式
+// ==========================================
+
+function updateParentViewCellsInTable() {
+    document.querySelectorAll('.parent-view-cell').forEach(cell => {
+        const sId = cell.getAttribute('data-student-id');
+        const s = (db.students || []).find(stu => stu.id.toString() === sId);
+        const sName = s ? s.name : '';
+        const vStat = currentParentViewStats ? currentParentViewStats[sId] : null;
+        if (vStat && vStat.totalViews > 0) {
+            const shortTime = formatShortViewTime(vStat.lastViewedAt);
+            const isLine = vStat.lastSource && vStat.lastSource.indexOf('LINE') !== -1;
+            const icon = isLine ? '💬' : '📱';
+            cell.innerHTML = `
+                <button type="button" onclick="openParentViewLogsModal('${sId}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition cursor-pointer active:scale-95" title="點擊查看 ${escapeCardHtml(sName)} 的完整閱覽足跡\n最後管道：${vStat.lastSource}\n最後時間：${vStat.lastViewedAt}\n備註：${vStat.lastNote || '無'}">
+                    <span>${icon} ${shortTime}</span>
+                    <span class="bg-indigo-200/80 text-indigo-900 rounded-full px-1 text-[10px] leading-tight">${vStat.totalViews}次</span>
+                </button>
+            `;
+        } else {
+            cell.innerHTML = '<span class="text-slate-300 font-bold text-[11px]">尚未閱覽</span>';
+        }
+    });
+}
+
+function formatShortViewTime(tsStr) {
+    if (!tsStr) return '-';
+    try {
+        const s = tsStr.replace(/-/g, '/');
+        const parts = s.split(' ');
+        if (parts.length >= 2) {
+            const dateParts = parts[0].split('/');
+            const timeParts = parts[1].split(':');
+            const mm = dateParts[1] || '';
+            const dd = dateParts[2] || '';
+            const hh = timeParts[0] || '';
+            const min = timeParts[1] || '';
+            if (mm && dd && hh && min) {
+                return `${mm}/${dd} ${hh}:${min}`;
+            }
+        }
+    } catch(e) {}
+    return tsStr.substring(5, 16);
+}
+
+async function openParentViewLogsModal(filterStudentId = null) {
+    const modal = document.getElementById('parent-view-logs-modal');
+    if (!modal) return;
+
+    const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+    const classLabel = cls ? cls.label : '目前班級';
+    const badgeEl = document.getElementById('parent-view-class-badge');
+    if (badgeEl) badgeEl.innerText = classLabel;
+
+    const searchInput = document.getElementById('parent-views-search-input');
+    if (searchInput) {
+        if (filterStudentId) {
+            const s = (db.students || []).find(st => st.id.toString() === filterStudentId.toString());
+            searchInput.value = s ? s.name : String(filterStudentId);
+        } else {
+            searchInput.value = '';
+        }
+    }
+    const chFilter = document.getElementById('parent-views-channel-filter');
+    if (chFilter) chFilter.value = 'ALL';
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    renderParentViewLogsContent();
+
+    if (!currentParentViewLogs || currentParentViewLogs.length === 0) {
+        await fetchParentViewLogs(false);
+    }
+}
+
+function closeParentViewLogsModal() {
+    const modal = document.getElementById('parent-view-logs-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+async function fetchParentViewLogs(isManual = false) {
+    const gasUrl = appConfig.gasUrl || '';
+    if (!gasUrl) {
+        if (isManual) showAlert('提示', '尚未設定 Google Apps Script 雲端網址！');
+        return;
+    }
+
+    const refreshIcon = document.getElementById('parent-views-refresh-icon');
+    if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+    try {
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'get_parent_views',
+                classPrefix: getActiveClassPrefix()
+            })
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+            currentParentViewStats = res.stats || {};
+            currentParentViewLogs = res.logs || [];
+            updateParentViewCellsInTable();
+            renderParentViewLogsContent();
+            if (isManual) showToast('已成功同步最新家長閱覽紀錄！', 'success');
+        } else {
+            if (isManual) showAlert('讀取失敗', res.message || '無法取得家長閱覽紀錄');
+        }
+    } catch (err) {
+        console.error('Fetch parent view logs error:', err);
+        if (isManual) showAlert('連線失敗', '無法連接 Google Apps Script 雲端試算表');
+    } finally {
+        if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+    }
+}
+
+function renderParentViewLogsContent() {
+    const totalStudents = db.students ? db.students.length : 0;
+    let viewedStudentsCount = 0;
+    let totalViewsCount = 0;
+    let latestTimeStr = '-';
+
+    if (currentParentViewStats) {
+        Object.keys(currentParentViewStats).forEach(sId => {
+            const st = currentParentViewStats[sId];
+            if (st && st.totalViews > 0) {
+                viewedStudentsCount++;
+                totalViewsCount += st.totalViews;
+                if (st.lastViewedAt && (latestTimeStr === '-' || st.lastViewedAt > latestTimeStr)) {
+                    latestTimeStr = st.lastViewedAt;
+                }
+            }
+        });
+    }
+
+    let boundCount = 0;
+    if (currentLineBindings) {
+        currentLineBindings.forEach(b => { if (b.isBound) boundCount++; });
+    }
+
+    const totalEl = document.getElementById('parent-views-stat-total');
+    if (totalEl) totalEl.innerText = `${totalViewsCount} 次`;
+
+    const coverageEl = document.getElementById('parent-views-stat-coverage');
+    if (coverageEl) {
+        const pct = totalStudents > 0 ? Math.round((viewedStudentsCount / totalStudents) * 100) : 0;
+        coverageEl.innerText = `${viewedStudentsCount} / ${totalStudents} 人 (${pct}%)`;
+    }
+
+    const lineEl = document.getElementById('parent-views-stat-line');
+    if (lineEl) {
+        const lPct = totalStudents > 0 ? Math.round((boundCount / totalStudents) * 100) : 0;
+        lineEl.innerText = `${boundCount} 人 (${lPct}%)`;
+    }
+
+    const lastTimeEl = document.getElementById('parent-views-stat-last-time');
+    if (lastTimeEl) {
+        lastTimeEl.innerText = latestTimeStr !== '-' ? formatShortViewTime(latestTimeStr) : '尚無紀錄';
+    }
+
+    filterParentViewLogsTable();
+}
+
+function filterParentViewLogsTable() {
+    const tbody = document.getElementById('parent-views-logs-tbody');
+    const emptyEl = document.getElementById('parent-views-empty');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    const searchVal = (document.getElementById('parent-views-search-input')?.value || '').trim().toLowerCase();
+    const chFilter = document.getElementById('parent-views-channel-filter')?.value || 'ALL';
+
+    const logs = currentParentViewLogs || [];
+    const filtered = logs.filter(log => {
+        if (searchVal) {
+            const matchName = (log.studentName || '').toLowerCase().includes(searchVal);
+            const matchId = String(log.studentId || '').includes(searchVal);
+            const matchToken = (log.token || '').toLowerCase().includes(searchVal);
+            const matchNote = (log.note || '').toLowerCase().includes(searchVal);
+            if (!matchName && !matchId && !matchToken && !matchNote) return false;
+        }
+        if (chFilter !== 'ALL') {
+            if (!(log.source || '').includes(chFilter)) return false;
+        }
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+    }
+
+    if (emptyEl) emptyEl.classList.add('hidden');
+
+    filtered.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/80 transition';
+
+        const isLine = (log.source || '').includes('LINE');
+        const sourceBadge = isLine
+            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">${escapeCardHtml(log.source)}</span>`
+            : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">${escapeCardHtml(log.source)}</span>`;
+
+        const noteBadge = (log.note || '').includes('待補交') || (log.note || '').includes('缺交')
+            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">${escapeCardHtml(log.note)}</span>`
+            : `<span class="text-slate-600 text-xs">${escapeCardHtml(log.note || '正常瀏覽')}</span>`;
+
+        tr.innerHTML = `
+            <td class="p-3 text-slate-500 font-mono text-[11px]">${escapeCardHtml(log.timestamp)}</td>
+            <td class="p-3">
+                <span class="font-bold text-slate-800">${String(log.studentId).padStart(2, '0')} ${escapeCardHtml(log.studentName)}</span>
+                <span class="block text-[10px] text-slate-400 font-mono">${escapeCardHtml(log.token || '')}</span>
+            </td>
+            <td class="p-3">${sourceBadge}</td>
+            <td class="p-3">${noteBadge}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function exportParentViewLogsCsv() {
+    const logs = currentParentViewLogs || [];
+    if (logs.length === 0) {
+        showAlert('提示', '目前尚無家長閱覽紀錄可供匯出！');
+        return;
+    }
+
+    const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+    const classLabel = cls ? cls.label : '目前班級';
+
+    let csvContent = '\uFEFF時間戳記,座號,學生姓名,查詢代碼,閱覽管道,備註\n';
+    logs.forEach(log => {
+        const time = `"${(log.timestamp || '').replace(/"/g, '""')}"`;
+        const sid = `"${(log.studentId || '').replace(/"/g, '""')}"`;
+        const name = `"${(log.studentName || '').replace(/"/g, '""')}"`;
+        const tok = `"${(log.token || '').replace(/"/g, '""')}"`;
+        const src = `"${(log.source || '').replace(/"/g, '""')}"`;
+        const note = `"${(log.note || '').replace(/"/g, '""')}"`;
+        csvContent += `${time},${sid},${name},${tok},${src},${note}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `${classLabel}_家長閱覽足跡日誌_${dateStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('已成功匯出家長閱覽紀錄 CSV！', 'success');
+}
 
