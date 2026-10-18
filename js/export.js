@@ -1591,7 +1591,7 @@ async function previewParentCardsModal(explicitStudentIds, explicitDensity) {
                         <button onclick="toggleModalCardCustomPanel()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3 py-1.5 rounded-xl text-xs border border-emerald-500/60 transition active:scale-95 flex items-center gap-1 cursor-pointer">
                             <span>✏️ 自訂文字</span>
                         </button>
-                        <!-- 儲存 PDF 按鈕 -->
+                        <!-- 儲存 PDF 按鈕 (先產生 PDF 預覽，由使用者確認後按下載) -->
                         <button id="btn-modal-download-pdf" onclick="downloadParentCardsPDF()" class="bg-amber-400 hover:bg-amber-300 text-amber-950 font-black px-3.5 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
                             <span>📥 儲存 PDF (A4)</span>
                         </button>
@@ -1632,6 +1632,25 @@ async function previewParentCardsModal(explicitStudentIds, explicitDensity) {
                     </div>
                 </div>
 
+                <!-- PDF 檔案確認與手動下載檢視區 (點擊「📥 儲存 PDF」後顯示，確認版面無誤再按下載鍵) -->
+                <div id="parent-cards-pdf-preview-wrapper" class="hidden flex-col flex-1 bg-slate-800 overflow-hidden no-print">
+                    <div class="p-3 bg-amber-50 border-b border-amber-200 flex flex-wrap justify-between items-center gap-2">
+                        <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-950">
+                            <span class="text-lg">📄</span>
+                            <span>A4 PDF 成品已生成！請於下方確認版面無誤後，點擊右側「⬇️ 下載 PDF 檔案」儲存：</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="backToParentCardsHtmlView()" class="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold rounded-xl text-xs shadow-2xs transition active:scale-95 cursor-pointer">
+                                🔙 返回修改文字 / 調整版面
+                            </button>
+                            <button onclick="confirmDownloadGeneratedPDF()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs sm:text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                                <span>⬇️ 確認版面無誤，下載 PDF 檔案</span>
+                            </button>
+                        </div>
+                    </div>
+                    <iframe id="parent-cards-pdf-preview-iframe" class="w-full flex-1 border-0 bg-slate-700" style="min-height: 68vh;"></iframe>
+                </div>
+
                 <!-- 預覽容器 (A4 表格滾動區) -->
                 <div id="parent-cards-print-container" class="p-4 sm:p-6 overflow-y-auto bg-slate-100 flex-1 space-y-6">
                     <div class="text-center py-10 text-gray-500 font-bold">正在生成 QR Code 排版中...</div>
@@ -1641,7 +1660,8 @@ async function previewParentCardsModal(explicitStudentIds, explicitDensity) {
                 <div class="p-3 bg-gray-50 border-t flex flex-wrap justify-between items-center gap-2 text-xs text-gray-500 no-print">
                     <span id="parent-cards-page-stats">全班預計產生 A4 列印頁面</span>
                     <div class="flex items-center gap-2">
-                        <button onclick="downloadParentCardsPDF()" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg shadow-2xs transition active:scale-95 cursor-pointer">📥 儲存 PDF 檔</button>
+                        <button id="btn-footer-confirm-pdf-dl" onclick="confirmDownloadGeneratedPDF()" class="hidden px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow transition active:scale-95 cursor-pointer">⬇️ 下載 PDF 檔案</button>
+                        <button id="btn-footer-preview-pdf" onclick="downloadParentCardsPDF()" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg shadow-2xs transition active:scale-95 cursor-pointer">📥 儲存 PDF 檔</button>
                         <button onclick="printParentCardsA4()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-2xs transition active:scale-95 cursor-pointer">🖨️ 直接列印</button>
                         <button onclick="closeParentCardsModal()" class="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition active:scale-95 cursor-pointer">關閉視窗</button>
                     </div>
@@ -1649,22 +1669,9 @@ async function previewParentCardsModal(explicitStudentIds, explicitDensity) {
             </div>
         `;
         document.body.appendChild(modal);
-    } else {
-        // 確保舊快取建立的 modal 也具備儲存 PDF 與新版列印按鈕
-        const oldPrintBtn = modal.querySelector('button[onclick="window.print()"]');
-        if (oldPrintBtn) {
-            oldPrintBtn.setAttribute('onclick', 'printParentCardsA4()');
-            oldPrintBtn.id = 'btn-modal-print-a4';
-            if (!modal.querySelector('#btn-modal-download-pdf')) {
-                const dlBtn = document.createElement('button');
-                dlBtn.id = 'btn-modal-download-pdf';
-                dlBtn.setAttribute('onclick', 'downloadParentCardsPDF()');
-                dlBtn.className = 'bg-amber-400 hover:bg-amber-300 text-amber-950 font-black px-3.5 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer';
-                dlBtn.innerHTML = '<span>📥 儲存 PDF (A4)</span>';
-                oldPrintBtn.parentNode.insertBefore(dlBtn, oldPrintBtn);
-            }
-        }
     }
+
+    backToParentCardsHtmlView();
 
     const modalDensitySelect = document.getElementById('modal-parent-card-density');
     if (modalDensitySelect) {
@@ -1686,7 +1693,25 @@ function closeParentCardsModal() {
     }
 }
 
+function backToParentCardsHtmlView() {
+    const pdfWrapper = document.getElementById('parent-cards-pdf-preview-wrapper');
+    const htmlContainer = document.getElementById('parent-cards-print-container');
+    const footerConfirmBtn = document.getElementById('btn-footer-confirm-pdf-dl');
+    const footerPreviewBtn = document.getElementById('btn-footer-preview-pdf');
+    if (pdfWrapper) {
+        pdfWrapper.classList.add('hidden');
+        pdfWrapper.style.display = 'none';
+    }
+    if (htmlContainer) {
+        htmlContainer.classList.remove('hidden');
+        htmlContainer.style.display = '';
+    }
+    if (footerConfirmBtn) footerConfirmBtn.classList.add('hidden');
+    if (footerPreviewBtn) footerPreviewBtn.classList.remove('hidden');
+}
+
 async function renderParentCardsContent(studentIds, cardsPerPage) {
+    backToParentCardsHtmlView();
     const container = document.getElementById('parent-cards-print-container');
     if (!container) return;
     container.innerHTML = '<div class="text-center py-10 text-gray-500 font-bold">正在生成 QR Code 排版中...</div>';
@@ -1863,38 +1888,409 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
     }
 }
 
-// 將預覽視窗中的所有 .a4-print-sheet 轉為高解析度多頁 A4 PDF Blob
+// Canvas 圓角矩形輔助函式
+function drawRoundRectPath(ctx, x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+// Canvas 自動斷行輔助函式
+function wrapCanvasLines(ctx, text, maxWidth) {
+    const str = (text || '').toString().trim();
+    if (!str) return [''];
+    const lines = [];
+    let currentLine = '';
+    for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (ch === '\n') {
+            lines.push(currentLine);
+            currentLine = '';
+            continue;
+        }
+        const testLine = currentLine + ch;
+        if (ctx.measureText(testLine).width > maxWidth && currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = ch;
+        } else {
+            currentLine = testLine;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+}
+
+// 載入 Image Promise
+function loadCanvasImage(src) {
+    return new Promise((resolve) => {
+        if (!src) return resolve(null);
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    });
+}
+
+// 使用原生 HTML5 2D Canvas 高解析度繪製單頁 A4 小卡 (徹底根除 html2canvas 中文字底部裁切與位移問題)
+async function renderParentCardPageToCanvas(pageStudents, pageIndex, totalPages, cardsPerPage, cfg, classLabel, parentBaseUrl, apiParam) {
+    const scale = 2.5; // 2.5x 超高解析度 (1985 x 2808 px)
+    const sheetW = 794;
+    const sheetH = 1123;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(sheetW * scale);
+    canvas.height = Math.round(sheetH * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    const fontSans = '-apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", "Heiti TC", sans-serif';
+    const fontMono = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+
+    // 1. 繪製 A4 白底
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, sheetW, sheetH);
+
+    const padX = 26;
+    const padTop = 24;
+    const footerY = sheetH - 36;
+
+    // 2. 繪製底部頁尾
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padX, footerY);
+    ctx.lineTo(sheetW - padX, footerY);
+    ctx.stroke();
+
+    ctx.textBaseline = 'middle';
+    const footerTextY = footerY + 14;
+    ctx.font = `500 10px ${fontSans}`;
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'left';
+    ctx.fillText('✂️ 請沿虛線裁切發給家長', padX, footerTextY);
+
+    ctx.font = `700 10px ${fontSans}`;
+    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'center';
+    ctx.fillText(`第 ${pageIndex + 1} / ${totalPages} 頁 ‧ 👨‍👩‍👧【家長發放版】(每頁 ${cardsPerPage} 張)`, sheetW / 2, footerTextY);
+
+    ctx.font = `500 10px ${fontSans}`;
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'right';
+    ctx.fillText('QRcode 自動清點作業系統', sheetW - padX, footerTextY);
+
+    // 3. 計算小卡網格配置
+    const gridW = sheetW - padX * 2;
+    const gridH = footerY - 10 - padTop;
+    const cols = 2;
+    const rows = Math.ceil(cardsPerPage / 2);
+    const gap = cardsPerPage === 8 ? 8 : (cardsPerPage === 4 ? 16 : 12);
+    const cardW = (gridW - gap * (cols - 1)) / cols;
+    const cardH = (gridH - gap * (rows - 1)) / rows;
+
+    const qrPixelSize = cardsPerPage === 8 ? 220 : (cardsPerPage === 4 ? 320 : 260);
+
+    for (let idx = 0; idx < pageStudents.length; idx++) {
+        const st = pageStudents[idx];
+        const col = idx % cols;
+        const row = Math.floor(idx / cols);
+        const cx = padX + col * (cardW + gap);
+        const cy = padTop + row * (cardH + gap);
+
+        // 卡片外框 (圓角虛線)
+        ctx.save();
+        drawRoundRectPath(ctx, cx, cy, cardW, cardH, 14);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([6, 4]);
+        ctx.stroke();
+        ctx.restore();
+
+        const cPad = cardsPerPage === 8 ? 9 : (cardsPerPage === 4 ? 16 : 12);
+        const ix = cx + cPad;
+        const iy = cy + cPad;
+        const iw = cardW - cPad * 2;
+        const ih = cardH - cPad * 2;
+
+        // --- 頂部標頭列 ---
+        const headerH = cardsPerPage === 8 ? 22 : (cardsPerPage === 4 ? 30 : 25);
+        const headerCenterY = iy + headerH / 2 - 2;
+
+        // 班級綠色膠囊
+        ctx.font = `700 ${cardsPerPage === 8 ? 10 : 11}px ${fontSans}`;
+        const clsTextW = ctx.measureText(classLabel).width;
+        const pillW = clsTextW + 16;
+        const pillH = cardsPerPage === 8 ? 18 : 20;
+        const pillY = headerCenterY - pillH / 2;
+
+        drawRoundRectPath(ctx, ix, pillY, pillW, pillH, pillH / 2);
+        ctx.fillStyle = '#ecfdf5';
+        ctx.fill();
+        ctx.strokeStyle = '#a7f3d0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = '#065f46';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(classLabel, ix + pillW / 2, headerCenterY);
+
+        // 右側「✂️ 裁切發放」
+        ctx.font = `500 10px ${fontSans}`;
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'right';
+        ctx.fillText('✂️ 裁切發放', ix + iw, headerCenterY);
+        const cutLabelW = ctx.measureText('✂️ 裁切發放').width + 8;
+
+        // 小卡標題
+        const titleFontPx = cardsPerPage === 8 ? 12 : (cardsPerPage === 4 ? 15 : 13.5);
+        ctx.font = `900 ${titleFontPx}px ${fontSans}`;
+        ctx.fillStyle = '#1e293b';
+        ctx.textAlign = 'left';
+        const titleMaxW = Math.max(40, iw - pillW - cutLabelW - 8);
+        ctx.fillText(cfg.title || '作業繳交狀況查詢卡', ix + pillW + 7, headerCenterY, titleMaxW);
+
+        // 標頭底線
+        const headerLineY = iy + headerH;
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ix, headerLineY);
+        ctx.lineTo(ix + iw, headerLineY);
+        ctx.stroke();
+
+        // --- 底部三步驟說明區 (由下往上計算精確高度) ---
+        const stepFontPx = cardsPerPage === 8 ? 8.6 : (cardsPerPage === 4 ? 11.2 : 9.6);
+        const lineH = stepFontPx * 1.38;
+        const bPadX = cardsPerPage === 8 ? 6 : 8;
+        const bPadY = cardsPerPage === 8 ? 3.5 : (cardsPerPage === 4 ? 7 : 5);
+        const iconSize = cardsPerPage === 8 ? 14 : (cardsPerPage === 4 ? 19 : 16);
+        const textMaxW = iw - bPadX * 2 - iconSize - 7;
+
+        ctx.font = `500 ${stepFontPx}px ${fontSans}`;
+        const lines1 = wrapCanvasLines(ctx, cfg.step1, textMaxW);
+        const lines2 = wrapCanvasLines(ctx, cfg.step2, textMaxW);
+        ctx.font = `700 ${stepFontPx}px ${fontSans}`;
+        const lines3 = wrapCanvasLines(ctx, cfg.note, textMaxW);
+
+        const box1H = Math.max(iconSize + bPadY * 2, lines1.length * lineH + bPadY * 2);
+        const box2H = Math.max(iconSize + bPadY * 2, lines2.length * lineH + bPadY * 2);
+        const box3H = Math.max(iconSize + bPadY * 2, lines3.length * lineH + bPadY * 2);
+        const stepGap = cardsPerPage === 8 ? 3 : (cardsPerPage === 4 ? 6 : 4.5);
+        const totalBottomH = box1H + box2H + box3H + stepGap * 2 + (cardsPerPage === 8 ? 5 : 7);
+
+        const bottomTopY = iy + ih - totalBottomH;
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ix, bottomTopY);
+        ctx.lineTo(ix + iw, bottomTopY);
+        ctx.stroke();
+
+        const stepsData = [
+            { lines: lines1, boxH: box1H, bg: '#f8fafc', border: '#e2e8f0', badgeBg: '#10b981', badgeText: '1', textColor: '#334155', weight: '500' },
+            { lines: lines2, boxH: box2H, bg: '#f8fafc', border: '#e2e8f0', badgeBg: '#3b82f6', badgeText: '2', textColor: '#334155', weight: '500' },
+            { lines: lines3, boxH: box3H, bg: '#fffbeb', border: '#fde68a', badgeBg: '#f59e0b', badgeText: '💡', textColor: '#451a03', weight: '700' }
+        ];
+
+        let curStepY = bottomTopY + (cardsPerPage === 8 ? 5 : 7);
+        for (const sItem of stepsData) {
+            drawRoundRectPath(ctx, ix, curStepY, iw, sItem.boxH, 8);
+            ctx.fillStyle = sItem.bg;
+            ctx.fill();
+            ctx.strokeStyle = sItem.border;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // 步驟編號方塊
+            const badgeX = ix + bPadX;
+            const badgeY = curStepY + bPadY + 1;
+            drawRoundRectPath(ctx, badgeX, badgeY, iconSize, iconSize, 5);
+            ctx.fillStyle = sItem.badgeBg;
+            ctx.fill();
+
+            ctx.font = `700 ${cardsPerPage === 8 ? 8.5 : 9.5}px ${fontSans}`;
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(sItem.badgeText, badgeX + iconSize / 2, badgeY + iconSize / 2);
+
+            // 步驟內文
+            ctx.font = `${sItem.weight} ${stepFontPx}px ${fontSans}`;
+            ctx.fillStyle = sItem.textColor;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            const textStartX = badgeX + iconSize + 7;
+            for (let lIdx = 0; lIdx < sItem.lines.length; lIdx++) {
+                const lineCenterY = curStepY + bPadY + (lIdx + 0.5) * lineH;
+                ctx.fillText(sItem.lines[lIdx], textStartX, lineCenterY);
+            }
+
+            curStepY += sItem.boxH + stepGap;
+        }
+
+        // --- 中間核心資訊區 (姓名、座號、代碼與 QR Code) ---
+        const midTopY = headerLineY + 2;
+        const midBotY = bottomTopY - 2;
+        const midH = Math.max(60, midBotY - midTopY);
+
+        // 右側 QR Code 區塊
+        const token = st.token || ('STU' + String(st.id).padStart(3, '0'));
+        const queryUrl = `${parentBaseUrl}?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+        let qrDataUrl = '';
+        try {
+            qrDataUrl = await QRCode.toDataURL(queryUrl, {
+                width: qrPixelSize,
+                margin: 1,
+                errorCorrectionLevel: 'M'
+            });
+        } catch(e) {}
+
+        const maxQrByHeight = Math.max(56, midH - 22);
+        const targetQr = cardsPerPage === 8 ? 72 : (cardsPerPage === 4 ? 128 : 96);
+        const qrDisplaySize = Math.min(targetQr, maxQrByHeight);
+        const qrBoxW = qrDisplaySize + 10;
+        const qrBoxH = qrDisplaySize + 20;
+        const qrBoxX = ix + iw - qrBoxW;
+        const qrBoxY = midTopY + (midH - qrBoxH) / 2;
+
+        drawRoundRectPath(ctx, qrBoxX, qrBoxY, qrBoxW, qrBoxH, 10);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        const qrImg = await loadCanvasImage(qrDataUrl);
+        if (qrImg) {
+            ctx.drawImage(qrImg, qrBoxX + 5, qrBoxY + 4, qrDisplaySize, qrDisplaySize);
+        }
+        ctx.font = `700 8.5px ${fontSans}`;
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('相機掃描免帳密', qrBoxX + qrBoxW / 2, qrBoxY + 4 + qrDisplaySize + 8);
+
+        // 左側學生姓名、座號與專屬查詢代碼
+        const leftMaxW = Math.max(80, qrBoxX - ix - 10);
+        const nameFontPx = cardsPerPage === 8 ? 19 : (cardsPerPage === 4 ? 28 : 22);
+        const seatFontPx = cardsPerPage === 8 ? 12 : (cardsPerPage === 4 ? 15 : 13);
+        const tokenBoxH = cardsPerPage === 8 ? 30 : (cardsPerPage === 4 ? 38 : 34);
+        const blockGap = cardsPerPage === 8 ? 5 : (cardsPerPage === 4 ? 10 : 7);
+        const totalLeftH = nameFontPx + seatFontPx + tokenBoxH + blockGap * 2;
+        let curLeftY = midTopY + (midH - totalLeftH) / 2;
+
+        // 學生姓名
+        ctx.font = `900 ${nameFontPx}px ${fontSans}`;
+        ctx.fillStyle = '#0f172a';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(st.name || '', ix, curLeftY + nameFontPx / 2, leftMaxW);
+        curLeftY += nameFontPx + blockGap;
+
+        // 座號
+        const seatCenterY = curLeftY + seatFontPx / 2;
+        ctx.font = `700 ${seatFontPx}px ${fontSans}`;
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'left';
+        ctx.fillText('座號：', ix, seatCenterY);
+        const seatLabelW = ctx.measureText('座號：').width;
+
+        ctx.font = `900 ${seatFontPx + 2}px ${fontMono}`;
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(`${String(st.id).padStart(2, '0')} 號`, ix + seatLabelW, seatCenterY);
+        curLeftY += seatFontPx + blockGap;
+
+        // 專屬查詢代碼框
+        ctx.font = `900 ${cardsPerPage === 8 ? 12.5 : 14}px ${fontMono}`;
+        const tokenValW = ctx.measureText(token).width;
+        ctx.font = `700 9px ${fontSans}`;
+        const tokenTitleW = ctx.measureText('專屬查詢代碼').width;
+        const tokenBoxW = Math.max(tokenValW, tokenTitleW) + 20;
+
+        drawRoundRectPath(ctx, ix, curLeftY, tokenBoxW, tokenBoxH, 9);
+        ctx.fillStyle = '#ecfdf5';
+        ctx.fill();
+        ctx.strokeStyle = '#6ee7b7';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.font = `700 9px ${fontSans}`;
+        ctx.fillStyle = '#065f46';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('專屬查詢代碼', ix + 10, curLeftY + tokenBoxH * 0.32);
+
+        ctx.font = `900 ${cardsPerPage === 8 ? 12.5 : 14}px ${fontMono}`;
+        ctx.fillStyle = '#022c22';
+        ctx.fillText(token, ix + 10, curLeftY + tokenBoxH * 0.72);
+    }
+
+    return canvas;
+}
+
+let currentParentCardsPdfBlobUrl = null;
+
+// 將所選學生小卡透過原生 Canvas 轉為高解析度多頁 A4 PDF Blob (零文字重疊/零截斷)
 async function buildParentCardsPdfBlob(onProgress) {
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
         document.activeElement.blur();
     }
-    const container = document.getElementById('parent-cards-print-container');
-    if (!container) throw new Error('找不到小卡預覽容器');
-    const sheets = Array.from(container.querySelectorAll('.a4-print-sheet'));
-    if (sheets.length === 0) throw new Error('目前沒有可匯出的小卡頁面');
 
-    if (typeof html2canvas === 'undefined') {
-        throw new Error('正在載入 PDF 轉換元件，請重新整理網頁後再試一次');
+    const studentIds = window._currentParentCardStudentIds || db.students.map(s => s.id);
+    const cardsPerPage = window._currentParentCardsDensity || 6;
+    const pool = db.students.filter(s => studentIds.includes(s.id));
+    if (pool.length === 0) throw new Error('目前沒有可匯出的學生資料');
+
+    const totalPages = Math.ceil(pool.length / cardsPerPage);
+    let classLabel = '本班級';
+    try {
+        const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+        if (cls && cls.label) classLabel = cls.label;
+    } catch(e) {}
+
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const parentBaseUrl = window.location.origin + basePath + 'parent.html';
+
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
     }
 
+    const cfg = getParentCardConfig();
     const pdfDoc = await PDFLib.PDFDocument.create();
     const a4W = 595.28;
     const a4H = 841.89;
 
-    for (let i = 0; i < sheets.length; i++) {
+    for (let p = 0; p < totalPages; p++) {
         if (typeof onProgress === 'function') {
-            onProgress(i + 1, sheets.length);
+            onProgress(p + 1, totalPages);
         }
-        const sheet = sheets[i];
-        const canvas = await html2canvas(sheet, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            logging: false,
-            width: 794,
-            height: 1123
-        });
-        const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const start = p * cardsPerPage;
+        const pageStudents = pool.slice(start, start + cardsPerPage);
+        const canvas = await renderParentCardPageToCanvas(
+            pageStudents,
+            p,
+            totalPages,
+            cardsPerPage,
+            cfg,
+            classLabel,
+            parentBaseUrl,
+            apiParam
+        );
+        const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
         const jpgBytes = await fetch(jpgDataUrl).then(r => r.arrayBuffer());
         const jpgImg = await pdfDoc.embedJpg(jpgBytes);
         const page = pdfDoc.addPage([a4W, a4H]);
@@ -1910,40 +2306,50 @@ async function buildParentCardsPdfBlob(onProgress) {
     return new Blob([pdfBytes], { type: 'application/pdf' });
 }
 
-// 儲存/下載家長專屬查詢小卡 A4 PDF
+// 點擊「📥 儲存 PDF (A4)」：產生 PDF 成品並顯示於預覽視窗，由使用者確認版面無誤後自行按「下載 PDF 檔案」鍵
 async function downloadParentCardsPDF() {
     const btn = document.getElementById('btn-modal-download-pdf');
     const origHtml = btn ? btn.innerHTML : '';
     try {
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<span>⏳ 產生 PDF 中...</span>';
+            btn.innerHTML = '<span>⏳ 產生 PDF 預覽中...</span>';
         }
-        showToast('正在為您產生高畫質 A4 PDF，請稍候...', 'info');
+        showToast('正在產生 A4 PDF 版面預覽，請稍候...', 'info');
 
         const blob = await buildParentCardsPdfBlob((curr, total) => {
             if (btn) btn.innerHTML = `<span>⏳ 轉換第 ${curr}/${total} 頁...</span>`;
         });
 
-        let classLabel = '全班';
-        try {
-            const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
-            if (cls && cls.label) classLabel = cls.label;
-        } catch(e) {}
+        if (currentParentCardsPdfBlobUrl) {
+            try { URL.revokeObjectURL(currentParentCardsPdfBlobUrl); } catch(e) {}
+        }
+        currentParentCardsPdfBlobUrl = URL.createObjectURL(blob);
 
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `作業繳交狀況查詢卡_${classLabel}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        const pdfWrapper = document.getElementById('parent-cards-pdf-preview-wrapper');
+        const pdfIframe = document.getElementById('parent-cards-pdf-preview-iframe');
+        const htmlContainer = document.getElementById('parent-cards-print-container');
+        const footerConfirmBtn = document.getElementById('btn-footer-confirm-pdf-dl');
+        const footerPreviewBtn = document.getElementById('btn-footer-preview-pdf');
 
-        showToast('✅ PDF 檔案已成功下載！', 'success');
+        if (pdfIframe) {
+            pdfIframe.src = currentParentCardsPdfBlobUrl;
+        }
+        if (htmlContainer) {
+            htmlContainer.classList.add('hidden');
+            htmlContainer.style.display = 'none';
+        }
+        if (pdfWrapper) {
+            pdfWrapper.classList.remove('hidden');
+            pdfWrapper.style.display = 'flex';
+        }
+        if (footerConfirmBtn) footerConfirmBtn.classList.remove('hidden');
+        if (footerPreviewBtn) footerPreviewBtn.classList.add('hidden');
+
+        showToast('📄 PDF 預覽已產生！確認版面無誤後請點擊「⬇️ 下載 PDF 檔案」', 'success');
     } catch (err) {
         console.error('downloadParentCardsPDF error:', err);
-        showAlert('匯出 PDF 失敗', err.message || String(err));
+        showAlert('產生 PDF 預覽失敗', err.message || String(err));
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -1952,7 +2358,28 @@ async function downloadParentCardsPDF() {
     }
 }
 
-// 從 Tab 8 直接開啟預覽並自動下載 PDF
+// 使用者確認 PDF 版面沒問題後，點擊「⬇️ 確認版面無誤，下載 PDF 檔案」才執行實際下載
+function confirmDownloadGeneratedPDF() {
+    if (!currentParentCardsPdfBlobUrl) {
+        downloadParentCardsPDF();
+        return;
+    }
+    let classLabel = '全班';
+    try {
+        const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+        if (cls && cls.label) classLabel = cls.label;
+    } catch(e) {}
+
+    const a = document.createElement('a');
+    a.href = currentParentCardsPdfBlobUrl;
+    a.download = `作業繳交狀況查詢卡_${classLabel}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('✅ PDF 檔案已開始下載！', 'success');
+}
+
+// 從 Tab 8 點擊「📥 儲存 PDF」：開啟預覽並切換至 PDF 成品檢視，待使用者確認無誤後自行點擊下載鍵
 async function downloadParentCardsPDFFromTab8() {
     const density = parseInt(document.getElementById('parent-tab-card-density').value, 10) || 6;
     const checkedIds = Array.from(document.querySelectorAll('.parent-tab-stu-cb:checked')).map(cb => parseInt(cb.value, 10));
