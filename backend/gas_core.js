@@ -363,11 +363,36 @@ function(e, ss, getSheetNames) {
     // ==========================================
     // 家長閱覽紀錄核心函式 (足跡日誌、節流防刷、統計匯總)
     // ==========================================
+    function findParentViewSheet(classPrefix) {
+      var clean = (classPrefix || "").replace(/\[|\]/g, "").trim();
+      var target1 = clean ? ("[" + clean + "] 家長閱覽紀錄") : "家長閱覽紀錄";
+      var target2 = clean ? ("[" + clean + "]家長閱覽紀錄") : "家長閱覽紀錄";
+      var sh = ss.getSheetByName(target1) || ss.getSheetByName(target2);
+      if (sh) return sh;
+
+      if (clean) {
+        var all = ss.getSheets();
+        for (var i = 0; i < all.length; i++) {
+          var sName = all[i].getName();
+          if (sName.indexOf("家長閱覽紀錄") !== -1) {
+            var sClean = sName.replace("家長閱覽紀錄", "").replace(/\[|\]/g, "").trim();
+            if (sClean === clean) return all[i];
+          }
+        }
+      } else {
+        return ss.getSheetByName("家長閱覽紀錄");
+      }
+      return null;
+    }
+
     function logParentView(classPrefix, student, source, note) {
       try {
-        var p = classPrefix || "";
-        var sheetName = p + "家長閱覽紀錄";
-        var sheet = ensureSheetAndColor(sheetName);
+        var sheet = findParentViewSheet(classPrefix);
+        if (!sheet) {
+          var clean = (classPrefix || "").replace(/\[|\]/g, "").trim();
+          var sheetName = clean ? ("[" + clean + "] 家長閱覽紀錄") : "家長閱覽紀錄";
+          sheet = ensureSheetAndColor(sheetName);
+        }
         if (!sheet) return;
 
         if (sheet.getLastRow() === 0) {
@@ -413,9 +438,7 @@ function(e, ss, getSheetNames) {
     }
 
     function getParentViewData(classPrefix) {
-      var p = classPrefix || "";
-      var sheetName = p + "家長閱覽紀錄";
-      var sheet = ss.getSheetByName(sheetName);
+      var sheet = findParentViewSheet(classPrefix);
       var stats = {};
       var logs = [];
 
