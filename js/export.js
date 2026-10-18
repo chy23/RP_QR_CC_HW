@@ -1577,7 +1577,7 @@ async function previewParentCardsModal(explicitStudentIds, explicitDensity) {
                             <p class="text-xs text-emerald-100">支援手機相機一鍵掃碼 ‧ 點擊卡片文字可直接線上編輯修改</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                         <!-- 密度切換 -->
                         <div class="flex items-center gap-1.5 bg-emerald-700/80 px-2.5 py-1 rounded-xl border border-emerald-500/50 text-xs">
                             <span class="text-emerald-100 font-bold hidden sm:inline">每頁密度：</span>
@@ -1591,7 +1591,12 @@ async function previewParentCardsModal(explicitStudentIds, explicitDensity) {
                         <button onclick="toggleModalCardCustomPanel()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3 py-1.5 rounded-xl text-xs border border-emerald-500/60 transition active:scale-95 flex items-center gap-1 cursor-pointer">
                             <span>✏️ 自訂文字</span>
                         </button>
-                        <button onclick="window.print()" class="bg-white text-emerald-800 hover:bg-emerald-50 font-bold px-4 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                        <!-- 儲存 PDF 按鈕 -->
+                        <button id="btn-modal-download-pdf" onclick="downloadParentCardsPDF()" class="bg-amber-400 hover:bg-amber-300 text-amber-950 font-black px-3.5 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                            <span>📥 儲存 PDF (A4)</span>
+                        </button>
+                        <!-- 直接列印按鈕 -->
+                        <button id="btn-modal-print-a4" onclick="printParentCardsA4()" class="bg-white text-emerald-800 hover:bg-emerald-50 font-bold px-3.5 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
                             <span>🖨️ 直接列印 (A4)</span>
                         </button>
                         <button onclick="closeParentCardsModal()" class="text-white hover:bg-white/20 p-2 rounded-full text-xl transition active:scale-95 cursor-pointer leading-none">&times;</button>
@@ -1633,13 +1638,32 @@ async function previewParentCardsModal(explicitStudentIds, explicitDensity) {
                 </div>
 
                 <!-- 底部操作列 -->
-                <div class="p-3 bg-gray-50 border-t flex justify-between items-center text-xs text-gray-500 no-print">
+                <div class="p-3 bg-gray-50 border-t flex flex-wrap justify-between items-center gap-2 text-xs text-gray-500 no-print">
                     <span id="parent-cards-page-stats">全班預計產生 A4 列印頁面</span>
-                    <button onclick="closeParentCardsModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition active:scale-95 cursor-pointer">關閉視窗</button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="downloadParentCardsPDF()" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg shadow-2xs transition active:scale-95 cursor-pointer">📥 儲存 PDF 檔</button>
+                        <button onclick="printParentCardsA4()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-2xs transition active:scale-95 cursor-pointer">🖨️ 直接列印</button>
+                        <button onclick="closeParentCardsModal()" class="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition active:scale-95 cursor-pointer">關閉視窗</button>
+                    </div>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+    } else {
+        // 確保舊快取建立的 modal 也具備儲存 PDF 與新版列印按鈕
+        const oldPrintBtn = modal.querySelector('button[onclick="window.print()"]');
+        if (oldPrintBtn) {
+            oldPrintBtn.setAttribute('onclick', 'printParentCardsA4()');
+            oldPrintBtn.id = 'btn-modal-print-a4';
+            if (!modal.querySelector('#btn-modal-download-pdf')) {
+                const dlBtn = document.createElement('button');
+                dlBtn.id = 'btn-modal-download-pdf';
+                dlBtn.setAttribute('onclick', 'downloadParentCardsPDF()');
+                dlBtn.className = 'bg-amber-400 hover:bg-amber-300 text-amber-950 font-black px-3.5 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer';
+                dlBtn.innerHTML = '<span>📥 儲存 PDF (A4)</span>';
+                oldPrintBtn.parentNode.insertBefore(dlBtn, oldPrintBtn);
+            }
+        }
     }
 
     const modalDensitySelect = document.getElementById('modal-parent-card-density');
@@ -1694,30 +1718,37 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
 
     const cfg = getParentCardConfig();
 
-    let gridClass = 'grid-cols-2 grid-rows-3 gap-3.5';
+    // 精準調校 A4 (794x1123px) 內各密度的高度與字級，確保 6張/8張/4張 絕不超出單頁高度
+    let gridClass = 'grid-cols-2 grid-rows-3 gap-3';
     let qrPixelSize = 240;
-    let qrDisplaySize = 105;
-    let cardPadding = 'p-3.5';
-    let nameSize = 'text-2xl';
-    let stepPadding = 'p-2';
-    let stepTextSize = 'text-[10px]';
+    let qrDisplaySize = 95;
+    let cardPadding = 'p-2.5';
+    let nameSize = 'text-xl';
+    let stepPadding = 'p-1.5';
+    let stepTextSize = 'text-[9.5px]';
+    let middlePy = 'py-1';
+    let bottomSpace = 'space-y-1 pt-1.5';
 
     if (cardsPerPage === 8) {
         gridClass = 'grid-cols-2 grid-rows-4 gap-2';
         qrPixelSize = 200;
-        qrDisplaySize = 82;
+        qrDisplaySize = 72;
         cardPadding = 'p-2';
-        nameSize = 'text-xl';
-        stepPadding = 'p-1.5';
-        stepTextSize = 'text-[9px]';
+        nameSize = 'text-lg';
+        stepPadding = 'p-1';
+        stepTextSize = 'text-[8.5px]';
+        middlePy = 'py-0.5';
+        bottomSpace = 'space-y-1 pt-1';
     } else if (cardsPerPage === 4) {
         gridClass = 'grid-cols-2 grid-rows-2 gap-4';
         qrPixelSize = 300;
-        qrDisplaySize = 130;
+        qrDisplaySize = 128;
         cardPadding = 'p-4';
         nameSize = 'text-3xl';
         stepPadding = 'p-2.5';
         stepTextSize = 'text-xs';
+        middlePy = 'py-2';
+        bottomSpace = 'space-y-2 pt-2';
     }
 
     container.innerHTML = '';
@@ -1746,7 +1777,7 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
         sheetEl.className = 'a4-print-sheet flex flex-col justify-between';
 
         const gridEl = document.createElement('div');
-        gridEl.className = `grid ${gridClass} h-full flex-1`;
+        gridEl.className = `grid ${gridClass} flex-1 min-h-0`;
         sheetEl.appendChild(gridEl);
 
         for (const st of pageStudents) {
@@ -1765,55 +1796,55 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
             }
 
             const card = document.createElement('div');
-            card.className = `border-2 border-dashed border-slate-300 rounded-2xl ${cardPadding} bg-white flex flex-col justify-between relative shadow-2xs h-full`;
+            card.className = `border-2 border-dashed border-slate-300 rounded-2xl ${cardPadding} bg-white flex flex-col justify-between relative shadow-2xs h-full min-h-0 overflow-hidden`;
             card.innerHTML = `
-                <!-- 頂部標頭 -->
-                <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 flex-shrink-0">
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 select-none">${escapeCardHtml(classLabel)}</span>
-                        <span class="card-editable-title text-sm font-black text-slate-800 tracking-tight cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改全班標題" oninput="handleCardDirectEdit('title', this)">${escapeCardHtml(cfg.title)}</span>
+                <!-- 頂部標頭 (強制單行不換行) -->
+                <div class="flex justify-between items-center gap-1 border-b border-slate-200 pb-1 flex-shrink-0">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 select-none whitespace-nowrap shrink-0">${escapeCardHtml(classLabel)}</span>
+                        <span class="card-editable-title text-xs sm:text-sm font-black text-slate-800 tracking-tight cursor-text whitespace-nowrap truncate" contenteditable="true" spellcheck="false" title="點擊可直接修改全班標題" oninput="handleCardDirectEdit('title', this)">${escapeCardHtml(cfg.title)}</span>
                     </div>
-                    <span class="text-[10px] text-slate-400 font-mono flex items-center gap-0.5 select-none">✂️ 裁切發放</span>
+                    <span class="text-[10px] text-slate-400 font-mono flex items-center gap-0.5 select-none whitespace-nowrap shrink-0">✂️ 裁切發放</span>
                 </div>
                 
                 <!-- 中間核心資訊 (學生姓名、座號、查詢代碼與大 QR Code) -->
-                <div class="flex items-center justify-between gap-3 py-2 flex-1">
-                    <div class="space-y-1.5 flex-1 min-w-0 flex flex-col justify-center">
+                <div class="flex items-center justify-between gap-2.5 ${middlePy} flex-1 min-h-0">
+                    <div class="space-y-1 flex-1 min-w-0 flex flex-col justify-center">
                         <div class="${nameSize} font-black text-slate-900 tracking-tight leading-tight truncate">${escapeCardHtml(st.name)}</div>
-                        <div class="text-sm font-bold text-slate-600 flex items-center gap-1">
+                        <div class="text-xs font-bold text-slate-600 flex items-center gap-1 whitespace-nowrap">
                             <span>座號：</span>
-                            <span class="font-mono text-base font-black text-slate-900">${String(st.id).padStart(2, '0')} 號</span>
+                            <span class="font-mono text-sm font-black text-slate-900">${String(st.id).padStart(2, '0')} 號</span>
                         </div>
-                        <div class="bg-emerald-50/90 border border-emerald-300 rounded-xl px-2.5 py-1 inline-block shadow-2xs self-start">
-                            <div class="text-[9.5px] text-emerald-800 font-bold leading-tight">專屬查詢代碼</div>
-                            <div class="text-sm font-mono font-black text-emerald-950 tracking-wider leading-tight">${escapeCardHtml(token)}</div>
+                        <div class="bg-emerald-50/90 border border-emerald-300 rounded-xl px-2.5 py-0.5 inline-block shadow-2xs self-start">
+                            <div class="text-[9px] text-emerald-800 font-bold leading-tight whitespace-nowrap">專屬查詢代碼</div>
+                            <div class="text-xs sm:text-sm font-mono font-black text-emerald-950 tracking-wider leading-tight whitespace-nowrap">${escapeCardHtml(token)}</div>
                         </div>
                     </div>
-                    <div class="flex-shrink-0 flex flex-col items-center justify-center p-1.5 bg-white border border-slate-200 rounded-2xl shadow-xs">
-                        <img src="${qrDataUrl}" width="${qrDisplaySize}" height="${qrDisplaySize}" alt="QR" class="rounded-lg">
-                        <span class="text-[9px] text-slate-400 font-bold mt-1 select-none">相機掃描免帳密</span>
+                    <div class="flex-shrink-0 flex flex-col items-center justify-center p-1 bg-white border border-slate-200 rounded-xl shadow-xs">
+                        <img src="${qrDataUrl}" width="${qrDisplaySize}" height="${qrDisplaySize}" alt="QR" class="rounded">
+                        <span class="text-[8.5px] text-slate-400 font-bold mt-0.5 select-none whitespace-nowrap">相機掃描免帳密</span>
                     </div>
                 </div>
 
                 <!-- 底部指引：如何查詢、如何綁定與導師叮嚀 -->
-                <div class="pt-2 border-t border-slate-100 space-y-1.5 flex-shrink-0">
-                    <div class="bg-slate-50/90 border border-slate-200/80 rounded-xl ${stepPadding} flex items-start gap-2">
-                        <div class="w-5 h-5 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
+                <div class="${bottomSpace} border-t border-slate-100 flex-shrink-0">
+                    <div class="bg-slate-50/90 border border-slate-200/80 rounded-lg ${stepPadding} flex items-start gap-1.5">
+                        <div class="w-4 h-4 rounded-md bg-emerald-500 text-white flex items-center justify-center font-bold text-[9px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
                             1
                         </div>
-                        <div class="${stepTextSize} text-slate-700 leading-snug card-editable-step1 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟一說明" oninput="handleCardDirectEdit('step1', this)">${escapeCardHtml(cfg.step1)}</div>
+                        <div class="${stepTextSize} text-slate-700 leading-tight card-editable-step1 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟一說明" oninput="handleCardDirectEdit('step1', this)">${escapeCardHtml(cfg.step1)}</div>
                     </div>
-                    <div class="bg-slate-50/90 border border-slate-200/80 rounded-xl ${stepPadding} flex items-start gap-2">
-                        <div class="w-5 h-5 rounded-lg bg-blue-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
+                    <div class="bg-slate-50/90 border border-slate-200/80 rounded-lg ${stepPadding} flex items-start gap-1.5">
+                        <div class="w-4 h-4 rounded-md bg-blue-500 text-white flex items-center justify-center font-bold text-[9px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
                             2
                         </div>
-                        <div class="${stepTextSize} text-slate-700 leading-snug card-editable-step2 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟二說明" oninput="handleCardDirectEdit('step2', this)">${escapeCardHtml(cfg.step2)}</div>
+                        <div class="${stepTextSize} text-slate-700 leading-tight card-editable-step2 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟二說明" oninput="handleCardDirectEdit('step2', this)">${escapeCardHtml(cfg.step2)}</div>
                     </div>
-                    <div class="bg-amber-50/70 border border-amber-200/70 rounded-xl ${stepPadding} flex items-start gap-2">
-                        <div class="w-5 h-5 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
+                    <div class="bg-amber-50/70 border border-amber-200/70 rounded-lg ${stepPadding} flex items-start gap-1.5">
+                        <div class="w-4 h-4 rounded-md bg-amber-500 text-white flex items-center justify-center font-bold text-[9px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
                             💡
                         </div>
-                        <div class="${stepTextSize} text-amber-950 leading-snug card-editable-note font-medium cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改導師叮嚀" oninput="handleCardDirectEdit('note', this)">${escapeCardHtml(cfg.note)}</div>
+                        <div class="${stepTextSize} text-amber-950 leading-tight card-editable-note font-medium cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改導師叮嚀" oninput="handleCardDirectEdit('note', this)">${escapeCardHtml(cfg.note)}</div>
                     </div>
                 </div>
             `;
@@ -1821,7 +1852,7 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
         }
 
         const footerEl = document.createElement('div');
-        footerEl.className = 'text-center text-[10px] text-slate-400 pt-2 border-t border-slate-200 mt-2 flex justify-between items-center';
+        footerEl.className = 'text-center text-[10px] text-slate-400 pt-1.5 border-t border-slate-200 mt-1.5 flex justify-between items-center flex-shrink-0';
         footerEl.innerHTML = `
             <span>✂️ 請沿虛線裁切發給家長</span>
             <span class="font-bold text-slate-600">第 ${p + 1} / ${totalPages} 頁 ‧ 👨‍👩‍👧【家長發放版】(每頁 ${cardsPerPage} 張)</span>
@@ -1829,6 +1860,155 @@ async function renderParentCardsContent(studentIds, cardsPerPage) {
         `;
         sheetEl.appendChild(footerEl);
         container.appendChild(sheetEl);
+    }
+}
+
+// 將預覽視窗中的所有 .a4-print-sheet 轉為高解析度多頁 A4 PDF Blob
+async function buildParentCardsPdfBlob(onProgress) {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+    }
+    const container = document.getElementById('parent-cards-print-container');
+    if (!container) throw new Error('找不到小卡預覽容器');
+    const sheets = Array.from(container.querySelectorAll('.a4-print-sheet'));
+    if (sheets.length === 0) throw new Error('目前沒有可匯出的小卡頁面');
+
+    if (typeof html2canvas === 'undefined') {
+        throw new Error('正在載入 PDF 轉換元件，請重新整理網頁後再試一次');
+    }
+
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    const a4W = 595.28;
+    const a4H = 841.89;
+
+    for (let i = 0; i < sheets.length; i++) {
+        if (typeof onProgress === 'function') {
+            onProgress(i + 1, sheets.length);
+        }
+        const sheet = sheets[i];
+        const canvas = await html2canvas(sheet, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            width: 794,
+            height: 1123
+        });
+        const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const jpgBytes = await fetch(jpgDataUrl).then(r => r.arrayBuffer());
+        const jpgImg = await pdfDoc.embedJpg(jpgBytes);
+        const page = pdfDoc.addPage([a4W, a4H]);
+        page.drawImage(jpgImg, {
+            x: 0,
+            y: 0,
+            width: a4W,
+            height: a4H
+        });
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    return new Blob([pdfBytes], { type: 'application/pdf' });
+}
+
+// 儲存/下載家長專屬查詢小卡 A4 PDF
+async function downloadParentCardsPDF() {
+    const btn = document.getElementById('btn-modal-download-pdf');
+    const origHtml = btn ? btn.innerHTML : '';
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 產生 PDF 中...</span>';
+        }
+        showToast('正在為您產生高畫質 A4 PDF，請稍候...', 'info');
+
+        const blob = await buildParentCardsPdfBlob((curr, total) => {
+            if (btn) btn.innerHTML = `<span>⏳ 轉換第 ${curr}/${total} 頁...</span>`;
+        });
+
+        let classLabel = '全班';
+        try {
+            const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+            if (cls && cls.label) classLabel = cls.label;
+        } catch(e) {}
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `作業繳交狀況查詢卡_${classLabel}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+        showToast('✅ PDF 檔案已成功下載！', 'success');
+    } catch (err) {
+        console.error('downloadParentCardsPDF error:', err);
+        showAlert('匯出 PDF 失敗', err.message || String(err));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml || '<span>📥 儲存 PDF (A4)</span>';
+        }
+    }
+}
+
+// 從 Tab 8 直接開啟預覽並自動下載 PDF
+async function downloadParentCardsPDFFromTab8() {
+    const density = parseInt(document.getElementById('parent-tab-card-density').value, 10) || 6;
+    const checkedIds = Array.from(document.querySelectorAll('.parent-tab-stu-cb:checked')).map(cb => parseInt(cb.value, 10));
+    if (checkedIds.length === 0) {
+        showAlert('提示', '請至少勾選一位學生！');
+        return;
+    }
+    await previewParentCardsModal(checkedIds, density);
+    await downloadParentCardsPDF();
+}
+
+// 直接列印 (A4)：產生精準 A4 PDF 並透過瀏覽器內建 PDF 列印引擎列印 (避免網頁滾動條截斷)
+async function printParentCardsA4() {
+    const btn = document.getElementById('btn-modal-print-a4');
+    const origHtml = btn ? btn.innerHTML : '';
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 準備列印頁面...</span>';
+        }
+        const blob = await buildParentCardsPdfBlob((curr, total) => {
+            if (btn) btn.innerHTML = `<span>⏳ 排版第 ${curr}/${total} 頁...</span>`;
+        });
+        const pdfUrl = URL.createObjectURL(blob);
+
+        let printFrame = document.getElementById('parent-cards-pdf-print-frame');
+        if (printFrame) printFrame.remove();
+        printFrame = document.createElement('iframe');
+        printFrame.id = 'parent-cards-pdf-print-frame';
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        printFrame.src = pdfUrl;
+        document.body.appendChild(printFrame);
+
+        printFrame.onload = () => {
+            setTimeout(() => {
+                try {
+                    printFrame.contentWindow.focus();
+                    printFrame.contentWindow.print();
+                } catch (e) {
+                    window.print();
+                }
+            }, 300);
+        };
+    } catch (err) {
+        console.warn('PDF print fallback to window.print():', err);
+        window.print();
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml || '<span>🖨️ 直接列印 (A4)</span>';
+        }
     }
 }
 
