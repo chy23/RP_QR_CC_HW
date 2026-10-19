@@ -1829,9 +1829,15 @@
                                     <p class="text-[11px] text-slate-400">點選學生即時檢視該生手札內容</p>
                                 </div>
                             </div>
-                            <select id="parent-simulator-student-select" onchange="updateParentSimulator(this.value)" class="text-xs font-bold border border-emerald-300 bg-white text-emerald-900 rounded-xl px-2.5 py-1.5 shadow-2xs outline-none">
-                                <!-- 動態載入學生選單 -->
-                            </select>
+                            <div class="flex items-center gap-1.5">
+                                <select id="parent-simulator-student-select" onchange="updateParentSimulator(this.value)" class="text-xs font-bold border border-emerald-300 bg-white text-emerald-900 rounded-xl px-2.5 py-1.5 shadow-2xs outline-none">
+                                    <!-- 動態載入學生選單 -->
+                                </select>
+                                <button type="button" id="btn-sim-cloud-sync" onclick="refreshParentSimulatorFromCloud()" title="直接從 Google 試算表連線查詢最新狀態" class="text-xs px-2 py-1.5 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 font-bold shadow-2xs flex items-center gap-1 cursor-pointer transition active:scale-95">
+                                    <span id="sim-refresh-icon">🔄</span>
+                                    <span class="hidden sm:inline">試算表同步</span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- 手機框架外觀 -->

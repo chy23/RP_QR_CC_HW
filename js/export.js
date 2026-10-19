@@ -1309,17 +1309,19 @@
                                 const taskDateStr = (typeof getTaskDate === 'function') ? getTaskDate(k.taskId, k.noticeName) : '';
                                 const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
                                 let isLate = false;
-                                if (record.manualStatus === 'late') {
+                                const hasLateTag = (record.timestamp && record.timestamp.includes('[遲交]')) || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
+                                if (hasLateTag) {
                                     isLate = true;
-                                } else if (record.manualStatus === 'ontime') {
-                                    isLate = false;
+                                } else if (record.manualStatus === 'late' && hasLateTag) {
+                                    isLate = true;
                                 } else {
-                                    const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
-                                    if (lateFn && lateFn(record.fullTimestamp || record.timestamp, deadlineStr)) {
-                                        isLate = true;
-                                    }
+                                    isLate = false;
                                 }
-                                if (isLate) cellValue = `[遲交] ${record.timestamp}`;
+                                if (isLate) {
+                                    cellValue = `[遲交] ${record.timestamp.replace(/\[遲交\]/g, '').trim()}`;
+                                } else {
+                                    cellValue = record.timestamp.replace(/\[遲交\]/g, '').trim();
+                                }
                             }
                         }
                         row.push(cellValue);
@@ -2640,8 +2642,12 @@ function classifyParentTaskStatus(statusStr, timestamp, deadline) {
 
     // 5. 遲交 (Late) - 試算表有注記[遲交]才計入遲交
     let isLate = false;
-    if (s === '遲交' || s === 'late' || s.includes('[遲交]') || s.includes('遲交')) {
+    if (s.includes('[遲交]') || ts.includes('[遲交]')) {
         isLate = true;
+    } else if (s === '遲交' || s === 'late') {
+        if (!ts || ts.includes('[遲交]')) {
+            isLate = true;
+        }
     }
 
     if (isLate) {
@@ -2664,85 +2670,11 @@ function classifyParentTaskStatus(statusStr, timestamp, deadline) {
     };
 }
 
-function updateParentSimulator(studentId) {
-    currentSimulatorStudentId = parseInt(studentId, 10);
+let simulatorAbortController = null;
+
+function renderParentSimulatorView(student, studentTasks, isLiveCloud = false, syncDateStr = null) {
     const frame = document.getElementById('parent-simulator-frame');
-    if (!frame) return;
-
-    const student = db.students.find(s => s.id === currentSimulatorStudentId);
-    if (!student) {
-        frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">查無該生資料</div>';
-        return;
-    }
-
-    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
-    const tasks = db.tasks || [];
-    const records = db.records || [];
-    const ranges = db.ranges || [];
-
-    // 計算各作業狀況 (排除從未掃描統計過、且未設定範圍的作業)
-    const studentTasks = [];
-    tasks.forEach(t => {
-        // 檢查全班是否有任何繳交打卡紀錄
-        const hasAnyRecord = (records || []).some(r => r.taskId === t.id);
-        // 檢查是否有設定範圍或日期
-        const hasAnyRange = (ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
-
-        // 若全班完全沒有任何掃描/打卡紀錄，且未設定範圍日期，表示尚未開始清點，不計入準時率與待辦
-        if (!hasAnyRecord && !hasAnyRange) {
-            return;
-        }
-
-        let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
-        if (ranges) {
-            const rangeNotices = ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
-            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
-        }
-        if (noticeNames.length === 0) noticeNames = [''];
-
-        noticeNames.forEach(nn => {
-            // 確認該子項目在全班是否有紀錄或範圍
-            const subHasRecord = (records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
-            const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
-            if (!subHasRecord && !subHasRange) return;
-
-            let range = '';
-            let dueDate = nn || '近期';
-            const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
-            if (rObj) {
-                range = rObj.range || nn || '';
-                if (rObj.date) dueDate = rObj.date;
-            } else if (nn) {
-                range = nn;
-            }
-
-            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
-            let status = '缺交';
-            let timestamp = '';
-            if (rec) {
-                timestamp = rec.timestamp || rec.fullTimestamp || '';
-                if (rec.manualStatus === 'late' || (rec.timestamp && rec.timestamp.includes('[遲交]'))) {
-                    status = '遲交';
-                } else if (rec.manualStatus === 'ontime') {
-                    status = '已交';
-                } else if (rec.manualStatus) {
-                    status = rec.manualStatus;
-                } else {
-                    status = '已交';
-                }
-            }
-
-            studentTasks.push({
-                subject: t.subject || '其他',
-                taskName: t.name,
-                range: range,
-                date: dueDate,
-                status: status,
-                timestamp: timestamp,
-                deadline: t.deadline || (dueDate !== '近期' ? dueDate : '')
-            });
-        });
-    });
+    if (!frame || !student) return;
 
     // 統計計算 (採用統一分類標準)
     let totalAssigned = studentTasks.length;
@@ -2912,7 +2844,12 @@ function updateParentSimulator(studentId) {
     const simNow = new Date();
     const simWeekdays = ['日', '一', '二', '三', '四', '五', '六'];
     const simW = simWeekdays[simNow.getDay()];
-    const simDateStr = `${simNow.getFullYear()}/${String(simNow.getMonth() + 1).padStart(2, '0')}/${String(simNow.getDate()).padStart(2, '0')} (${simW}) ${simNow.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+    const defaultTimeStr = `${simNow.getFullYear()}/${String(simNow.getMonth() + 1).padStart(2, '0')}/${String(simNow.getDate()).padStart(2, '0')} (${simW}) ${simNow.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+    const displayTimeStr = syncDateStr || defaultTimeStr;
+
+    const badgeDotColor = isLiveCloud ? 'bg-emerald-500 animate-pulse' : 'bg-blue-500';
+    const badgeBg = isLiveCloud ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-blue-700 bg-blue-50 border-blue-200';
+    const badgeLabel = isLiveCloud ? '試算表即時連線' : '本地即時資料';
 
     frame.innerHTML = `
         <!-- 手機頂部英雄卡 -->
@@ -2926,9 +2863,9 @@ function updateParentSimulator(studentId) {
                 </div>
             </div>
             <div class="text-right">
-                <span class="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    即時同步 ${simDateStr}
+                <span id="sim-sync-badge" class="inline-flex items-center gap-1 text-[9px] ${badgeBg} px-2 py-0.5 rounded-full border font-bold">
+                    <span class="w-1.5 h-1.5 rounded-full ${badgeDotColor}"></span>
+                    ${badgeLabel} ${displayTimeStr}
                 </span>
             </div>
         </div>
@@ -2987,6 +2924,164 @@ function updateParentSimulator(studentId) {
             ${subjectsHtml}
         </div>
     `;
+}
+
+async function fetchSimulatorFromCloud(student, gas, forceCloud = false) {
+    if (!student || !gas) return;
+    const targetStudentId = student.id;
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+
+    if (simulatorAbortController) {
+        simulatorAbortController.abort();
+    }
+    simulatorAbortController = new AbortController();
+
+    const refreshIcon = document.getElementById('sim-refresh-icon');
+    if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+    try {
+        const response = await fetch(gas, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'parent_query',
+                token: token,
+                source: '🖥️ 教師端模擬器即時連線'
+            }),
+            signal: simulatorAbortController.signal
+        });
+        const res = await response.json();
+        if (res && res.status === 'success' && currentSimulatorStudentId === targetStudentId) {
+            const cloudTasks = (res.tasks || []).map(ct => ({
+                subject: ct.subject || '其他',
+                taskName: ct.taskName || '作業',
+                range: ct.range || '',
+                date: ct.date || ct.deadline || '近期',
+                status: ct.status || '',
+                timestamp: ct.timestamp || ct.status || '',
+                deadline: ct.deadline || ct.date || ''
+            }));
+            const now = new Date();
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            const syncDateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} (${weekdays[now.getDay()]}) ${now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+            renderParentSimulatorView(student, cloudTasks, true, syncDateStr);
+        }
+    } catch (e) {
+        if (e.name !== 'AbortError') {
+            console.warn('[ParentSimulator] Cloud query error:', e);
+        }
+    } finally {
+        if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+    }
+}
+
+function refreshParentSimulatorFromCloud() {
+    const sel = document.getElementById('parent-simulator-student-select');
+    const studentId = sel ? sel.value : currentSimulatorStudentId;
+    if (studentId) {
+        updateParentSimulator(studentId, true);
+        if (typeof showToast === 'function') {
+            showToast('已向試算表發動即時連線查詢...', 'info');
+        }
+    }
+}
+window.refreshParentSimulatorFromCloud = refreshParentSimulatorFromCloud;
+
+function updateParentSimulator(studentId, forceCloud = false) {
+    currentSimulatorStudentId = parseInt(studentId, 10);
+    const frame = document.getElementById('parent-simulator-frame');
+    if (!frame) return;
+
+    const student = db.students.find(s => s.id === currentSimulatorStudentId);
+    if (!student) {
+        frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">查無該生資料</div>';
+        return;
+    }
+
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+    const tasks = db.tasks || [];
+    const records = db.records || [];
+    const ranges = db.ranges || [];
+
+    // 計算各作業狀況 (排除從未掃描統計過、且未設定範圍的作業)
+    const studentTasks = [];
+    tasks.forEach(t => {
+        // 檢查全班是否有任何繳交打卡紀錄
+        const hasAnyRecord = (records || []).some(r => r.taskId === t.id);
+        // 檢查是否有設定範圍或日期
+        const hasAnyRange = (ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
+
+        // 若全班完全沒有任何掃描/打卡紀錄，且未設定範圍日期，表示尚未開始清點，不計入準時率與待辦
+        if (!hasAnyRecord && !hasAnyRange) {
+            return;
+        }
+
+        let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
+        if (ranges) {
+            const rangeNotices = ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
+            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
+        }
+        if (noticeNames.length === 0) noticeNames = [''];
+
+        noticeNames.forEach(nn => {
+            // 確認該子項目在全班是否有紀錄或範圍
+            const subHasRecord = (records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
+            if (!subHasRecord && !subHasRange) return;
+
+            let range = '';
+            let dueDate = nn || '近期';
+            const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            if (rObj) {
+                range = rObj.range || nn || '';
+                if (rObj.date) dueDate = rObj.date;
+            } else if (nn) {
+                range = nn;
+            }
+
+            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+                timestamp = rec.timestamp || rec.fullTimestamp || '';
+                // 試算表有註記[遲交]才計入遲交：唯有時間戳明確包含 [遲交] 註記時才認定為遲交
+                const hasLateTag = (rec.timestamp && rec.timestamp.includes('[遲交]')) ||
+                                   (rec.fullTimestamp && rec.fullTimestamp.includes('[遲交]'));
+                if (hasLateTag) {
+                    status = '遲交';
+                } else if (rec.manualStatus === 'late') {
+                    // 若舊資料殘留 manualStatus 為 late 但時間戳未註記 [遲交]，自動清洗為正常已交
+                    delete rec.manualStatus;
+                    status = '已交';
+                } else if (rec.manualStatus === 'ontime') {
+                    status = '已交';
+                } else if (rec.manualStatus) {
+                    status = rec.manualStatus;
+                } else {
+                    status = '已交';
+                }
+            }
+
+            studentTasks.push({
+                subject: t.subject || '其他',
+                taskName: t.name,
+                range: range,
+                date: dueDate,
+                status: status,
+                timestamp: timestamp,
+                deadline: t.deadline || (dueDate !== '近期' ? dueDate : '')
+            });
+        });
+    });
+
+    // 先以本地清洗後的資料即時呈現（零延遲）
+    renderParentSimulatorView(student, studentTasks, false);
+
+    // 啟動雲端連線查詢（SWR）：若有設定 GAS 且在線，直接向試算表取得權威資料
+    const gas = (typeof getGasUrl === 'function') ? getGasUrl() : (window.gasUrl || '');
+    if (gas && navigator.onLine) {
+        fetchSimulatorFromCloud(student, gas, forceCloud);
+    }
 }
 
 function toggleSimAccordion(id) {

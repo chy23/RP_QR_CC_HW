@@ -669,17 +669,15 @@ function deleteClass(id) {
                         const leaves = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "其他假別"];
                         if (cellValue.startsWith('[遲交]') || cellValue.includes('遲交')) {
                             record.manualStatus = 'late';
-                            record.timestamp = cellValue.replace(/\[遲交\]|遲交/g, '').trim();
+                            record.timestamp = cellValue.startsWith('[遲交]') ? cellValue : (`[遲交] ${cellValue}`);
                         } else if (leaves.includes(cellValue)) {
                             record.manualStatus = cellValue;
                             record.timestamp = '1970-01-01T00:00:00';
-                        } else if (/^\d{1,2}\/\d{1,2} \d{1,2}:\d{1,2}/.test(cellValue) || /^20\d{2}[-\/]\d{1,2}[-\/]\d{1,2}/.test(cellValue)) {
-                            // Valid timestamp without [遲交] -> Teacher did not note [遲交], count as ontime
-                            record.timestamp = cellValue;
                         } else {
-                            // User typed custom string like "沒帶", "生理假"
-                            record.manualStatus = 'leave_custom_' + cellValue;
-                            record.timestamp = '1970-01-01T00:00:00';
+                            // 任何無 [遲交] 註記之正常登記時間戳或狀態（例如 10/18 08:30、10/18、2026/10/18、已交等）
+                            // 試算表無 [遲交] 註記一律視為準時繳交，清除任何舊有的 manualStatus
+                            delete record.manualStatus;
+                            record.timestamp = cellValue;
                         }
                         
                         db.records.push(record);

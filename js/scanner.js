@@ -441,7 +441,10 @@
                                 cellValue = loopMissingText;
                             }
                             let isLate = false;
-                            if (record.manualStatus === 'late' || (record.timestamp && record.timestamp.includes('[遲交]'))) {
+                            const hasLateTag = (record.timestamp && record.timestamp.includes('[遲交]')) || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
+                            if (hasLateTag) {
+                                isLate = true;
+                            } else if (record.manualStatus === 'late' && hasLateTag) {
                                 isLate = true;
                             } else if (record.manualStatus === 'ontime') {
                                 isLate = false;
@@ -550,7 +553,7 @@
                                     } else {
                                         exemptLeaves++; // 其餘假別 (病假、事假等) 免計入分母
                                     }
-                                } else if (r.manualStatus === 'late' || (r.timestamp && r.timestamp.includes('[遲交]'))) {
+                                } else if ((r.timestamp && r.timestamp.includes('[遲交]')) || (r.fullTimestamp && r.fullTimestamp.includes('[遲交]')) || (r.manualStatus === 'late' && r.timestamp && r.timestamp.includes('[遲交]'))) {
                                     late++;
                                 } else if (r.manualStatus === 'missing') {
                                     missing++;
@@ -1449,7 +1452,8 @@ function renderStatistics() {
                     if (record) {
                         // 判斷是否遲交
                         let isLate = false;
-                        if (record.manualStatus === 'late' || (record.timestamp && record.timestamp.includes('[遲交]'))) {
+                        const hasLateTag = (record.timestamp && record.timestamp.includes('[遲交]')) || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
+                        if (hasLateTag) {
                             isLate = true;
                         } else if (record.manualStatus === 'ontime') {
                             isLate = false;
@@ -1963,7 +1967,8 @@ let currentTargetRecord = null;
                 
                 if (record) {
                     let isLate = false;
-                    if (record.manualStatus === 'late' || (record.timestamp && record.timestamp.includes('[遲交]'))) isLate = true;
+                    const hasLateTag = (record.timestamp && record.timestamp.includes('[遲交]')) || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
+                    if (hasLateTag) isLate = true;
                     else if (record.manualStatus === 'ontime') isLate = false;
                     
                     if (isLeaveStatus(record.manualStatus)) {
