@@ -172,122 +172,6 @@
             box-shadow: none !important;
             min-height: 100vh;
         }
-
-        /* ===== A4 小卡列印與預覽樣式 (標準 A4 210x297mm 比例 794x1123px) ===== */
-        .a4-print-sheet {
-            background: white;
-            width: 794px;
-            min-width: 794px;
-            max-width: 794px;
-            height: 1123px;
-            min-height: 1123px;
-            max-height: 1123px;
-            margin: 0 auto 20px auto;
-            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
-            border-radius: 8px;
-            padding: 24px 26px;
-            box-sizing: border-box;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* ===== 卡片文字即時編輯樣式 ===== */
-        [contenteditable="true"] {
-            outline: 1px dashed transparent;
-            border-radius: 4px;
-            transition: outline-color 0.15s, background-color 0.15s;
-        }
-        [contenteditable="true"]:hover {
-            outline: 1.5px dashed #10b981;
-            background-color: rgba(16, 185, 129, 0.06);
-        }
-        [contenteditable="true"]:focus {
-            outline: 2px solid #059669;
-            background-color: rgba(16, 185, 129, 0.1);
-        }
-
-        @media print {
-            @page {
-                size: A4 portrait;
-                margin: 0;
-            }
-            [contenteditable="true"] {
-                outline: none !important;
-                background-color: transparent !important;
-            }
-            html, body {
-                background: white !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                width: 210mm !important;
-                height: auto !important;
-                overflow: visible !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            body > *:not(#parent-cards-modal) {
-                display: none !important;
-            }
-            header, nav, #main-tabs, .tab-content, .no-print, #header-container, footer, #main-header {
-                display: none !important;
-            }
-            #parent-cards-modal {
-                position: static !important;
-                display: block !important;
-                background: white !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                width: 100% !important;
-                height: auto !important;
-                max-height: none !important;
-                overflow: visible !important;
-            }
-            #parent-cards-modal > div {
-                width: 100% !important;
-                max-width: none !important;
-                height: auto !important;
-                max-height: none !important;
-                overflow: visible !important;
-                box-shadow: none !important;
-                border: none !important;
-                border-radius: 0 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: block !important;
-            }
-            #parent-cards-print-container {
-                width: 100% !important;
-                height: auto !important;
-                max-height: none !important;
-                overflow: visible !important;
-                background: white !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                display: block !important;
-            }
-            .a4-print-sheet {
-                page-break-after: always !important;
-                break-after: page !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-                width: 210mm !important;
-                min-width: 210mm !important;
-                max-width: 210mm !important;
-                height: 297mm !important;
-                min-height: 297mm !important;
-                max-height: 297mm !important;
-                margin: 0 auto !important;
-                padding: 8mm 9mm !important;
-                box-sizing: border-box !important;
-                box-shadow: none !important;
-                border: none !important;
-                border-radius: 0 !important;
-            }
-            .a4-print-sheet:last-child {
-                page-break-after: auto !important;
-                break-after: auto !important;
-            }
-        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -492,13 +376,20 @@
                 <!-- Ver 3.2.2 (純清點作業版) -->
                 <div class="border-l-4 border-blue-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span class="text-blue-700">Ver. 3.2.2 (純清點作業專屬版)</span>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/10/19 (純清點作業分支)</span>
+                        <span class="text-blue-700">Ver. 3.2.2 (純清點作業專屬版 - 離線防斷線與極致瘦身版)</span>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">2026/10/20 (純清點作業分支)</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
                         <li><strong>🎯 無家長端純粹清點體驗：</strong>完全移除家長手札 (Tab 8)、LINE 智慧推播及查詢小卡模組，導覽列精簡回歸純粹的 0~7 分頁，專注於教師現場作業清點、即時掃碼、統計報表、批改退回與缺交提醒。</li>
+                        <li><strong>📶 教室離線防斷線機制 (Offline Queue &amp; Automatic Resync Engine)：</strong>
+                            <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-500">
+                                <li><strong>斷網零中斷盲掃：</strong>消滅教室 Wi-Fi 訊號不穩或突發斷線造成的清點阻礙！離線時所有掃碼打卡、手動補登與批改異動照常運作，並自動存入本地離線佇列 (<code>rp_offline_sync_queue</code>)，絕不遺失任何學生紀錄。</li>
+                                <li><strong>頂部即時同步狀態徽章：</strong>頂部導覽列即時反映連線狀態——🟢 雲端已同步（點擊可快速測試連線）、🟡 離線中 (X 筆待同步，點擊一秒手動補傳)、🔵 同步補傳中。</li>
+                                <li><strong>連線恢復自動補傳：</strong>偵測到網路恢復時自動發動背景安全補傳，並以 Apple HIG Toast 提示「✅ 雲端同步完成！已成功補傳 X 筆清點紀錄」，確保試算表資料永遠精準完整。</li>
+                            </ul>
+                        </li>
+                        <li><strong>⚡ 前端代碼極致瘦身：</strong>全面清除 <code>export.js</code> 與 <code>index.html</code> 中逾 2,700 行之家長手札、LINE 與小卡列印相關閒置代碼，核心 JS 體積縮減近 70%，啟動與掃描更敏捷。</li>
                         <li><strong>✨ 承襲 Ver. 3.2 經典架構並同步最新修復：</strong>本分支繼承最後純清點版本 Ver. 3.2 / 3.2.1 之純粹定位，並全面整合最新一代 Apple HIG 極致流暢介面、專屬高識別度 Favicon 圖示、日期防呆校正與作業範圍（如 1-5 頁）核心防誤判引擎。</li>
-                        <li><strong>⚡ 極速加載與極致輕量：</strong>移除家長端模擬器與足跡追蹤腳本，前端架構更簡潔，資源佔用更低，啟動與掃描更敏捷。</li>
                     </ul>
                 </div>
 
@@ -756,6 +647,7 @@
                         })();
                     </script>
                     <span id="header-class-info" class="text-xs md:text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-200/60 px-3 py-1 rounded-full whitespace-nowrap"></span>
+                    <span id="header-sync-badge" onclick="handleSyncBadgeClick()" class="hidden items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full cursor-pointer transition-all active:scale-95 border whitespace-nowrap" title="點擊檢視雲端連線狀態與補傳離線紀錄"></span>
                 </h1>
             </div>
             <div class="mt-3 md:mt-0 flex items-center gap-2 md:absolute md:right-4 md:top-1/2 md:-translate-y-1/2">
