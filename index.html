@@ -492,10 +492,17 @@
                 <!-- Ver 3.4.2 (Beta) -->
                 <div class="border-l-4 border-amber-500 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
-                        <span class="text-amber-700">Ver. 3.4.2 (雙端專屬高識別度分頁圖示版 - Beta 測試)</span>
-                        <span class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">2026/10/19 (Beta 測試中)</span>
+                        <span class="text-amber-700">Ver. 3.4.2 (教室離線防斷線自動同步機制與雙端專屬圖示版 - Beta 測試)</span>
+                        <span class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">2026/10/20 (Beta 測試中)</span>
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>📶 教室離線防斷線機制 (Offline Queue &amp; Automatic Resync Engine)：</strong>
+                            <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-500">
+                                <li><strong>斷網零中斷盲掃：</strong>徹底消滅教室 Wi-Fi 訊號微弱或突發斷線造成的清點阻礙！離線時所有掃碼打卡、手動補登與批改異動照常運作，並自動存入本地離線佇列 (<code>rp_offline_sync_queue</code>)，絕不遺失任何學生紀錄。</li>
+                                <li><strong>頂部即時同步狀態徽章：</strong>頂部導覽列即時反映連線狀態——🟢 雲端已同步（點擊可快速測試連線）、🟡 離線中 (X 筆待同步，點擊一秒手動補傳)、🔵 同步補傳中。</li>
+                                <li><strong>連線恢復自動補傳：</strong>偵測到網路恢復時自動發動背景安全補傳，並以 Apple HIG Toast 提示「✅ 雲端同步完成！已成功補傳 X 筆清點紀錄」，確保試算表資料永遠精準完整。</li>
+                            </ul>
+                        </li>
                         <li><strong>🎨 教師端與家長端「雙端專屬分頁圖示 (Favicon)」：</strong>針對教師快速清點作業與家長伴讀查閱的不同使用情境，設計「視覺語彙同源、一眼精準立辨」的雙生圖示體系：
                             <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-500">
                                 <li><strong>教師端（皇家藍底 ＋ 翡翠綠清點打勾徽章 ✅）：</strong>象徵作業即時清點、批改登記與交齊確認。</li>
@@ -825,6 +832,7 @@
                         })();
                     </script>
                     <span id="header-class-info" class="text-xs md:text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-200/60 px-3 py-1 rounded-full whitespace-nowrap"></span>
+                    <span id="header-sync-badge" onclick="handleSyncBadgeClick()" class="hidden items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full cursor-pointer transition-all active:scale-95 border whitespace-nowrap" title="點擊檢視雲端連線狀態與補傳離線紀錄"></span>
                 </h1>
             </div>
             <div class="mt-3 md:mt-0 flex items-center gap-2 md:absolute md:right-4 md:top-1/2 md:-translate-y-1/2">

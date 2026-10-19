@@ -194,10 +194,126 @@
               });
         }
 
+        // ==========================================
+        // 教室離線防斷線機制 (Offline Queue & Automatic Resync Engine)
+        // ==========================================
+        const OFFLINE_SYNC_QUEUE_KEY = 'rp_offline_sync_queue';
+        let isFlushingOfflineQueue = false;
+
+        function getOfflineQueue() {
+            try {
+                const raw = localStorage.getItem(OFFLINE_SYNC_QUEUE_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                console.error('Failed to parse offline sync queue:', e);
+                return [];
+            }
+        }
+
+        function saveOfflineQueue(queue) {
+            try {
+                localStorage.setItem(OFFLINE_SYNC_QUEUE_KEY, JSON.stringify(queue || []));
+            } catch (e) {
+                console.error('Failed to save offline sync queue:', e);
+            }
+        }
+
+        function updateSyncStatusBadge(state, count = 0) {
+            const badge = document.getElementById('header-sync-badge');
+            if (!badge) return;
+
+            const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+            const curGas = (window.gasUrl || (gasInput ? gasInput.value.trim() : '') || (typeof appConfig !== 'undefined' && appConfig.gasUrl));
+            if (!curGas) {
+                badge.classList.add('hidden');
+                badge.classList.remove('inline-flex');
+                return;
+            }
+
+            badge.classList.remove('hidden');
+            badge.classList.add('inline-flex');
+
+            if (state === 'offline' || count > 0) {
+                badge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full cursor-pointer transition-all active:scale-95 border bg-amber-50 text-amber-800 border-amber-300 shadow-xs';
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span><span>離線中 (${count} 筆待同步) 點擊補傳</span>`;
+                badge.title = `目前離線或網路中斷，有 ${count} 筆清點紀錄已暫存本機，點擊可立即連線補傳`;
+            } else if (state === 'syncing') {
+                badge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full cursor-pointer transition-all active:scale-95 border bg-blue-50 text-blue-700 border-blue-200';
+                badge.innerHTML = `<svg class="animate-spin w-3 h-3 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>同步補傳中...</span>`;
+                badge.title = '正在將紀錄補傳至 Google 試算表...';
+            } else if (state === 'error') {
+                badge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full cursor-pointer transition-all active:scale-95 border bg-rose-50 text-rose-700 border-rose-200';
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span><span>同步失敗 (點擊重試)</span>`;
+                badge.title = '上次嘗試補傳雲端失敗，點擊重新嘗試連線';
+            } else {
+                badge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full cursor-pointer transition-all active:scale-95 border bg-emerald-50 text-emerald-700 border-emerald-200/80';
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>雲端已同步</span>`;
+                badge.title = '雲端試算表連線正常，所有清點紀錄已即時同步（點擊可測試連線）';
+            }
+        }
+
+        async function handleSyncBadgeClick() {
+            const queue = getOfflineQueue();
+            if (isFlushingOfflineQueue) {
+                if (typeof showToast === 'function') showToast('正在與雲端試算表同步中，請稍候...', 'info');
+                return;
+            }
+            if (queue.length > 0) {
+                if (typeof showToast === 'function') showToast(`發現 ${queue.length} 筆待同步紀錄，立即為您補傳至雲端試算表...`, 'info');
+                await flushOfflineSyncQueue(true);
+            } else {
+                const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+                const curGas = (window.gasUrl || (gasInput ? gasInput.value.trim() : '') || (typeof appConfig !== 'undefined' && appConfig.gasUrl));
+                if (!curGas) {
+                    showAlert('提示', '尚未設定 Google Apps Script 試算表網址，請先至「0. 資料建置」設定！');
+                    return;
+                }
+                updateSyncStatusBadge('syncing');
+                try {
+                    const res = await fetch(curGas, {
+                        method: 'POST',
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'ping' })
+                    });
+                    const data = await res.json();
+                    if (data && data.status === 'success') {
+                        updateSyncStatusBadge('synced');
+                        if (typeof showToast === 'function') showToast('✅ 雲端試算表連線正常，所有紀錄皆已即時同步！', 'success');
+                    } else {
+                        updateSyncStatusBadge('error');
+                        showAlert('連線異常', '試算表回應異常：' + JSON.stringify(data));
+                    }
+                } catch (err) {
+                    updateSyncStatusBadge('error');
+                    showAlert('連線失敗', '無法連接 Google 試算表，請確認網路連線或 GAS 權限是否設定為「所有人」。\n' + (err.message || String(err)));
+                }
+            }
+        }
+
+        async function flushOfflineSyncQueue(isManual = false) {
+            const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
+            if (!gasUrl && gasInput && gasInput.value.trim()) window.gasUrl = gasInput.value.trim();
+            if (!gasUrl) {
+                updateSyncStatusBadge('synced');
+                return;
+            }
+
+            if (!navigator.onLine) {
+                const qCount = getOfflineQueue().length;
+                updateSyncStatusBadge('offline', qCount);
+                if (isManual) {
+                    showAlert('目前處於離線狀態', `裝置目前無網路連線。共有 ${qCount} 筆清點紀錄已安全暫存於本機，待連上網路時系統將自動補傳！`);
+                }
+                return;
+            }
+
+            syncToGoogleSheets([]);
+        }
+
         function syncToGoogleSheets(newRecordsArray) {
             const gasInput = document.getElementById('global-gas-url') || document.getElementById('gas-url');
             if (!gasUrl && gasInput && gasInput.value.trim()) window.gasUrl = gasInput.value.trim();
-            if(!gasUrl) return;
+            if (!gasUrl) return;
             
             // 1. Prepare delta records
             const deltaPayload = (newRecordsArray || []).map(r => {
@@ -233,8 +349,22 @@
                     status: recStatus
                 };
             });
+
+            // 2. 存入離線佇列 (Offline Queue)
+            let queue = getOfflineQueue();
+            if (deltaPayload.length > 0) {
+                queue.push(...deltaPayload);
+                saveOfflineQueue(queue);
+            }
+
+            // 3. 離線防護：若斷網則保留佇列並更新頂部徽章提示
+            if (!navigator.onLine) {
+                console.warn('目前離線中，已將紀錄暫存至本機佇列 (共 ' + queue.length + ' 筆)');
+                updateSyncStatusBadge('offline', queue.length);
+                return;
+            }
             
-            // 2. Prepare FULL 2D tables for exactly matching web view
+            // 4. Prepare FULL 2D tables for exactly matching web view
             const fullSyncData = [];
             const allSubjectKeys = {};
             const subjects = getSubjects();
@@ -479,18 +609,33 @@
             }
             // ============================
 
+            updateSyncStatusBadge('syncing');
+            isFlushingOfflineQueue = true;
             fetch(gasUrl, {
                 method: 'POST',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ classPrefix: getActiveClassPrefix(),
                     action: 'full_sync',
-                    records: deltaPayload,
+                    records: queue,
                     sheets: fullSyncData
                 })
             }).then(res => res.json()).then(data => {
-                console.log("GAS Sync Success:", data);
+                isFlushingOfflineQueue = false;
+                if (data && data.status === 'success') {
+                    const count = queue.length;
+                    saveOfflineQueue([]);
+                    updateSyncStatusBadge('synced');
+                    if (count > 0 && typeof showToast === 'function') {
+                        showToast(`✅ 雲端同步完成！已成功送出 ${count} 筆清點紀錄至試算表。`, 'success');
+                    }
+                } else {
+                    console.error("GAS Sync Response Error:", data);
+                    updateSyncStatusBadge('offline', queue.length);
+                }
             }).catch(err => {
+                isFlushingOfflineQueue = false;
                 console.error("GAS Sync Error:", err);
+                updateSyncStatusBadge('offline', queue.length);
             });
         }
 
@@ -1894,5 +2039,32 @@ let currentTargetRecord = null;
             // 單向即時寫入雲端
             const newRec = db.records.find(r => r.studentId === studentId && r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
             syncToGoogleSheets(newRec ? [newRec] : []);
+        }
+
+        // ==========================================
+        // 離線狀態與網路恢復自動監聽
+        // ==========================================
+        window.addEventListener('online', () => {
+            console.log('網路連線已恢復，自動補傳離線佇列...');
+            if (typeof flushOfflineSyncQueue === 'function') flushOfflineSyncQueue(false);
+        });
+        window.addEventListener('offline', () => {
+            console.log('偵測到離線狀態');
+            if (typeof updateSyncStatusBadge === 'function') updateSyncStatusBadge('offline', getOfflineQueue().length);
+        });
+        if (typeof document !== 'undefined') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => {
+                    if (typeof updateSyncStatusBadge === 'function') {
+                        const qCount = getOfflineQueue().length;
+                        if (qCount > 0) {
+                            updateSyncStatusBadge('offline', qCount);
+                            if (navigator.onLine) flushOfflineSyncQueue(false);
+                        } else {
+                            updateSyncStatusBadge('synced');
+                        }
+                    }
+                }, 800);
+            });
         }
 
