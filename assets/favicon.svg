@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    
+    <!-- Emerald Badge Gradient -->
+    <linearGradient id="check-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    
+    <!-- Subtle Inner Shadow / Glow -->
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <filter id="badge-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- iOS Apple Squircle Base -->
+  <rect width="512" height="512" rx="115" fill="url(#bg-grad)"/>
+  
+  <!-- Subtle Highlight Border -->
+  <rect x="6" y="6" width="500" height="500" rx="110" fill="none" stroke="rgba(255, 255, 255, 0.22)" stroke-width="8"/>
+
+  <!-- QR Elements Group with Shadow -->
+  <g filter="url(#shadow)">
+    <!-- Top-Left Finder Square -->
+    <rect x="88" y="88" width="116" height="116" rx="26" fill="none" stroke="#ffffff" stroke-width="22"/>
+    <rect x="122" y="122" width="48" height="48" rx="12" fill="#ffffff"/>
+
+    <!-- Top-Right Finder Square -->
+    <rect x="308" y="88" width="116" height="116" rx="26" fill="none" stroke="#ffffff" stroke-width="22"/>
+    <rect x="342" y="122" width="48" height="48" rx="12" fill="#ffffff"/>
+
+    <!-- Bottom-Left Finder Square -->
+    <rect x="88" y="308" width="116" height="116" rx="26" fill="none" stroke="#ffffff" stroke-width="22"/>
+    <rect x="122" y="342" width="48" height="48" rx="12" fill="#ffffff"/>
+
+    <!-- Center & Matrix Data Elements -->
+    <rect x="234" y="234" width="44" height="44" rx="10" fill="#ffffff"/>
+    <rect x="238" y="126" width="36" height="36" rx="8" fill="rgba(255, 255, 255, 0.95)"/>
+    <rect x="128" y="238" width="36" height="36" rx="8" fill="rgba(255, 255, 255, 0.95)"/>
+    <rect x="238" y="348" width="36" height="36" rx="8" fill="rgba(255, 255, 255, 0.95)"/>
+    <rect x="348" y="238" width="36" height="36" rx="8" fill="rgba(255, 255, 255, 0.95)"/>
+  </g>
+
+  <!-- Bottom-Right Check-in Success Badge -->
+  <g filter="url(#badge-shadow)">
+    <!-- White outer rim -->
+    <circle cx="366" cy="366" r="74" fill="#ffffff"/>
+    <!-- Emerald Circle -->
+    <circle cx="366" cy="366" r="64" fill="url(#check-grad)"/>
+    <!-- Checkmark -->
+    <path d="M336 366 L356 386 L398 344" fill="none" stroke="#ffffff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

@@ -6,7 +6,13 @@
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>QRcode自動清點作業系統 (Ver. 3.3)</title>
+    <title>QRcode自動清點作業系統 (Ver. 3.4.1)</title>
+    <!-- Favicon & Touch Icons -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+    <link rel="shortcut icon" href="favicon.ico">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode -->
@@ -482,6 +488,18 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors active:scale-95 active:opacity-80">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
+                <!-- Ver 3.4.1 (Beta) -->
+                <div class="border-l-4 border-indigo-600 pl-4 py-1 mb-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span class="text-indigo-700">Ver. 3.4.1 (專屬分頁圖示版 - Beta 測試)</span>
+                        <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-mono">2026/10/19</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>🎨 專屬瀏覽器分頁圖示 (Favicon)：</strong>擺脫瀏覽器預設的灰色地球圖示！量身打造專屬高對比高識別度分頁圖示，以 Apple HIG 風格圓角矩形結合<strong>白底 QR 碼標誌</strong>與<strong>亮綠色清點成功打勾徽章</strong>，在亮色/深色分頁標籤列均清晰奪目。</li>
+                        <li><strong>📐 支援跨平台全解析度向量與點陣圖：</strong>同時配置極致清晰的 SVG 向量圖示（支援 Retina / 4K 螢幕不失真）、32x32 分頁標籤標準點陣圖，以及 iOS / 行動裝置桌面專用 Apple Touch Icon (180x180)，無論在電腦分頁或手機加入主畫面皆美觀俐落。</li>
+                    </ul>
+                </div>
+
                 <!-- Ver 3.4 -->
                 <div class="border-l-4 border-emerald-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
@@ -765,7 +783,7 @@
             <div class="w-full text-center mt-1 md:mt-0">
                 <h1 class="text-2xl md:text-3xl font-bold text-slate-900 flex justify-center items-center gap-2 flex-wrap">
                     <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    <span>QRcode自動清點作業系統</span> <span id="version-display" class="text-lg font-bold tracking-tight text-slate-500" data-version="3.4">Ver. 3.4</span>
+                    <span>QRcode自動清點作業系統</span> <span id="version-display" class="text-lg font-bold tracking-tight text-slate-500" data-version="3.4.1">Ver. 3.4.1</span>
                     <script>
                         (function() {
                             const isBeta = window.location.pathname.includes('/beta/');
