@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - beta
+      - 純清點作業版
 
 permissions:
   contents: read
@@ -35,6 +36,13 @@ jobs:
           path: beta-site
         continue-on-error: true
 
+      - name: Checkout pure-check branch
+        uses: actions/checkout@v4
+        with:
+          ref: 純清點作業版
+          path: check-only-site
+        continue-on-error: true
+
       - name: Prepare deployment directory
         run: |
           mkdir -p public
@@ -48,10 +56,20 @@ jobs:
             mkdir -p public/beta
             cp -r beta-site/* public/beta/
           fi
+
+          # If 純清點作業版 branch exists, copy it to /check-only/ and /check/
+          if [ -d "check-only-site" ]; then
+            mkdir -p public/check-only
+            cp -r check-only-site/* public/check-only/
+            mkdir -p public/check
+            cp -r check-only-site/* public/check/
+          fi
           
           # Clean up any potential git internal folders copied
           rm -rf public/.git || true
           rm -rf public/beta/.git || true
+          rm -rf public/check-only/.git || true
+          rm -rf public/check/.git || true
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
