@@ -2638,30 +2638,10 @@ function classifyParentTaskStatus(statusStr, timestamp, deadline) {
         };
     }
 
-    // 5. 遲交 (Late)
+    // 5. 遲交 (Late) - 試算表有注記[遲交]才計入遲交
     let isLate = false;
     if (s === '遲交' || s === 'late' || s.includes('[遲交]') || s.includes('遲交')) {
         isLate = true;
-    } else if (deadline && (ts || s)) {
-        const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
-        if (lateFn) {
-            isLate = lateFn(ts || s, deadline);
-        } else {
-            try {
-                const dl = new Date(deadline + 'T23:59:59');
-                let scDate = null;
-                const timeToCheck = ts || s;
-                if (timeToCheck.includes('T') || timeToCheck.includes('-')) {
-                    scDate = new Date(timeToCheck);
-                } else {
-                    const year = new Date().getFullYear();
-                    scDate = new Date(`${year}/${timeToCheck}`);
-                }
-                if (scDate && !isNaN(scDate.getTime()) && scDate > dl) {
-                    isLate = true;
-                }
-            } catch(e) {}
-        }
     }
 
     if (isLate) {
@@ -2741,15 +2721,12 @@ function updateParentSimulator(studentId) {
             let timestamp = '';
             if (rec) {
                 timestamp = rec.timestamp || rec.fullTimestamp || '';
-                const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
-                if (rec.manualStatus === 'late') {
+                if (rec.manualStatus === 'late' || (rec.timestamp && rec.timestamp.includes('[遲交]'))) {
                     status = '遲交';
                 } else if (rec.manualStatus === 'ontime') {
                     status = '已交';
                 } else if (rec.manualStatus) {
                     status = rec.manualStatus;
-                } else if (lateFn && lateFn(timestamp, dueDate)) {
-                    status = `[遲交] ${timestamp}`;
                 } else {
                     status = '已交';
                 }
