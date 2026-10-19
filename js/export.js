@@ -1291,7 +1291,7 @@
                 db.students.forEach(s => {
                     const row = [s.name];
                     finalTaskKeys.forEach(k => {
-                        const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
+                        const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && (r.noticeName || '') === (k.noticeName || ''));
                         const taskDef = db.tasks.find(t => t.id === k.taskId);
                         const missingText = (taskDef && taskDef.subject === '聯絡簿') ? '沒帶' : '缺交';
                         let cellValue = missingText;
@@ -1305,23 +1305,19 @@
                                 cellValue = lName;
                             } else if (record.manualStatus === 'missing') {
                                 cellValue = missingText;
-                            }
-                            if (taskDef && taskDef.deadline) {
-                                let deadlineDate = new Date(taskDef.deadline);
+                            } else {
+                                const taskDateStr = (typeof getTaskDate === 'function') ? getTaskDate(k.taskId, k.noticeName) : '';
+                                const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
                                 let isLate = false;
                                 if (record.manualStatus === 'late') {
                                     isLate = true;
                                 } else if (record.manualStatus === 'ontime') {
                                     isLate = false;
                                 } else {
-                                    let scanDate;
-                                    if (record.timestamp.includes('T') || record.timestamp.includes('-')) {
-                                        scanDate = new Date(record.timestamp);
-                                    } else {
-                                        const currentYear = new Date().getFullYear();
-                                        scanDate = new Date(`${currentYear}/${record.timestamp}`);
+                                    const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+                                    if (lateFn && lateFn(record.fullTimestamp || record.timestamp, deadlineStr)) {
+                                        isLate = true;
                                     }
-                                    if (scanDate > deadlineDate) isLate = true;
                                 }
                                 if (isLate) cellValue = `[遲交] ${record.timestamp}`;
                             }
@@ -2646,20 +2642,26 @@ function classifyParentTaskStatus(statusStr, timestamp, deadline) {
     let isLate = false;
     if (s === '遲交' || s === 'late' || s.includes('[遲交]') || s.includes('遲交')) {
         isLate = true;
-    } else if (deadline && ts) {
-        try {
-            const dl = new Date(deadline + 'T23:59:59');
-            let scDate = null;
-            if (ts.includes('T') || ts.includes('-')) {
-                scDate = new Date(ts);
-            } else {
-                const year = new Date().getFullYear();
-                scDate = new Date(`${year}/${ts}`);
-            }
-            if (scDate && !isNaN(scDate.getTime()) && scDate > dl) {
-                isLate = true;
-            }
-        } catch(e) {}
+    } else if (deadline && (ts || s)) {
+        const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+        if (lateFn) {
+            isLate = lateFn(ts || s, deadline);
+        } else {
+            try {
+                const dl = new Date(deadline + 'T23:59:59');
+                let scDate = null;
+                const timeToCheck = ts || s;
+                if (timeToCheck.includes('T') || timeToCheck.includes('-')) {
+                    scDate = new Date(timeToCheck);
+                } else {
+                    const year = new Date().getFullYear();
+                    scDate = new Date(`${year}/${timeToCheck}`);
+                }
+                if (scDate && !isNaN(scDate.getTime()) && scDate > dl) {
+                    isLate = true;
+                }
+            } catch(e) {}
+        }
     }
 
     if (isLate) {
@@ -2724,13 +2726,6 @@ function updateParentSimulator(studentId) {
             const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
             if (!subHasRecord && !subHasRange) return;
 
-            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
-            let status = '缺交';
-            let timestamp = '';
-            if (rec) {
-                status = rec.manualStatus || '已交';
-                timestamp = rec.timestamp || rec.fullTimestamp || '';
-            }
             let range = '';
             let dueDate = nn || '近期';
             const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
@@ -2741,6 +2736,25 @@ function updateParentSimulator(studentId) {
                 range = nn;
             }
 
+            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+                timestamp = rec.timestamp || rec.fullTimestamp || '';
+                const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+                if (rec.manualStatus === 'late') {
+                    status = '遲交';
+                } else if (rec.manualStatus === 'ontime') {
+                    status = '已交';
+                } else if (rec.manualStatus) {
+                    status = rec.manualStatus;
+                } else if (lateFn && lateFn(timestamp, dueDate)) {
+                    status = `[遲交] ${timestamp}`;
+                } else {
+                    status = '已交';
+                }
+            }
+
             studentTasks.push({
                 subject: t.subject || '其他',
                 taskName: t.name,
@@ -2748,7 +2762,7 @@ function updateParentSimulator(studentId) {
                 date: dueDate,
                 status: status,
                 timestamp: timestamp,
-                deadline: t.deadline || ''
+                deadline: t.deadline || (dueDate !== '近期' ? dueDate : '')
             });
         });
     });
@@ -2766,7 +2780,7 @@ function updateParentSimulator(studentId) {
     const lateDetailsPerTask = {};
 
     studentTasks.forEach(t => {
-        const c = classifyParentTaskStatus(t.status, t.timestamp, t.deadline);
+        const c = classifyParentTaskStatus(t.status, t.timestamp, t.deadline || t.date);
         if (c.type === 'ontime') {
             onTimeCount++;
         } else if (c.type === 'late') {
@@ -2818,7 +2832,7 @@ function updateParentSimulator(studentId) {
             if (!taskMap[tn]) taskMap[tn] = { total: 0, ontime: 0, late: 0, miss: 0, exc: 0, items: [] };
             taskMap[tn].total++;
             
-            const c = classifyParentTaskStatus(st.status, st.timestamp, st.deadline);
+            const c = classifyParentTaskStatus(st.status, st.timestamp, st.deadline || st.date);
             taskMap[tn].items.push({
                 range: st.range,
                 date: st.date,
@@ -3085,7 +3099,7 @@ function getStudentPendingTasks(student) {
                 range = nn;
             }
 
-            const c = classifyParentTaskStatus(status, timestamp, t.deadline);
+            const c = classifyParentTaskStatus(status, timestamp, t.deadline || dueDate);
             if (c.type === 'missing' || c.type === 'forgot' || c.type === 'returned') {
                 pendingList.push({
                     subject: t.subject || '其他',

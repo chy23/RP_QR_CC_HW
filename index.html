@@ -503,6 +503,13 @@
                             </ul>
                         </li>
                         <li><strong>⚡ 內嵌 Base64 與跨端像素級支援：</strong>全面支援 SVG 向量直嵌（零快取延遲、防灰色地球）、32x32 分頁標籤標準點陣圖，以及 iOS / 行動裝置桌面專用 Apple Touch Icon (180x180)，無論在電腦分頁或手機加入主畫面皆美觀俐落。</li>
+                        <li><strong>🛠️ 【系統錯誤修復】跨日補交與遲交未記錄至家長端之全鏈路修復：</strong>
+                            <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-500">
+                                <li><strong>動態應交日期關聯補正：</strong>解決作業預期繳交日儲存於欄位範圍對照（<code>ranges</code>）中，但過往僅查詢未定義之 <code>task.deadline</code> 導致無法比對截止日之架構缺失。</li>
+                                <li><strong>全方位跨日比對防護：</strong>全面支援相機掃碼、批次手動登記、Tab 8 批改退回、試算表 2D 雙向同步。學生跨日補交時自動判定為遲交，並於雲端同步 <code>[遲交]</code> 標記。</li>
+                                <li><strong>家長端與 GAS 全鏈路判定：</strong>家長手札儀表板（<code>parent.html</code>）、家長模擬器與 Google Apps Script (<code>gas_core.js</code>) 全面升級截止日（當日 23:59:59）智慧比對，確保 <code>⏰ 遲交</code> 徽章與統計數據 100% 精準無誤。</li>
+                            </ul>
+                        </li>
                     </ul>
                 </div>
 
