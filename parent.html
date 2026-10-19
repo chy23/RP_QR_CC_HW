@@ -940,14 +940,12 @@
             let timestamp = '';
             if (rec) {
               timestamp = rec.timestamp || rec.fullTimestamp || '';
-              if (rec.manualStatus === 'late') {
+              if (rec.manualStatus === 'late' || (rec.timestamp && rec.timestamp.includes('[遲交]'))) {
                 status = '遲交';
               } else if (rec.manualStatus === 'ontime') {
                 status = '已交';
               } else if (rec.manualStatus) {
                 status = rec.manualStatus;
-              } else if (isLateCheck(timestamp, assignedDate)) {
-                status = `[遲交] ${timestamp}`;
               } else {
                 status = '已交';
               }
@@ -974,9 +972,7 @@
             const t = taskList.find(x => x.id === r.taskId);
             let lStatus = r.manualStatus || '已交';
             if (lStatus !== 'late' && lStatus !== 'ontime' && !lStatus.startsWith('leave_')) {
-              const rObj = db.ranges ? db.ranges.find(rg => rg.taskId === r.taskId && (rg.noticeName || '') === (r.noticeName || '')) : null;
-              const dDate = rObj ? rObj.date : '';
-              if (isLateCheck(r.fullTimestamp || r.timestamp, dDate)) {
+              if (r.timestamp && r.timestamp.includes('[遲交]')) {
                 lStatus = '遲交';
               }
             }
@@ -1176,14 +1172,10 @@
         };
       }
 
-      // 5. 遲交 (Late)
+      // 5. 遲交 (Late) - 試算表有注記[遲交]才計入遲交
       let isLate = false;
       if (s === '遲交' || s === 'late' || s.includes('[遲交]') || s.includes('遲交')) {
         isLate = true;
-      } else if (deadline && (ts || s)) {
-        if (isLateCheck(ts || s, deadline)) {
-          isLate = true;
-        }
       }
 
       if (isLate) {

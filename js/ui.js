@@ -674,14 +674,8 @@ function deleteClass(id) {
                             record.manualStatus = cellValue;
                             record.timestamp = '1970-01-01T00:00:00';
                         } else if (/^\d{1,2}\/\d{1,2} \d{1,2}:\d{1,2}/.test(cellValue) || /^20\d{2}[-\/]\d{1,2}[-\/]\d{1,2}/.test(cellValue)) {
-                            // Valid timestamp
+                            // Valid timestamp without [遲交] -> Teacher did not note [遲交], count as ontime
                             record.timestamp = cellValue;
-                            const taskDateStr = (typeof getTaskDate === 'function') ? getTaskDate(task.id, noticeName) : '';
-                            const deadlineStr = task.deadline || taskDateStr;
-                            const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
-                            if (lateFn && lateFn(cellValue, deadlineStr)) {
-                                record.manualStatus = 'late';
-                            }
                         } else {
                             // User typed custom string like "沒帶", "生理假"
                             record.manualStatus = 'leave_custom_' + cellValue;
