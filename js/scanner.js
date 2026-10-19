@@ -59,15 +59,32 @@
         // --- Date & Late Status Verification Helpers ---
         function parseDateToEndOfDay(dStr, fallbackYear) {
             if (!dStr) return null;
-            const s = dStr.toString().trim().replace(/\//g, "-");
-            const mYMD = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+            const raw = dStr.toString().trim();
+            // 1. 先檢驗完整的 YYYY-MM-DD 或 YYYY/MM/DD
+            const mYMD = raw.match(/^(20\d{2})[-\/](\d{1,2})[-\/](\d{1,2})/);
             if (mYMD) {
-                return new Date(parseInt(mYMD[1], 10), parseInt(mYMD[2], 10) - 1, parseInt(mYMD[3], 10), 23, 59, 59, 999);
+                const m = parseInt(mYMD[2], 10);
+                const d = parseInt(mYMD[3], 10);
+                if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+                    return new Date(parseInt(mYMD[1], 10), m - 1, d, 23, 59, 59, 999);
+                }
             }
-            const mMD = s.match(/(\d{1,2})-(\d{1,2})/);
-            if (mMD) {
-                const y = fallbackYear || new Date().getFullYear();
-                return new Date(y, parseInt(mMD[1], 10) - 1, parseInt(mMD[2], 10), 23, 59, 59, 999);
+            // 2. 嚴格防止把「1-5」「1-10」「p.1-5」「10-12」等作業頁數/課次範圍誤判為 1月5日
+            if (/^[pP]?\d+\s*[-~～至到]\s*\d+/.test(raw) && !raw.includes('/') && !raw.includes('月')) {
+                return null;
+            }
+            // 3. 僅當原始字串包含明確日期符號（斜線 / 或「月」）時，才允許解析為 M/D 格式
+            if (raw.includes('/') || raw.includes('月')) {
+                const s = raw.replace(/\//g, '-').replace(/月/g, '-').replace(/日/g, '');
+                const mMD = s.match(/(\d{1,2})-(\d{1,2})/);
+                if (mMD) {
+                    const m = parseInt(mMD[1], 10);
+                    const d = parseInt(mMD[2], 10);
+                    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+                        const y = fallbackYear || new Date().getFullYear();
+                        return new Date(y, m - 1, d, 23, 59, 59, 999);
+                    }
+                }
             }
             return null;
         }
@@ -293,16 +310,18 @@
                             } else if (record.manualStatus === 'missing') {
                                 cellValue = loopMissingText;
                             }
-                            const taskDef = db.tasks.find(t => t.id === k.taskId);
-                            const taskDateStr = getTaskDate(k.taskId, k.noticeName);
-                            const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
-                            
                             let isLate = false;
-                            if (record.manualStatus === 'late') isLate = true;
-                            else if (record.manualStatus === 'ontime') isLate = false;
-                            else if (isLateCheck(record.fullTimestamp || record.timestamp, deadlineStr)) isLate = true;
+                            if (record.manualStatus === 'late' || (record.timestamp && record.timestamp.includes('[遲交]'))) {
+                                isLate = true;
+                            } else if (record.manualStatus === 'ontime') {
+                                isLate = false;
+                            }
                             
-                            if (isLate) cellValue = `[遲交] ${record.timestamp}`;
+                            if (isLate) {
+                                cellValue = `[遲交] ${record.timestamp.replace(/\[遲交\]/g, '').trim()}`;
+                            } else {
+                                cellValue = record.timestamp.replace(/\[遲交\]/g, '').trim();
+                            }
                         }
                         row.push(cellValue);
                     });
@@ -401,19 +420,12 @@
                                     } else {
                                         exemptLeaves++; // 其餘假別 (病假、事假等) 免計入分母
                                     }
-                                } else if (r.manualStatus === 'late') {
+                                } else if (r.manualStatus === 'late' || (r.timestamp && r.timestamp.includes('[遲交]'))) {
                                     late++;
                                 } else if (r.manualStatus === 'missing') {
                                     missing++;
                                 } else {
-                                    const taskDef = db.tasks.find(t => t.id === k.taskId);
-                                    const taskDateStr = getTaskDate(k.taskId, k.noticeName);
-                                    const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
-                                    let isLate = false;
-                                    if (r.manualStatus === 'ontime') isLate = false;
-                                    else if (isLateCheck(r.fullTimestamp || r.timestamp, deadlineStr)) isLate = true;
-                                    if (isLate) late++;
-                                    else onTime++;
+                                    onTime++;
                                 }
                             } else {
                                 missing++;
@@ -1292,12 +1304,10 @@ function renderStatistics() {
                     if (record) {
                         // 判斷是否遲交
                         let isLate = false;
-                        if (record.manualStatus === 'late') {
+                        if (record.manualStatus === 'late' || (record.timestamp && record.timestamp.includes('[遲交]'))) {
                             isLate = true;
                         } else if (record.manualStatus === 'ontime') {
                             isLate = false;
-                        } else if (isLateCheck(record.fullTimestamp || record.timestamp, deadlineStr)) {
-                            isLate = true;
                         }
                         
                         if (isLeaveStatus(record.manualStatus)) {
@@ -1394,14 +1404,13 @@ let currentTargetRecord = null;
                 const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
                 
                 let isLate = false;
-                if (record.manualStatus === 'late') isLate = true;
+                if (record.manualStatus === 'late' || (record.timestamp && record.timestamp.includes('[遲交]'))) isLate = true;
                 else if (record.manualStatus === 'ontime') isLate = false;
-                else if (isLateCheck(record.fullTimestamp || record.timestamp, deadlineStr)) isLate = true;
 
                 if (!isLate && record.manualStatus !== 'missing' && (!isLeaveStatus(record.manualStatus))) {
                     // 準時 -> 遲交
                     record.manualStatus = 'late';
-                    record.timestamp = timeString;
+                    record.timestamp = `[遲交] ${timeString}`;
                     record.fullTimestamp = now.toISOString();
                 } else {
                     // 遲交或假別 -> 缺交
@@ -1809,9 +1818,8 @@ let currentTargetRecord = null;
                 
                 if (record) {
                     let isLate = false;
-                    if (record.manualStatus === 'late') isLate = true;
+                    if (record.manualStatus === 'late' || (record.timestamp && record.timestamp.includes('[遲交]'))) isLate = true;
                     else if (record.manualStatus === 'ontime') isLate = false;
-                    else if (isLateCheck(record.fullTimestamp || record.timestamp, deadlineStr)) isLate = true;
                     
                     if (isLeaveStatus(record.manualStatus)) {
                             const lName = getLeaveName(record.manualStatus);
