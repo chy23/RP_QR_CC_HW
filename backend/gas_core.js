@@ -142,24 +142,29 @@ function(e, ss, getSheetNames) {
       return url;
     }
 
-    function parseDateForCompare(dStr) {
+    function parseDateForCompare(dStr, fallbackYear) {
       if (!dStr) return null;
       var s = dStr.toString().trim().replace(/\//g, "-");
       var mYMD = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
       if (mYMD) {
-        return new Date(parseInt(mYMD[1], 10), parseInt(mYMD[2], 10) - 1, parseInt(mYMD[3], 10), 23, 59, 59);
+        return new Date(parseInt(mYMD[1], 10), parseInt(mYMD[2], 10) - 1, parseInt(mYMD[3], 10), 23, 59, 59, 999);
       }
       var mMD = s.match(/(\d{1,2})-(\d{1,2})/);
       if (mMD) {
-        var curY = new Date().getFullYear();
-        return new Date(curY, parseInt(mMD[1], 10) - 1, parseInt(mMD[2], 10), 23, 59, 59);
+        var curY = fallbackYear || new Date().getFullYear();
+        return new Date(curY, parseInt(mMD[1], 10) - 1, parseInt(mMD[2], 10), 23, 59, 59, 999);
       }
       return null;
     }
 
     function parseScanTime(tsStr) {
       if (!tsStr) return null;
-      var s = tsStr.toString().trim().replace(/\//g, "-");
+      var s = tsStr.toString().trim().replace(/\[遲交\]|\[已繳交\]|遲交|已交|已繳交/g, "").trim();
+      s = s.replace(/\//g, "-");
+      if (s.indexOf("T") !== -1) {
+        var d = new Date(s);
+        if (!isNaN(d.getTime())) return d;
+      }
       var mYMDTime = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
       if (mYMDTime) {
         return new Date(parseInt(mYMDTime[1], 10), parseInt(mYMDTime[2], 10) - 1, parseInt(mYMDTime[3], 10), parseInt(mYMDTime[4], 10), parseInt(mYMDTime[5], 10));
@@ -167,14 +172,26 @@ function(e, ss, getSheetNames) {
       var mMDTime = s.match(/(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
       if (mMDTime) {
         var curY = new Date().getFullYear();
-        return new Date(curY, parseInt(mMDTime[1], 10) - 1, parseInt(mMDTime[2], 10), parseInt(mMDTime[4], 10));
+        return new Date(curY, parseInt(mMDTime[1], 10) - 1, parseInt(mMDTime[2], 10), parseInt(mMDTime[3], 10), parseInt(mMDTime[4], 10));
+      }
+      var mYMD = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (mYMD) {
+        return new Date(parseInt(mYMD[1], 10), parseInt(mYMD[2], 10) - 1, parseInt(mYMD[3], 10), 0, 0, 0);
+      }
+      var mMD = s.match(/(\d{1,2})-(\d{1,2})/);
+      if (mMD) {
+        var curY2 = new Date().getFullYear();
+        return new Date(curY2, parseInt(mMD[1], 10) - 1, parseInt(mMD[2], 10), 0, 0, 0);
       }
       return null;
     }
 
     function isLateCheck(scanTimeStr, deadlineStr) {
-      var sc = parseScanTime(scanTimeStr) || parseDateForCompare(scanTimeStr);
-      var dl = parseDateForCompare(deadlineStr);
+      if (!scanTimeStr || !deadlineStr) return false;
+      var sStr = scanTimeStr.toString().trim();
+      if (sStr.indexOf("遲交") !== -1 || sStr.toLowerCase().indexOf("late") !== -1) return true;
+      var sc = parseScanTime(sStr);
+      var dl = parseDateForCompare(deadlineStr, sc ? sc.getFullYear() : undefined);
       if (sc && dl) {
         return sc.getTime() > dl.getTime();
       }
@@ -320,8 +337,11 @@ function(e, ss, getSheetNames) {
               if (!cleanStatus || cleanStatus === '缺交' || cleanStatus === '未交' || cleanStatus === '沒帶' || cleanStatus === 'missing') {
                 isMissing = true;
                 cleanStatus = cleanStatus || '缺交';
-              } else if (cleanStatus.indexOf('遲') !== -1 || cleanStatus.toLowerCase().indexOf('late') !== -1) {
+              } else if (cleanStatus.indexOf('遲') !== -1 || cleanStatus.toLowerCase().indexOf('late') !== -1 || isLateCheck(cleanStatus, tDate)) {
                 isLate = true;
+                if (cleanStatus.indexOf('遲') === -1 && cleanStatus.toLowerCase().indexOf('late') === -1) {
+                  cleanStatus = '[遲交] ' + cleanStatus;
+                }
               } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他'].indexOf(cleanStatus) !== -1) {
                 isExcused = true;
               } else {
@@ -333,6 +353,7 @@ function(e, ss, getSheetNames) {
                 taskName: tName,
                 range: tRange,
                 date: tDate,
+                deadline: tDate,
                 status: cleanStatus
               };
               studentTasks.push(taskItem);
@@ -1174,6 +1195,8 @@ function(e, ss, getSheetNames) {
                 finalStatus = '遲交';
               } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他'].indexOf(matchTask.status) !== -1) {
                 finalStatus = matchTask.status;
+              } else if (isLateCheck(lRow[0], matchTask.date)) {
+                finalStatus = '遲交';
               }
             } else if (finalStatus.indexOf('遲') !== -1 || finalStatus.toLowerCase().indexOf('late') !== -1) {
               finalStatus = '遲交';

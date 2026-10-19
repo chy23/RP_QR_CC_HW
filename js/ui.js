@@ -667,15 +667,21 @@ function deleteClass(id) {
                         };
                         
                         const leaves = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "其他假別"];
-                        if (cellValue.startsWith('[遲交]')) {
+                        if (cellValue.startsWith('[遲交]') || cellValue.includes('遲交')) {
                             record.manualStatus = 'late';
-                            record.timestamp = cellValue.replace('[遲交]', '').trim();
+                            record.timestamp = cellValue.replace(/\[遲交\]|遲交/g, '').trim();
                         } else if (leaves.includes(cellValue)) {
                             record.manualStatus = cellValue;
                             record.timestamp = '1970-01-01T00:00:00';
                         } else if (/^\d{1,2}\/\d{1,2} \d{1,2}:\d{1,2}/.test(cellValue) || /^20\d{2}[-\/]\d{1,2}[-\/]\d{1,2}/.test(cellValue)) {
                             // Valid timestamp
                             record.timestamp = cellValue;
+                            const taskDateStr = (typeof getTaskDate === 'function') ? getTaskDate(task.id, noticeName) : '';
+                            const deadlineStr = task.deadline || taskDateStr;
+                            const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+                            if (lateFn && lateFn(cellValue, deadlineStr)) {
+                                record.manualStatus = 'late';
+                            }
                         } else {
                             // User typed custom string like "沒帶", "生理假"
                             record.manualStatus = 'leave_custom_' + cellValue;

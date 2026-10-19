@@ -924,14 +924,6 @@
             const subHasRange = (db.ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
             if (!subHasRecord && !subHasRange) return;
 
-            const rec = (db.records || []).find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
-            let status = '缺交';
-            let timestamp = '';
-            if (rec) {
-              status = rec.manualStatus || '已交';
-              timestamp = rec.timestamp || rec.fullTimestamp || '';
-            }
-            
             // 抓取範圍與指派日期
             let range = nn || '';
             let assignedDate = nn || '近期';
@@ -943,11 +935,30 @@
               }
             }
 
+            const rec = (db.records || []).find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+              timestamp = rec.timestamp || rec.fullTimestamp || '';
+              if (rec.manualStatus === 'late') {
+                status = '遲交';
+              } else if (rec.manualStatus === 'ontime') {
+                status = '已交';
+              } else if (rec.manualStatus) {
+                status = rec.manualStatus;
+              } else if (isLateCheck(timestamp, assignedDate)) {
+                status = `[遲交] ${timestamp}`;
+              } else {
+                status = '已交';
+              }
+            }
+
             studentTasks.push({
               subject: t.subject || '其他',
               taskName: t.name,
               range: range,
               date: assignedDate,
+              deadline: assignedDate,
               status: status,
               timestamp: timestamp
             });
@@ -961,12 +972,20 @@
           .slice(0, 25)
           .map(r => {
             const t = taskList.find(x => x.id === r.taskId);
+            let lStatus = r.manualStatus || '已交';
+            if (lStatus !== 'late' && lStatus !== 'ontime' && !lStatus.startsWith('leave_')) {
+              const rObj = db.ranges ? db.ranges.find(rg => rg.taskId === r.taskId && (rg.noticeName || '') === (r.noticeName || '')) : null;
+              const dDate = rObj ? rObj.date : '';
+              if (isLateCheck(r.fullTimestamp || r.timestamp, dDate)) {
+                lStatus = '遲交';
+              }
+            }
             return {
               timestamp: r.fullTimestamp || r.timestamp || r.timeOnly || '',
               subject: t ? t.subject : '',
               taskName: t ? t.name : '',
               range: r.range || r.noticeName || '',
-              status: r.manualStatus || '已交'
+              status: lStatus
             };
           });
 
@@ -1008,7 +1027,7 @@
       const mMDTime = s.match(/(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
       if (mMDTime) {
         const curY = new Date().getFullYear();
-        return new Date(curY, parseInt(mMDTime[1], 10) - 1, parseInt(mMDTime[2], 10), parseInt(mMDTime[4], 10), parseInt(mMDTime[5], 10));
+        return new Date(curY, parseInt(mMDTime[1], 10) - 1, parseInt(mMDTime[2], 10), parseInt(mMDTime[3], 10), parseInt(mMDTime[4], 10));
       }
       return null;
     }
@@ -1034,6 +1053,65 @@
         mid += '○';
       }
       return s.charAt(0) + mid + s.charAt(s.length - 1);
+    }
+
+    // ==========================================
+    // 日期解析與遲交判定輔助函式
+    // ==========================================
+    function parseDateToEndOfDay(dStr, fallbackYear) {
+      if (!dStr) return null;
+      const s = dStr.toString().trim().replace(/\//g, "-");
+      const mYMD = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (mYMD) {
+        return new Date(parseInt(mYMD[1], 10), parseInt(mYMD[2], 10) - 1, parseInt(mYMD[3], 10), 23, 59, 59, 999);
+      }
+      const mMD = s.match(/(\d{1,2})-(\d{1,2})/);
+      if (mMD) {
+        const y = fallbackYear || new Date().getFullYear();
+        return new Date(y, parseInt(mMD[1], 10) - 1, parseInt(mMD[2], 10), 23, 59, 59, 999);
+      }
+      return null;
+    }
+
+    function parseScanDateTime(tsStr) {
+      if (!tsStr) return null;
+      let s = tsStr.toString().trim().replace(/\[遲交\]|\[已繳交\]|遲交|已交|已繳交/g, "").trim();
+      s = s.replace(/\//g, "-");
+      if (s.includes("T")) {
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) return d;
+      }
+      const mYMDTime = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (mYMDTime) {
+        return new Date(parseInt(mYMDTime[1], 10), parseInt(mYMDTime[2], 10) - 1, parseInt(mYMDTime[3], 10), parseInt(mYMDTime[4], 10), parseInt(mYMDTime[5], 10));
+      }
+      const mMDTime = s.match(/(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (mMDTime) {
+        const y = new Date().getFullYear();
+        return new Date(y, parseInt(mMDTime[1], 10) - 1, parseInt(mMDTime[2], 10), parseInt(mMDTime[3], 10), parseInt(mMDTime[4], 10));
+      }
+      const mYMD = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (mYMD) {
+        return new Date(parseInt(mYMD[1], 10), parseInt(mYMD[2], 10) - 1, parseInt(mYMD[3], 10), 0, 0, 0);
+      }
+      const mMD = s.match(/(\d{1,2})-(\d{1,2})/);
+      if (mMD) {
+        const y = new Date().getFullYear();
+        return new Date(y, parseInt(mMD[1], 10) - 1, parseInt(mMD[2], 10), 0, 0, 0);
+      }
+      return null;
+    }
+
+    function isLateCheck(scanTimeStr, dueDateStr) {
+      if (!scanTimeStr || !dueDateStr) return false;
+      const sStr = scanTimeStr.toString().trim();
+      if (sStr.includes("遲交") || sStr.toLowerCase().includes("late")) return true;
+      const sc = parseScanDateTime(sStr);
+      const dl = parseDateToEndOfDay(dueDateStr, sc ? sc.getFullYear() : undefined);
+      if (sc && dl) {
+        return sc.getTime() > dl.getTime();
+      }
+      return false;
     }
 
     // ==========================================
@@ -1102,6 +1180,10 @@
       let isLate = false;
       if (s === '遲交' || s === 'late' || s.includes('[遲交]') || s.includes('遲交')) {
         isLate = true;
+      } else if (deadline && (ts || s)) {
+        if (isLateCheck(ts || s, deadline)) {
+          isLate = true;
+        }
       }
 
       if (isLate) {
@@ -1212,7 +1294,7 @@
       const lateDetailsPerTask = {}; // 常遲到明細 { '作業名稱': [範圍/日期...] }
 
       tasks.forEach(t => {
-        const c = classifyTaskStatus(t.status, t.timestamp || t.status);
+        const c = classifyTaskStatus(t.status, t.timestamp || t.status, t.date || t.deadline);
 
         if (c.type === 'ontime') {
           onTimeCount++;
@@ -1402,7 +1484,7 @@
           }
           tasksMap[tName].total++;
 
-          const c = classifyTaskStatus(st.status, st.timestamp || st.status);
+          const c = classifyTaskStatus(st.status, st.timestamp || st.status, st.date || st.deadline);
           if (c.type === 'ontime') {
             subOnTime++;
             tasksMap[tName].ontime++;
@@ -1553,7 +1635,10 @@
         logsContainer.innerHTML = '<div class="py-4 text-center text-xs text-slate-500 font-medium">尚無近期打卡紀錄</div>';
       } else {
         recentLogs.forEach(l => {
-          const c = classifyTaskStatus(l.status, l.timestamp);
+          let deadline = '';
+          const matchTask = tasks.find(x => x.subject === l.subject && x.taskName === l.taskName && (!l.range || x.range === l.range));
+          if (matchTask) deadline = matchTask.date || matchTask.deadline || '';
+          const c = classifyTaskStatus(l.status, l.timestamp, deadline);
           const badge = `<span class="text-xs font-bold px-2 py-0.5 rounded-full border ${c.badgeClass}">${c.badge}</span>`;
 
           logsContainer.innerHTML += `

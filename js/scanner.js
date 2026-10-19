@@ -56,6 +56,66 @@
             });
         }
         
+        // --- Date & Late Status Verification Helpers ---
+        function parseDateToEndOfDay(dStr, fallbackYear) {
+            if (!dStr) return null;
+            const s = dStr.toString().trim().replace(/\//g, "-");
+            const mYMD = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (mYMD) {
+                return new Date(parseInt(mYMD[1], 10), parseInt(mYMD[2], 10) - 1, parseInt(mYMD[3], 10), 23, 59, 59, 999);
+            }
+            const mMD = s.match(/(\d{1,2})-(\d{1,2})/);
+            if (mMD) {
+                const y = fallbackYear || new Date().getFullYear();
+                return new Date(y, parseInt(mMD[1], 10) - 1, parseInt(mMD[2], 10), 23, 59, 59, 999);
+            }
+            return null;
+        }
+
+        function parseScanDateTime(tsStr) {
+            if (!tsStr) return null;
+            let s = tsStr.toString().trim().replace(/\[遲交\]|\[已繳交\]|遲交|已交|已繳交/g, "").trim();
+            s = s.replace(/\//g, "-");
+            if (s.includes("T")) {
+                const d = new Date(s);
+                if (!isNaN(d.getTime())) return d;
+            }
+            const mYMDTime = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+            if (mYMDTime) {
+                return new Date(parseInt(mYMDTime[1], 10), parseInt(mYMDTime[2], 10) - 1, parseInt(mYMDTime[3], 10), parseInt(mYMDTime[4], 10), parseInt(mYMDTime[5], 10));
+            }
+            const mMDTime = s.match(/(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+            if (mMDTime) {
+                const y = new Date().getFullYear();
+                return new Date(y, parseInt(mMDTime[1], 10) - 1, parseInt(mMDTime[2], 10), parseInt(mMDTime[3], 10), parseInt(mMDTime[4], 10));
+            }
+            const mYMD = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (mYMD) {
+                return new Date(parseInt(mYMD[1], 10), parseInt(mYMD[2], 10) - 1, parseInt(mYMD[3], 10), 0, 0, 0);
+            }
+            const mMD = s.match(/(\d{1,2})-(\d{1,2})/);
+            if (mMD) {
+                const y = new Date().getFullYear();
+                return new Date(y, parseInt(mMD[1], 10) - 1, parseInt(mMD[2], 10), 0, 0, 0);
+            }
+            return null;
+        }
+
+        function isLateCheck(scanTimeStr, dueDateStr) {
+            if (!scanTimeStr || !dueDateStr) return false;
+            const sStr = scanTimeStr.toString().trim();
+            if (sStr.includes("遲交") || sStr.toLowerCase().includes("late")) return true;
+            const sc = parseScanDateTime(sStr);
+            const dl = parseDateToEndOfDay(dueDateStr, sc ? sc.getFullYear() : undefined);
+            if (sc && dl) {
+                return sc.getTime() > dl.getTime();
+            }
+            return false;
+        }
+        window.parseDateToEndOfDay = parseDateToEndOfDay;
+        window.parseScanDateTime = parseScanDateTime;
+        window.isLateCheck = isLateCheck;
+
         // --- Google Sheets Sync Logic ---
         // (gasUrl and sheetUrl are dynamically managed via db.js window accessors)
         
@@ -128,24 +188,19 @@
                 const task = db.tasks.find(t => t.id === r.taskId);
                 
                 let recStatus = '已繳交';
+                const taskDateStr = getTaskDate(r.taskId, r.noticeName);
+                const deadlineStr = (task && task.deadline) ? task.deadline : taskDateStr;
+
                 if (r.manualStatus === 'late') {
                     recStatus = '遲交';
+                } else if (r.manualStatus === 'ontime') {
+                    recStatus = '已繳交';
                 } else if (r.manualStatus === 'missing') {
                     recStatus = (task && task.subject === '聯絡簿') ? '沒帶' : '缺交';
                 } else if (isLeaveStatus(r.manualStatus) || ['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他'].includes(r.manualStatus)) {
                     recStatus = getLeaveName(r.manualStatus) || r.manualStatus;
-                } else if (task && task.deadline) {
-                    const dl = new Date(task.deadline + 'T23:59:59');
-                    let sc = null;
-                    if (r.timestamp && (r.timestamp.includes('T') || r.timestamp.includes('-'))) {
-                        sc = new Date(r.timestamp);
-                    } else if (r.timestamp) {
-                        const curYear = new Date().getFullYear();
-                        sc = new Date(`${curYear}/${r.timestamp}`);
-                    }
-                    if (dl && sc && !isNaN(sc.getTime()) && !isNaN(dl.getTime()) && sc > dl) {
-                        recStatus = '遲交';
-                    }
+                } else if (isLateCheck(r.fullTimestamp || r.timestamp, deadlineStr)) {
+                    recStatus = '遲交';
                 }
 
                 return {
@@ -227,7 +282,7 @@
                 db.students.forEach(s => {
                     const row = [s.name];
                     uniqueTaskKeys.forEach(k => {
-                        const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
+                        const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && (r.noticeName || '') === (k.noticeName || ''));
                         const loopTaskDef = db.tasks.find(t => t.id === k.taskId);
                         const loopMissingText = (loopTaskDef && loopTaskDef.subject === '聯絡簿') ? '沒帶' : '缺交';
                         let cellValue = loopMissingText;
@@ -239,21 +294,13 @@
                                 cellValue = loopMissingText;
                             }
                             const taskDef = db.tasks.find(t => t.id === k.taskId);
-                            const missingText = (taskDef && taskDef.subject === '聯絡簿') ? '沒帶' : '缺交';
-                            const deadlineDate = (taskDef && taskDef.deadline) ? new Date(taskDef.deadline + 'T23:59:59') : null;
+                            const taskDateStr = getTaskDate(k.taskId, k.noticeName);
+                            const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
                             
                             let isLate = false;
                             if (record.manualStatus === 'late') isLate = true;
                             else if (record.manualStatus === 'ontime') isLate = false;
-                            else if (deadlineDate) {
-                                let scanDate;
-                                if (record.timestamp.includes('T') || record.timestamp.includes('-')) scanDate = new Date(record.timestamp);
-                                else {
-                                    const currentYear = new Date().getFullYear();
-                                    scanDate = new Date(`${currentYear}/${record.timestamp}`);
-                                }
-                                if (scanDate > deadlineDate) isLate = true;
-                            }
+                            else if (isLateCheck(record.fullTimestamp || record.timestamp, deadlineStr)) isLate = true;
                             
                             if (isLate) cellValue = `[遲交] ${record.timestamp}`;
                         }
@@ -338,7 +385,7 @@
                             
                             totalAssigned++;
 
-                            const r = db.records.find(rec => rec.studentId === studentId && rec.taskId === k.taskId && rec.noticeName === k.noticeName);
+                            const r = db.records.find(rec => rec.studentId === studentId && rec.taskId === k.taskId && (rec.noticeName || '') === (k.noticeName || ''));
                             if (r) {
                                 if (isLeaveStatus(r.manualStatus) || r.manualStatus === '其他假別' || leavesToExempt.includes(r.manualStatus)) {
                                     const lName = getLeaveName(r.manualStatus) || r.manualStatus;
@@ -360,12 +407,11 @@
                                     missing++;
                                 } else {
                                     const taskDef = db.tasks.find(t => t.id === k.taskId);
-                                    const deadlineDate = (taskDef && taskDef.deadline) ? new Date(taskDef.deadline + 'T23:59:59') : null;
+                                    const taskDateStr = getTaskDate(k.taskId, k.noticeName);
+                                    const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
                                     let isLate = false;
-                                    if (deadlineDate) {
-                                        let scanDate = (r.timestamp.includes('T') || r.timestamp.includes('-')) ? new Date(r.timestamp) : new Date(`${new Date().getFullYear()}/${r.timestamp}`);
-                                        if (scanDate > deadlineDate) isLate = true;
-                                    }
+                                    if (r.manualStatus === 'ontime') isLate = false;
+                                    else if (isLateCheck(r.fullTimestamp || r.timestamp, deadlineStr)) isLate = true;
                                     if (isLate) late++;
                                     else onTime++;
                                 }
@@ -902,22 +948,24 @@
                 
                 // 動態註冊這個範圍到 db.ranges，讓系統知道這是一個獨立的欄位
                 if (taskRange && taskRange !== '') {
-                    const existingRange = db.ranges.find(rg => rg.taskId === r.taskId && rg.noticeName === taskRange);
+                    const existingRange = db.ranges.find(rg => rg.taskId === r.taskId && (rg.noticeName || '') === taskRange);
                     if (!existingRange) {
                         db.ranges.push({ taskId: r.taskId, noticeName: taskRange, range: taskRange, date: scanSession.dateStr });
                     }
                 }
                 
-                const existing = db.records.findIndex(rec => rec.studentId === r.studentId && rec.taskId === r.taskId && rec.noticeName === taskRange);
+                const existing = db.records.findIndex(rec => rec.studentId === r.studentId && rec.taskId === r.taskId && (rec.noticeName || '') === taskRange);
                 if(existing !== -1) {
                     db.records[existing].timestamp = r.fullTimestamp;
+                    db.records[existing].fullTimestamp = r.fullTimestamp;
                     delete db.records[existing].manualStatus;
                 } else {
                     db.records.push({
                         studentId: r.studentId,
                         taskId: r.taskId,
                         noticeName: taskRange,
-                        timestamp: r.fullTimestamp
+                        timestamp: r.fullTimestamp,
+                        fullTimestamp: r.fullTimestamp
                     });
                 }
                 
@@ -1130,12 +1178,12 @@
         }
 function getTaskDate(taskId, noticeName) {
             if (!db.ranges) return '';
-            const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
+            const existing = db.ranges.find(r => r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
             return existing ? (existing.date || '') : '';
         }
 function getTaskRange(taskId, noticeName) {
             if (!db.ranges) return noticeName || '';
-            const existing = db.ranges.find(r => r.taskId === taskId && r.noticeName === noticeName);
+            const existing = db.ranges.find(r => r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
             if (existing && existing.range) return existing.range;
             return noticeName || '';
         }
@@ -1236,8 +1284,9 @@ function renderStatistics() {
                 bodyHTML += `<tr><td class="p-2 border font-semibold whitespace-nowrap">${s.name}</td>`;
                 finalTaskKeys.forEach(k => {
                     const taskDef = db.tasks.find(t => t.id === k.taskId);
-                    const deadline = taskDef && taskDef.deadline ? new Date(taskDef.deadline + 'T23:59:59') : null;
-                    const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && r.noticeName === k.noticeName);
+                    const taskDateStr = getTaskDate(k.taskId, k.noticeName);
+                    const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
+                    const record = db.records.find(r => r.studentId === s.id && r.taskId === k.taskId && (r.noticeName || '') === (k.noticeName || ''));
                     const missingText = (taskDef && taskDef.subject === '聯絡簿') ? '沒帶' : '缺交';
                     let mark = `<span class="text-red-700 font-bold text-xs bg-red-50 border border-red-200 px-1 rounded block">${missingText}</span>`;
                     if (record) {
@@ -1247,18 +1296,8 @@ function renderStatistics() {
                             isLate = true;
                         } else if (record.manualStatus === 'ontime') {
                             isLate = false;
-                        } else if (deadline) {
-                            // timestamp format: "MM/DD HH:mm" or ISO
-                            // To be safe, compare year if possible, but here we just check if it's late based on current year or raw timestamp if ISO
-                            let scanDate;
-                            if (record.timestamp.includes('T') || record.timestamp.includes('-')) {
-                                scanDate = new Date(record.timestamp);
-                            } else {
-                                // Fallback to current year + MM/DD HH:mm
-                                const currentYear = new Date().getFullYear();
-                                scanDate = new Date(`${currentYear}/${record.timestamp}`);
-                            }
-                            if (scanDate > deadline) isLate = true;
+                        } else if (isLateCheck(record.fullTimestamp || record.timestamp, deadlineStr)) {
+                            isLate = true;
                         }
                         
                         if (isLeaveStatus(record.manualStatus)) {
@@ -1336,7 +1375,7 @@ let currentTargetRecord = null;
             }
             
             // 單個學生格子的點擊切換邏輯 (順序: 缺交 -> 準時 -> 遲交 -> 缺交)
-            const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
+            const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
             const now = new Date();
             const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
             
@@ -1351,20 +1390,13 @@ let currentTargetRecord = null;
             } else {
                 const record = db.records[index];
                 const taskDef = db.tasks.find(t => t.id === taskId);
-                const deadline = taskDef && taskDef.deadline ? new Date(taskDef.deadline + 'T23:59:59') : null;
+                const taskDateStr = getTaskDate(taskId, noticeName);
+                const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
                 
                 let isLate = false;
                 if (record.manualStatus === 'late') isLate = true;
                 else if (record.manualStatus === 'ontime') isLate = false;
-                else if (deadline) {
-                    let scanDate;
-                    if (record.timestamp.includes('T') || record.timestamp.includes('-')) scanDate = new Date(record.timestamp);
-                    else {
-                        const currentYear = new Date().getFullYear();
-                        scanDate = new Date(`${currentYear}/${record.timestamp}`);
-                    }
-                    if (scanDate > deadline) isLate = true;
-                }
+                else if (isLateCheck(record.fullTimestamp || record.timestamp, deadlineStr)) isLate = true;
 
                 if (!isLate && record.manualStatus !== 'missing' && (!isLeaveStatus(record.manualStatus))) {
                     // 準時 -> 遲交
@@ -1380,7 +1412,7 @@ let currentTargetRecord = null;
             saveData();
             renderStatistics();
             // 找出新狀態同步 (即使是刪除也要觸發完整同步，才能將雲端試算表上的格子清空)
-            const newRec = db.records.find(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
+            const newRec = db.records.find(r => r.studentId === studentId && r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
             syncToGoogleSheets(newRec ? [newRec] : []);
         }
 
@@ -1420,27 +1452,27 @@ let currentTargetRecord = null;
             if (studentId === null) {
                 // Batch operation
                 db.students.forEach(student => {
-                    const index = db.records.findIndex(r => r.studentId === student.id && r.taskId === taskId && r.noticeName === noticeName);
+                    const index = db.records.findIndex(r => r.studentId === student.id && r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
                     if (statusType === 'missing') {
                         if (index !== -1) db.records.splice(index, 1);
                     } else {
                         if (index !== -1) {
                             db.records[index].manualStatus = statusType;
                         } else {
-                            db.records.push({ studentId: student.id, taskId, noticeName, timestamp: timeString, manualStatus: statusType });
+                            db.records.push({ studentId: student.id, taskId, noticeName, timestamp: timeString, manualStatus: statusType, fullTimestamp: now.toISOString() });
                         }
                     }
                 });
             } else {
                 // Individual operation
-                const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
+                const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
                 if (statusType === 'missing') {
                     if (index !== -1) db.records.splice(index, 1);
                 } else {
                     if (index !== -1) {
                         db.records[index].manualStatus = statusType;
                     } else {
-                        db.records.push({ studentId, taskId, noticeName, timestamp: timeString, manualStatus: statusType });
+                        db.records.push({ studentId, taskId, noticeName, timestamp: timeString, manualStatus: statusType, fullTimestamp: now.toISOString() });
                     }
                 }
             }
@@ -1731,7 +1763,8 @@ let currentTargetRecord = null;
             const [taskId, noticeName] = activeGradingTaskValue.split(':::');
             
             const taskDef = db.tasks.find(t => t.id === taskId);
-            const deadline = taskDef && taskDef.deadline ? new Date(taskDef.deadline + 'T23:59:59') : null;
+            const taskDateStr = getTaskDate(taskId, noticeName);
+            const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
             
             let bodyHTML = '';
             
@@ -1768,7 +1801,7 @@ let currentTargetRecord = null;
             }
 
             filteredStudents.forEach(s => {
-                const record = db.records.find(r => r.studentId === s.id && r.taskId === taskId && r.noticeName === noticeName);
+                const record = db.records.find(r => r.studentId === s.id && r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
                 
                 let missingText = (taskDef?.subject === '聯絡簿') ? '沒帶' : '缺交';
                 let statusHTML = `<span class="text-red-700 font-bold bg-red-50 px-2 py-1 rounded border border-red-200 shadow-sm">${missingText}</span>`;
@@ -1778,15 +1811,7 @@ let currentTargetRecord = null;
                     let isLate = false;
                     if (record.manualStatus === 'late') isLate = true;
                     else if (record.manualStatus === 'ontime') isLate = false;
-                    else if (deadline) {
-                        let scanDate;
-                        if (record.timestamp.includes('T') || record.timestamp.includes('-')) scanDate = new Date(record.timestamp);
-                        else {
-                            const currentYear = new Date().getFullYear();
-                            scanDate = new Date(`${currentYear}/${record.timestamp}`);
-                        }
-                        if (scanDate > deadline) isLate = true;
-                    }
+                    else if (isLateCheck(record.fullTimestamp || record.timestamp, deadlineStr)) isLate = true;
                     
                     if (isLeaveStatus(record.manualStatus)) {
                             const lName = getLeaveName(record.manualStatus);
@@ -1836,7 +1861,7 @@ let currentTargetRecord = null;
             const now = new Date();
             const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
             
-            const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
+            const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
             
             if (statusType === 'missing') {
                 if (index !== -1) db.records.splice(index, 1);
@@ -1859,7 +1884,7 @@ let currentTargetRecord = null;
             renderStatistics();
             
             // 單向即時寫入雲端
-            const newRec = db.records.find(r => r.studentId === studentId && r.taskId === taskId && r.noticeName === noticeName);
+            const newRec = db.records.find(r => r.studentId === studentId && r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
             syncToGoogleSheets(newRec ? [newRec] : []);
         }
 
