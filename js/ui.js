@@ -844,6 +844,7 @@ function deleteClass(id) {
 
         function renderStudents() {
             const list = document.getElementById('student-list');
+            if (!list) return;
             list.innerHTML = '';
             db.students.forEach(s => {
                 const li = document.createElement('li');
@@ -943,6 +944,7 @@ function addTask() {
 
         function renderTasks() {
             const list = document.getElementById('task-list');
+            if (!list) return;
             list.innerHTML = '';
             
             const grouped = {};
@@ -1215,8 +1217,10 @@ function addTask() {
 
         function toggleNoticeInput() {
             const select = document.getElementById('tab3-task-select');
+            if (!select) return;
             const task = db.tasks.find(t => t.id === select.value);
             const container = document.getElementById('notice-name-container');
+            if (!container) return;
             if (task) {
                 container.style.display = 'block';
             } else {
