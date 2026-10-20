@@ -752,6 +752,7 @@
                         if (typeof syncFromGoogleSheets === 'function') {
                             await syncFromGoogleSheets(true);
                         }
+                        if (typeof updateHeaderClassInfo === 'function') updateHeaderClassInfo();
                         hideLoading();
                         showToast('班級學生名單與作業已成功同步！', 'success');
                         const banner = document.getElementById('no-students-banner');
@@ -767,9 +768,28 @@
             }
         }
 
+        function updateHeaderClassInfo() {
+            const el = document.getElementById('header-class-info');
+            if (!el) return;
+            if (!appConfig || !appConfig.classes || appConfig.classes.length === 0) {
+                el.classList.add('hidden');
+                return;
+            }
+            el.classList.remove('hidden');
+            const current = appConfig.classes.find(c => c.id === appConfig.activeClassId) || appConfig.classes[0];
+            if (appConfig.classes.length === 1) {
+                el.innerHTML = `🏫 <span>${current.label || '預設班級'}</span>`;
+            } else {
+                let opts = appConfig.classes.map(c => 
+                    `<option value="${c.id}" ${c.id === appConfig.activeClassId ? 'selected' : ''}>${c.label}</option>`
+                ).join('');
+                el.innerHTML = `🏫 <select class="bg-transparent font-bold text-blue-800 outline-none cursor-pointer" onchange="switchGlobalClass(this.value)">${opts}</select>`;
+            }
+        }
+
         // 頁面初始化
         document.addEventListener('DOMContentLoaded', () => {
-            // 自動讀取 URL 參數中的 gas 網址 (方便老師生成帶參數的一鍵配對連結)
+            // 自動讀取 URL 參數中的 gas 與 class (方便老師生成帶參數的一鍵配對連結)
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const queryGas = urlParams.get('gas');
@@ -780,10 +800,22 @@
                     }
                     window.gasUrl = queryGas.trim();
                 }
+
+                const queryClass = urlParams.get('class');
+                if (queryClass && typeof appConfig !== 'undefined' && appConfig.classes) {
+                    const matched = appConfig.classes.find(c => c.prefix === queryClass || c.label === queryClass || c.id === queryClass);
+                    if (matched && matched.id !== appConfig.activeClassId) {
+                        appConfig.activeClassId = matched.id;
+                        if (typeof saveAppConfig === 'function') saveAppConfig();
+                    }
+                }
             } catch(e) {}
+
+            updateHeaderClassInfo();
 
             setTimeout(() => {
                 if (typeof switchTab === 'function') switchTab(1);
+                updateHeaderClassInfo();
 
                 // 檢查是否無學生名單
                 if (!db.students || db.students.length === 0) {
