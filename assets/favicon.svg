@@ -1,19 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <!-- Background Gradient -->
-    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Background Gradient (Teacher Royal Blue) -->
+    <linearGradient id="bg-grad-teacher" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#3b82f6"/>
       <stop offset="50%" stop-color="#2563eb"/>
       <stop offset="100%" stop-color="#1d4ed8"/>
     </linearGradient>
     
-    <!-- Emerald Badge Gradient -->
+    <!-- Emerald Check Badge Gradient -->
     <linearGradient id="check-grad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#34d399"/>
       <stop offset="100%" stop-color="#059669"/>
     </linearGradient>
     
-    <!-- Subtle Inner Shadow / Glow -->
     <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
       <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.25"/>
     </filter>
@@ -23,9 +22,7 @@
   </defs>
 
   <!-- iOS Apple Squircle Base -->
-  <rect width="512" height="512" rx="115" fill="url(#bg-grad)"/>
-  
-  <!-- Subtle Highlight Border -->
+  <rect width="512" height="512" rx="115" fill="url(#bg-grad-teacher)"/>
   <rect x="6" y="6" width="500" height="500" rx="110" fill="none" stroke="rgba(255, 255, 255, 0.22)" stroke-width="8"/>
 
   <!-- QR Elements Group with Shadow -->
@@ -52,11 +49,8 @@
 
   <!-- Bottom-Right Check-in Success Badge -->
   <g filter="url(#badge-shadow)">
-    <!-- White outer rim -->
     <circle cx="366" cy="366" r="74" fill="#ffffff"/>
-    <!-- Emerald Circle -->
     <circle cx="366" cy="366" r="64" fill="url(#check-grad)"/>
-    <!-- Checkmark -->
     <path d="M336 366 L356 386 L398 344" fill="none" stroke="#ffffff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

@@ -1309,17 +1309,19 @@
                                 const taskDateStr = (typeof getTaskDate === 'function') ? getTaskDate(k.taskId, k.noticeName) : '';
                                 const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
                                 let isLate = false;
-                                if (record.manualStatus === 'late') {
+                                const hasLateTag = (record.timestamp && record.timestamp.includes('[遲交]')) || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
+                                if (hasLateTag) {
                                     isLate = true;
-                                } else if (record.manualStatus === 'ontime') {
-                                    isLate = false;
+                                } else if (record.manualStatus === 'late' && hasLateTag) {
+                                    isLate = true;
                                 } else {
-                                    const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
-                                    if (lateFn && lateFn(record.fullTimestamp || record.timestamp, deadlineStr)) {
-                                        isLate = true;
-                                    }
+                                    isLate = false;
                                 }
-                                if (isLate) cellValue = `[遲交] ${record.timestamp}`;
+                                if (isLate) {
+                                    cellValue = `[遲交] ${record.timestamp.replace(/\[遲交\]/g, '').trim()}`;
+                                } else {
+                                    cellValue = record.timestamp.replace(/\[遲交\]/g, '').trim();
+                                }
                             }
                         }
                         row.push(cellValue);
@@ -2638,9 +2640,9 @@ function classifyParentTaskStatus(statusStr, timestamp, deadline) {
         };
     }
 
-    // 5. 遲交 (Late) - 試算表有注記[遲交]才計入遲交
+    // 5. 遲交 (Late) - 只有教師明確註記[遲交]才計入遲交，不管時間點
     let isLate = false;
-    if (s === '遲交' || s === 'late' || s.includes('[遲交]') || s.includes('遲交')) {
+    if (s.includes('[遲交]') || ts.includes('[遲交]') || s === '遲交' || s === 'late') {
         isLate = true;
     }
 
@@ -2664,85 +2666,11 @@ function classifyParentTaskStatus(statusStr, timestamp, deadline) {
     };
 }
 
-function updateParentSimulator(studentId) {
-    currentSimulatorStudentId = parseInt(studentId, 10);
+let simulatorAbortController = null;
+
+function renderParentSimulatorView(student, studentTasks, isLiveCloud = false, syncDateStr = null) {
     const frame = document.getElementById('parent-simulator-frame');
-    if (!frame) return;
-
-    const student = db.students.find(s => s.id === currentSimulatorStudentId);
-    if (!student) {
-        frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">查無該生資料</div>';
-        return;
-    }
-
-    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
-    const tasks = db.tasks || [];
-    const records = db.records || [];
-    const ranges = db.ranges || [];
-
-    // 計算各作業狀況 (排除從未掃描統計過、且未設定範圍的作業)
-    const studentTasks = [];
-    tasks.forEach(t => {
-        // 檢查全班是否有任何繳交打卡紀錄
-        const hasAnyRecord = (records || []).some(r => r.taskId === t.id);
-        // 檢查是否有設定範圍或日期
-        const hasAnyRange = (ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
-
-        // 若全班完全沒有任何掃描/打卡紀錄，且未設定範圍日期，表示尚未開始清點，不計入準時率與待辦
-        if (!hasAnyRecord && !hasAnyRange) {
-            return;
-        }
-
-        let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
-        if (ranges) {
-            const rangeNotices = ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
-            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
-        }
-        if (noticeNames.length === 0) noticeNames = [''];
-
-        noticeNames.forEach(nn => {
-            // 確認該子項目在全班是否有紀錄或範圍
-            const subHasRecord = (records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
-            const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
-            if (!subHasRecord && !subHasRange) return;
-
-            let range = '';
-            let dueDate = nn || '近期';
-            const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
-            if (rObj) {
-                range = rObj.range || nn || '';
-                if (rObj.date) dueDate = rObj.date;
-            } else if (nn) {
-                range = nn;
-            }
-
-            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
-            let status = '缺交';
-            let timestamp = '';
-            if (rec) {
-                timestamp = rec.timestamp || rec.fullTimestamp || '';
-                if (rec.manualStatus === 'late' || (rec.timestamp && rec.timestamp.includes('[遲交]'))) {
-                    status = '遲交';
-                } else if (rec.manualStatus === 'ontime') {
-                    status = '已交';
-                } else if (rec.manualStatus) {
-                    status = rec.manualStatus;
-                } else {
-                    status = '已交';
-                }
-            }
-
-            studentTasks.push({
-                subject: t.subject || '其他',
-                taskName: t.name,
-                range: range,
-                date: dueDate,
-                status: status,
-                timestamp: timestamp,
-                deadline: t.deadline || (dueDate !== '近期' ? dueDate : '')
-            });
-        });
-    });
+    if (!frame || !student) return;
 
     // 統計計算 (採用統一分類標準)
     let totalAssigned = studentTasks.length;
@@ -2912,7 +2840,12 @@ function updateParentSimulator(studentId) {
     const simNow = new Date();
     const simWeekdays = ['日', '一', '二', '三', '四', '五', '六'];
     const simW = simWeekdays[simNow.getDay()];
-    const simDateStr = `${simNow.getFullYear()}/${String(simNow.getMonth() + 1).padStart(2, '0')}/${String(simNow.getDate()).padStart(2, '0')} (${simW}) ${simNow.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+    const defaultTimeStr = `${simNow.getFullYear()}/${String(simNow.getMonth() + 1).padStart(2, '0')}/${String(simNow.getDate()).padStart(2, '0')} (${simW}) ${simNow.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+    const displayTimeStr = syncDateStr || defaultTimeStr;
+
+    const badgeDotColor = isLiveCloud ? 'bg-emerald-500 animate-pulse' : 'bg-blue-500';
+    const badgeBg = isLiveCloud ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-blue-700 bg-blue-50 border-blue-200';
+    const badgeLabel = isLiveCloud ? '試算表即時連線' : '本地即時資料';
 
     frame.innerHTML = `
         <!-- 手機頂部英雄卡 -->
@@ -2926,67 +2859,430 @@ function updateParentSimulator(studentId) {
                 </div>
             </div>
             <div class="text-right">
-                <span class="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    即時同步 ${simDateStr}
+                <span id="sim-sync-badge" class="inline-flex items-center gap-1 text-[9px] ${badgeBg} px-2 py-0.5 rounded-full border font-bold transition-all">
+                    <span class="w-1.5 h-1.5 rounded-full ${badgeDotColor}"></span>
+                    ${badgeLabel} ${displayTimeStr}
                 </span>
             </div>
         </div>
 
-        <!-- 三大指標 -->
-        <div class="grid grid-cols-3 gap-1.5 text-center">
-            <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                <div class="text-[10px] text-slate-400 font-bold">準時率</div>
-                <div class="text-base font-black ${onTimeRate >= 90 ? 'text-emerald-600' : (onTimeRate >= 80 ? 'text-amber-600' : 'text-rose-600')} mt-0.5">${onTimeRate}%</div>
-            </div>
-            <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                <div class="text-[10px] text-slate-400 font-bold">已準時交</div>
-                <div class="text-xs font-black text-slate-800 mt-0.5">${onTimeCount} / ${effTotal}</div>
-                <div class="text-[9px] text-slate-400">${lateCount > 0 ? `遲${lateCount} ‧ ` : ''}缺${totalMissing}</div>
-            </div>
-            <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                <div class="text-[10px] text-slate-400 font-bold">待補交</div>
-                <div class="text-base font-black ${pendingItems.length > 0 ? 'text-rose-600' : 'text-emerald-600'}">${pendingItems.length}</div>
-                <div class="text-[9px] ${pendingItems.length > 0 ? 'text-rose-500 font-bold' : 'text-emerald-500'}">${pendingItems.length > 0 ? '待補交' : '全數交齊'}</div>
-            </div>
-        </div>
+        <!-- 雲端同步進度容器（動態插入點） -->
+        <div id="sim-sync-banner-container"></div>
 
-        <!-- 🚨 待補交作業清單 -->
-        <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
-            <div class="flex justify-between items-center text-[11px] font-black text-slate-800 border-b pb-1">
-                <span>🚨 待補交作業清單</span>
-                <span class="text-[10px] text-rose-600 font-bold">${pendingItems.length} 項</span>
-            </div>
-            ${pendingItems.length === 0 ? '<div class="text-[11px] text-emerald-600 font-bold py-1.5 text-center">沒有任何缺交作業，請給孩子一個大大的讚賞與鼓勵！ 🎉</div>' : ''}
-            ${pendingItems.map(p => `
-                <div class="flex items-center justify-between text-[11px] py-0.5">
-                    <span class="font-bold text-slate-700">[${p.subject}] ${p.taskName}${p.range ? ' (' + escapeCardHtml(p.range) + ')' : ''}</span>
-                    <span class="text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold">${p.badge}</span>
+        <!-- 模擬器主要內容區 -->
+        <div id="sim-content-body" class="space-y-3 transition-opacity duration-300">
+            <!-- 三大指標 -->
+            <div class="grid grid-cols-3 gap-1.5 text-center">
+                <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                    <div class="text-[10px] text-slate-400 font-bold">準時率</div>
+                    <div class="text-base font-black ${onTimeRate >= 90 ? 'text-emerald-600' : (onTimeRate >= 80 ? 'text-amber-600' : 'text-rose-600')} mt-0.5">${onTimeRate}%</div>
+                    <div class="text-[9px] text-slate-400">總繳交率 ${submittedRate}%</div>
                 </div>
-            `).join('')}
-        </div>
+                <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                    <div class="text-[10px] text-slate-400 font-bold">已準時交</div>
+                    <div class="text-xs font-black text-slate-800 mt-0.5">${onTimeCount} / ${effTotal}</div>
+                    <div class="text-[9px] text-slate-400">${lateCount > 0 ? `遲${lateCount} ‧ ` : ''}缺${totalMissing}</div>
+                </div>
+                <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                    <div class="text-[10px] text-slate-400 font-bold">待補交</div>
+                    <div class="text-base font-black ${pendingItems.length > 0 ? 'text-rose-600' : 'text-emerald-600'}">${pendingItems.length}</div>
+                    <div class="text-[9px] ${pendingItems.length > 0 ? 'text-rose-500 font-bold' : 'text-emerald-500'}">${pendingItems.length > 0 ? '待補交' : '全數交齊'}</div>
+                </div>
+            </div>
 
-        <!-- ⚠️ 常遲到作業排行 -->
-        <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
-            <div class="text-[11px] font-black text-slate-800 border-b pb-1">⚠️ 常遲到作業排行</div>
-            ${delayEntries.length === 0 ? '<div class="text-[11px] text-slate-400 py-1 text-center font-bold">目前無任何遲到紀錄 模範生！</div>' : ''}
-            ${delayEntries.slice(0, 3).map(([taskKey, count], idx) => `
-                <div class="flex flex-col text-[11px] py-0.5 border-b border-slate-50 last:border-0">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-slate-700">#${idx + 1} ${taskKey}</span>
-                        <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">遲交 ${count} 次</span>
+            <!-- 🚨 待補交作業清單 -->
+            <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
+                <div class="flex justify-between items-center text-[11px] font-black text-slate-800 border-b pb-1">
+                    <span>🚨 待補交作業清單</span>
+                    <span class="text-[10px] text-rose-600 font-bold">${pendingItems.length} 項</span>
+                </div>
+                ${pendingItems.length === 0 ? '<div class="text-[11px] text-emerald-600 font-bold py-1.5 text-center">沒有任何缺交作業，請給孩子一個大大的讚賞與鼓勵！ 🎉</div>' : ''}
+                ${pendingItems.map(p => `
+                    <div class="flex items-center justify-between text-[11px] py-0.5">
+                        <span class="font-bold text-slate-700">[${p.subject}] ${p.taskName}${p.range ? ' (' + escapeCardHtml(p.range) + ')' : ''}</span>
+                        <span class="text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold">${p.badge}</span>
                     </div>
-                    ${lateDetailsPerTask[taskKey] && lateDetailsPerTask[taskKey].length > 0 ? `<div class="text-[9.5px] text-amber-700 mt-0.5 pl-2">↳ 遲交項目：${lateDetailsPerTask[taskKey].map(d => escapeCardHtml(d)).join('、')}</div>` : ''}
-                </div>
-            `).join('')}
-        </div>
+                `).join('')}
+            </div>
 
-        <!-- 📊 各科習慣與展開明細 -->
-        <div class="space-y-1.5">
-            <div class="text-[11px] font-black text-slate-800 px-1">📊 各科長條圖 (點擊科目與作業可查看明細)</div>
-            ${subjectsHtml}
+            <!-- ⚠️ 常遲到作業排行 -->
+            <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
+                <div class="text-[11px] font-black text-slate-800 border-b pb-1">⚠️ 常遲到作業排行</div>
+                ${delayEntries.length === 0 ? '<div class="text-[11px] text-slate-400 py-1 text-center font-bold">目前無任何遲到紀錄 模範生！</div>' : ''}
+                ${delayEntries.slice(0, 3).map(([taskKey, count], idx) => `
+                    <div class="flex flex-col text-[11px] py-0.5 border-b border-slate-50 last:border-0">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-700">#${idx + 1} ${taskKey}</span>
+                            <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">遲交 ${count} 次</span>
+                        </div>
+                        ${lateDetailsPerTask[taskKey] && lateDetailsPerTask[taskKey].length > 0 ? `<div class="text-[9.5px] text-amber-700 mt-0.5 pl-2">↳ 遲交項目：${lateDetailsPerTask[taskKey].map(d => escapeCardHtml(d)).join('、')}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- 📊 各科習慣與展開明細 -->
+            <div class="space-y-1.5">
+                <div class="text-[11px] font-black text-slate-800 px-1">📊 各科長條圖 (點擊科目與作業可查看明細)</div>
+                ${subjectsHtml}
+            </div>
         </div>
     `;
+}
+
+let simulatorSyncTimers = [];
+
+function clearSimulatorSyncTimers() {
+    if (simulatorSyncTimers && simulatorSyncTimers.length > 0) {
+        simulatorSyncTimers.forEach(t => clearTimeout(t));
+        simulatorSyncTimers = [];
+    }
+}
+
+function setSimulatorSyncButtonState(isSyncing) {
+    const btn = document.getElementById('btn-sim-cloud-sync');
+    const txt = document.getElementById('sim-refresh-text');
+    const icon = document.getElementById('sim-refresh-icon');
+    if (btn) {
+        btn.disabled = isSyncing;
+        if (isSyncing) {
+            btn.classList.add('opacity-75', 'cursor-wait');
+        } else {
+            btn.classList.remove('opacity-75', 'cursor-wait');
+        }
+    }
+    if (txt) {
+        txt.textContent = isSyncing ? '試算表同步中...' : '試算表同步';
+    }
+    if (icon) {
+        if (isSyncing) {
+            icon.classList.add('animate-spin');
+        } else {
+            icon.classList.remove('animate-spin');
+        }
+    }
+}
+
+function startSimulatorSyncAnimation(student) {
+    clearSimulatorSyncTimers();
+    setSimulatorSyncButtonState(true);
+
+    const badge = document.getElementById('sim-sync-badge');
+    if (badge) {
+        badge.className = 'inline-flex items-center gap-1 text-[9px] text-amber-700 bg-amber-50 border-amber-200 px-2 py-0.5 rounded-full border font-bold transition-all';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span> 雲端連線同步中...';
+    }
+
+    const contentBody = document.getElementById('sim-content-body');
+    if (contentBody) {
+        contentBody.classList.add('opacity-50', 'pointer-events-none');
+    }
+
+    const bannerContainer = document.getElementById('sim-sync-banner-container');
+    if (bannerContainer) {
+        bannerContainer.innerHTML = `
+            <div id="sim-sync-banner" class="rounded-2xl p-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white shadow-md transition-all duration-300 relative overflow-hidden my-1">
+                <!-- 光暈光束滑過動畫 (Shimmer) -->
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer pointer-events-none"></div>
+
+                <div class="relative z-10 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold">
+                        <div class="flex items-center gap-1.5">
+                            <span id="sim-sync-icon" class="inline-block animate-spin text-sm">🔄</span>
+                            <span id="sim-sync-step-title" class="tracking-wide">正在連線 Google 試算表...</span>
+                        </div>
+                        <span id="sim-sync-percent" class="text-[10px] font-black bg-white/25 backdrop-blur-xs px-2 py-0.5 rounded-full font-mono">28%</span>
+                    </div>
+
+                    <!-- 進度條軌道 -->
+                    <div class="w-full bg-black/25 rounded-full h-2 p-0.5 overflow-hidden">
+                        <div id="sim-sync-progress-fill" class="bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-200 h-full rounded-full transition-all duration-500 ease-out shadow-xs" style="width: 28%"></div>
+                    </div>
+
+                    <!-- 步驟描述與三點彈跳動畫 -->
+                    <div class="flex items-center justify-between text-[10px] text-emerald-100">
+                        <span id="sim-sync-step-desc" class="truncate">驗證金鑰並向雲端發送手札查詢請求</span>
+                        <span class="flex gap-1 items-center font-mono opacity-80 shrink-0">
+                            <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay: 0ms"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay: 150ms"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay: 300ms"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // 第 2 階段: 850ms -> 65% (比對各科目繳交與遲交)
+    simulatorSyncTimers.push(setTimeout(() => {
+        const title = document.getElementById('sim-sync-step-title');
+        const desc = document.getElementById('sim-sync-step-desc');
+        const pct = document.getElementById('sim-sync-percent');
+        const fill = document.getElementById('sim-sync-progress-fill');
+        if (title) title.textContent = '正在讀取並比對各科作業紀錄...';
+        if (desc) desc.textContent = '逐科核對最新打卡時間、免計與遲交狀態';
+        if (pct) pct.textContent = '65%';
+        if (fill) fill.style.width = '65%';
+    }, 850));
+
+    // 第 3 階段: 2000ms -> 88% (彙整即時準時率與待辦清單)
+    simulatorSyncTimers.push(setTimeout(() => {
+        const title = document.getElementById('sim-sync-step-title');
+        const desc = document.getElementById('sim-sync-step-desc');
+        const pct = document.getElementById('sim-sync-percent');
+        const fill = document.getElementById('sim-sync-progress-fill');
+        if (title) title.textContent = '正在彙整即時準時率與待辦清單...';
+        if (desc) desc.textContent = '即將完成同步，數據與家長端 100% 同步';
+        if (pct) pct.textContent = '88%';
+        if (fill) fill.style.width = '88%';
+    }, 2000));
+
+    // 第 4 階段: 3400ms -> 94% (應對冷啟動或龐大試算表)
+    simulatorSyncTimers.push(setTimeout(() => {
+        const title = document.getElementById('sim-sync-step-title');
+        const desc = document.getElementById('sim-sync-step-desc');
+        const pct = document.getElementById('sim-sync-percent');
+        const fill = document.getElementById('sim-sync-progress-fill');
+        if (title) title.textContent = '雲端資料回傳中，正進行最後整理...';
+        if (desc) desc.textContent = '已接收試算表資料，即將呈現權威手札內容';
+        if (pct) pct.textContent = '94%';
+        if (fill) fill.style.width = '94%';
+    }, 3400));
+}
+
+function finishSimulatorSyncAnimation(student, cloudTasks, syncDateStr) {
+    clearSimulatorSyncTimers();
+
+    const banner = document.getElementById('sim-sync-banner');
+    const title = document.getElementById('sim-sync-step-title');
+    const desc = document.getElementById('sim-sync-step-desc');
+    const pct = document.getElementById('sim-sync-percent');
+    const fill = document.getElementById('sim-sync-progress-fill');
+    const icon = document.getElementById('sim-sync-icon');
+
+    if (banner) {
+        banner.className = 'rounded-2xl p-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md transition-all duration-300 relative overflow-hidden my-1';
+    }
+    if (icon) {
+        icon.classList.remove('animate-spin');
+        icon.textContent = '✅';
+    }
+    if (title) title.textContent = '試算表最新手札同步完成！';
+    if (desc) desc.textContent = '各科繳交紀錄與準時率已是最新資料';
+    if (pct) pct.textContent = '100%';
+    if (fill) {
+        fill.style.width = '100%';
+        fill.className = 'bg-white h-full rounded-full transition-all duration-300 ease-out shadow-xs';
+    }
+
+    // 停留 450ms 讓使用者看見 100% 完成動畫反饋，隨後重繪模擬器視圖
+    setTimeout(() => {
+        setSimulatorSyncButtonState(false);
+        renderParentSimulatorView(student, cloudTasks, true, syncDateStr);
+        if (typeof showToast === 'function') {
+            showToast('✅ 試算表最新手札已同步完成！', 'success');
+        }
+    }, 450);
+}
+
+function failSimulatorSyncAnimation(errMsg) {
+    clearSimulatorSyncTimers();
+    setSimulatorSyncButtonState(false);
+
+    const banner = document.getElementById('sim-sync-banner');
+    const title = document.getElementById('sim-sync-step-title');
+    const desc = document.getElementById('sim-sync-step-desc');
+    const pct = document.getElementById('sim-sync-percent');
+    const icon = document.getElementById('sim-sync-icon');
+    const fill = document.getElementById('sim-sync-progress-fill');
+
+    if (banner) {
+        banner.className = 'rounded-2xl p-3 bg-gradient-to-r from-amber-600 to-rose-600 text-white shadow-md transition-all duration-300 relative overflow-hidden my-1';
+    }
+    if (icon) {
+        icon.classList.remove('animate-spin');
+        icon.textContent = '⚠️';
+    }
+    if (title) title.textContent = '雲端試算表連線逾時或受限';
+    if (desc) desc.textContent = errMsg || '已維持顯示本地最新暫存手札資料';
+    if (pct) pct.textContent = '中斷';
+    if (fill) {
+        fill.style.width = '100%';
+        fill.className = 'bg-amber-300 h-full rounded-full shadow-xs';
+    }
+
+    // 2.5 秒後淡出並恢復正常內容
+    setTimeout(() => {
+        const bannerContainer = document.getElementById('sim-sync-banner-container');
+        if (bannerContainer) bannerContainer.innerHTML = '';
+        const contentBody = document.getElementById('sim-content-body');
+        if (contentBody) contentBody.classList.remove('opacity-50', 'pointer-events-none');
+    }, 2500);
+
+    const badge = document.getElementById('sim-sync-badge');
+    if (badge) {
+        badge.className = 'inline-flex items-center gap-1 text-[9px] text-amber-700 bg-amber-50 border-amber-200 px-2 py-0.5 rounded-full border font-bold';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> 本地暫存 (雲端未更新)';
+    }
+}
+
+async function fetchSimulatorFromCloud(student, gas, forceCloud = false) {
+    if (!student || !gas) return;
+    const targetStudentId = student.id;
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+
+    if (simulatorAbortController) {
+        simulatorAbortController.abort();
+    }
+    simulatorAbortController = new AbortController();
+
+    // 啟動多階段動畫過程
+    startSimulatorSyncAnimation(student);
+
+    try {
+        const response = await fetch(gas, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'parent_query',
+                token: token,
+                source: '🖥️ 教師端模擬器即時連線'
+            }),
+            signal: simulatorAbortController.signal
+        });
+        const res = await response.json();
+        if (res && res.status === 'success' && currentSimulatorStudentId === targetStudentId) {
+            const cloudTasks = (res.tasks || []).map(ct => ({
+                subject: ct.subject || '其他',
+                taskName: ct.taskName || '作業',
+                range: ct.range || '',
+                date: ct.date || ct.deadline || '近期',
+                status: ct.status || '',
+                timestamp: ct.timestamp || ct.status || '',
+                deadline: ct.deadline || ct.date || ''
+            }));
+            const now = new Date();
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            const syncDateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} (${weekdays[now.getDay()]}) ${now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+            finishSimulatorSyncAnimation(student, cloudTasks, syncDateStr);
+        } else if (currentSimulatorStudentId === targetStudentId) {
+            failSimulatorSyncAnimation(res ? res.message : '查無雲端手札資料');
+        }
+    } catch (e) {
+        if (e.name !== 'AbortError') {
+            console.warn('[ParentSimulator] Cloud query error:', e);
+            if (currentSimulatorStudentId === targetStudentId) {
+                failSimulatorSyncAnimation('網路連線逾時或 GAS 回應異常');
+            }
+        }
+    }
+}
+
+function refreshParentSimulatorFromCloud() {
+    const sel = document.getElementById('parent-simulator-student-select');
+    const studentId = sel ? sel.value : currentSimulatorStudentId;
+    if (studentId) {
+        const gas = (typeof getGasUrl === 'function') ? getGasUrl() : (window.gasUrl || '');
+        if (!gas) {
+            if (typeof showToast === 'function') {
+                showToast('尚未設定 Google 試算表 GAS 網址，目前僅呈現本地資料', 'warning');
+            }
+            return;
+        }
+        updateParentSimulator(studentId, true);
+    }
+}
+window.refreshParentSimulatorFromCloud = refreshParentSimulatorFromCloud;
+
+function updateParentSimulator(studentId, forceCloud = false) {
+    currentSimulatorStudentId = parseInt(studentId, 10);
+    const frame = document.getElementById('parent-simulator-frame');
+    if (!frame) return;
+
+    const student = db.students.find(s => s.id === currentSimulatorStudentId);
+    if (!student) {
+        frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">查無該生資料</div>';
+        return;
+    }
+
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+    const tasks = db.tasks || [];
+    const records = db.records || [];
+    const ranges = db.ranges || [];
+
+    // 計算各作業狀況 (排除從未掃描統計過、且未設定範圍的作業)
+    const studentTasks = [];
+    tasks.forEach(t => {
+        // 檢查全班是否有任何繳交打卡紀錄
+        const hasAnyRecord = (records || []).some(r => r.taskId === t.id);
+        // 檢查是否有設定範圍或日期
+        const hasAnyRange = (ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
+
+        // 若全班完全沒有任何掃描/打卡紀錄，且未設定範圍日期，表示尚未開始清點，不計入準時率與待辦
+        if (!hasAnyRecord && !hasAnyRange) {
+            return;
+        }
+
+        let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
+        if (ranges) {
+            const rangeNotices = ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
+            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
+        }
+        if (noticeNames.length === 0) noticeNames = [''];
+
+        noticeNames.forEach(nn => {
+            // 確認該子項目在全班是否有紀錄或範圍
+            const subHasRecord = (records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
+            if (!subHasRecord && !subHasRange) return;
+
+            let range = '';
+            let dueDate = nn || '近期';
+            const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            if (rObj) {
+                range = rObj.range || nn || '';
+                if (rObj.date) dueDate = rObj.date;
+            } else if (nn) {
+                range = nn;
+            }
+
+            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+                timestamp = rec.timestamp || rec.fullTimestamp || '';
+                const hasLateTag = (rec.timestamp && rec.timestamp.includes('[遲交]')) ||
+                                   (rec.fullTimestamp && rec.fullTimestamp.includes('[遲交]'));
+                if (hasLateTag || rec.manualStatus === 'late') {
+                    status = '遲交';
+                } else if (rec.manualStatus === 'ontime') {
+                    status = '已交';
+                } else if (rec.manualStatus) {
+                    status = rec.manualStatus;
+                } else {
+                    status = '已交';
+                }
+            }
+
+            studentTasks.push({
+                subject: t.subject || '其他',
+                taskName: t.name,
+                range: range,
+                date: dueDate,
+                status: status,
+                timestamp: timestamp,
+                deadline: t.deadline || (dueDate !== '近期' ? dueDate : '')
+            });
+        });
+    });
+
+    // 先以本地清洗後的資料即時呈現（零延遲）
+    renderParentSimulatorView(student, studentTasks, false);
+
+    // 啟動雲端連線查詢（SWR）：若有設定 GAS 且在線，直接向試算表取得權威資料
+    const gas = (typeof getGasUrl === 'function') ? getGasUrl() : (window.gasUrl || '');
+    if (gas && navigator.onLine) {
+        fetchSimulatorFromCloud(student, gas, forceCloud);
+    }
 }
 
 function toggleSimAccordion(id) {

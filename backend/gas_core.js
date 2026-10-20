@@ -355,8 +355,11 @@ function(e, ss, getSheetNames) {
                 isMissing = true;
                 cleanStatus = cleanStatus || '缺交';
               } else if (cleanStatus.indexOf('[遲交]') !== -1 || cleanStatus.indexOf('遲交') !== -1 || cleanStatus.toLowerCase().indexOf('late') !== -1) {
-                // 試算表有注記[遲交]才計入遲交
+                // 依教師指令：只有教師明確註記「遲交」才計入遲交，不管時間點
                 isLate = true;
+                if (cleanStatus.indexOf('[遲交]') === -1) {
+                  cleanStatus = '[遲交] ' + cleanStatus;
+                }
               } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他'].indexOf(cleanStatus) !== -1) {
                 isExcused = true;
               } else {
