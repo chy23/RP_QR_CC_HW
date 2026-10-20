@@ -153,6 +153,8 @@
         table { border-collapse: collapse; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+        .animate-shimmer { animation: shimmer 1.8s infinite; }
 
         /* 沉浸式掃描模式 */
         body.immersive-active #main-header,
@@ -510,6 +512,18 @@
                             </ul>
                         </li>
                         <li><strong>⚡ 內嵌 Base64 與跨端像素級支援：</strong>全面支援 SVG 向量直嵌（零快取延遲、防灰色地球）、32x32 分頁標籤標準點陣圖，以及 iOS / 行動裝置桌面專用 Apple Touch Icon (180x180)，無論在電腦分頁或手機加入主畫面皆美觀俐落。</li>
+                        <li><strong>🔒 GAS 網址安全遮罩模式（防旁窺明碼隱私保護）：</strong>
+                            <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-500">
+                                <li>連線成功或載入既有網址後，預設以星號密碼（<code>••••••••</code>）進行遮罩保護，防止投影或側錄時暴露 Google Apps Script 執行金鑰。</li>
+                                <li>提供專屬「👁️ 顯示明碼 / 🙈 隱藏網址」即時切換按鈕，並於下方呈現截短安全預覽與已連線驗證狀態。</li>
+                            </ul>
+                        </li>
+                        <li><strong>⏱️ 家長端手機模擬器多階段連線同步動畫（Multi-Stage Sync Experience）：</strong>
+                            <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-500">
+                                <li><strong>告別生硬等待：</strong>因 Google 雲端試算表運算需時 2~4 秒，特別導入 Apple HIG 流暢動畫進度卡，動態呈現「連線試算表 📡 28%」➔「讀取各科紀錄與免計 📋 65%」➔「彙整準時率與待辦清單 🧮 88%」➔「同步完成 100% ✅」。</li>
+                                <li><strong>雙重狀態回饋：</strong>搭配光暈光束滑過動效（Shimmer）、背景柔和半透明防重觸、頂部呼吸指示徽章與按鈕防抖防呆，同步完畢後秒速自動切換最新試算表資料。</li>
+                            </ul>
+                        </li>
                         <li><strong>🛠️ 【系統錯誤修復】跨日補交與遲交未記錄至家長端之全鏈路修復：</strong>
                             <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-500">
                                 <li><strong>動態應交日期關聯補正：</strong>解決作業預期繳交日儲存於欄位範圍對照（<code>ranges</code>）中，但過往僅查詢未定義之 <code>task.deadline</code> 導致無法比對截止日之架構缺失。</li>
@@ -1844,9 +1858,9 @@
                                 <select id="parent-simulator-student-select" onchange="updateParentSimulator(this.value)" class="text-xs font-bold border border-emerald-300 bg-white text-emerald-900 rounded-xl px-2.5 py-1.5 shadow-2xs outline-none">
                                     <!-- 動態載入學生選單 -->
                                 </select>
-                                <button type="button" id="btn-sim-cloud-sync" onclick="refreshParentSimulatorFromCloud()" title="直接從 Google 試算表連線查詢最新狀態" class="text-xs px-2 py-1.5 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 font-bold shadow-2xs flex items-center gap-1 cursor-pointer transition active:scale-95">
+                                <button type="button" id="btn-sim-cloud-sync" onclick="refreshParentSimulatorFromCloud()" title="直接從 Google 試算表連線查詢最新狀態" class="text-xs px-2.5 py-1.5 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 font-bold shadow-2xs flex items-center gap-1.5 cursor-pointer transition active:scale-95">
                                     <span id="sim-refresh-icon">🔄</span>
-                                    <span class="hidden sm:inline">試算表同步</span>
+                                    <span id="sim-refresh-text" class="hidden sm:inline">試算表同步</span>
                                 </button>
                             </div>
                         </div>

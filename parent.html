@@ -224,9 +224,20 @@
     </div>
 
     <!-- ⚡ 載入中指示器 -->
-    <div id="parentLoadingState" class="hidden text-center py-10 space-y-3">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent"></div>
-      <p class="text-sm font-bold text-slate-600">正在同步最新作業紀錄，請稍候...</p>
+    <div id="parentLoadingState" class="hidden my-6">
+      <div class="apple-glass rounded-3xl p-6 shadow-sm border border-emerald-100 text-center space-y-4 max-w-md mx-auto relative overflow-hidden">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 text-2xl shadow-xs">
+          <span id="parentLoadingSpinner" class="animate-spin inline-block">🔄</span>
+        </div>
+        <div>
+          <h3 id="parentLoadingTitle" class="font-black text-slate-900 text-base">正在連線雲端資料庫...</h3>
+          <p id="parentLoadingDesc" class="text-xs text-slate-500 mt-1">取得最新作業打卡與各科繳交進度</p>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden p-0.5">
+          <div id="parentLoadingProgress" class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-500" style="width: 30%"></div>
+        </div>
+        <div class="text-[11px] font-mono text-emerald-700 font-bold" id="parentLoadingPct">30%</div>
+      </div>
     </div>
 
     <!-- ==================== 查詢結果呈現區 ==================== -->
@@ -747,15 +758,55 @@
       }
     });
 
+    let parentLoadingTimers = [];
+    function clearParentLoadingTimers() {
+      if (parentLoadingTimers && parentLoadingTimers.length > 0) {
+        parentLoadingTimers.forEach(t => clearTimeout(t));
+        parentLoadingTimers = [];
+      }
+    }
+
+    function setParentLoadingProgress(pct, title, desc) {
+      const p = document.getElementById('parentLoadingProgress');
+      const t = document.getElementById('parentLoadingTitle');
+      const d = document.getElementById('parentLoadingDesc');
+      const pc = document.getElementById('parentLoadingPct');
+      if (p) p.style.width = pct + '%';
+      if (t && title) t.textContent = title;
+      if (d && desc) d.textContent = desc;
+      if (pc) pc.textContent = pct + '%';
+    }
+
+    function startParentLoadingAnimation() {
+      clearParentLoadingTimers();
+      setParentLoadingProgress(30, '正在連線雲端資料庫...', '取得最新作業打卡與各科繳交進度');
+
+      parentLoadingTimers.push(setTimeout(() => {
+        setParentLoadingProgress(65, '正在讀取試算表各科紀錄...', '逐科核對打卡時間、免計與遲交狀態');
+      }, 850));
+
+      parentLoadingTimers.push(setTimeout(() => {
+        setParentLoadingProgress(88, '正在彙整即時準時率與手札...', '即將完成同步，數據與班級試算表 100% 同步');
+      }, 2000));
+    }
+
     async function doParentQuery(targetToken, forceRefresh = false) {
       const query = (targetToken || currentStudentToken || '').trim();
       const errBox = document.getElementById('parentScanError');
+      const btnRefresh = document.getElementById('btnRefresh');
+      const refreshIcon = document.getElementById('refreshIcon');
 
       if (!query) {
         openScanModal();
         return;
       }
       errBox.classList.add('hidden');
+
+      if (btnRefresh) {
+        btnRefresh.disabled = true;
+        btnRefresh.classList.add('opacity-75', 'cursor-wait');
+      }
+      if (refreshIcon) refreshIcon.classList.add('animate-spin');
 
       currentStudentToken = query;
       const cacheKey = 'rp_parent_cache_' + query.toUpperCase();
@@ -775,10 +826,13 @@
         } catch(e) {}
       }
 
-      // 2. 顯示載入動畫（若無快取）
-      if (!hasCache) {
+      // 2. 顯示載入動畫（若無快取或點擊重新整理）
+      if (!hasCache || forceRefresh) {
+        startParentLoadingAnimation();
         document.getElementById('parentLoadingState').classList.remove('hidden');
-        document.getElementById('parentResultArea').classList.add('hidden');
+        if (!hasCache) {
+          document.getElementById('parentResultArea').classList.add('hidden');
+        }
       }
 
       // 3. 發起遠端雲端拉取，若無 API 則使用本地資料庫相容模式
@@ -820,14 +874,21 @@
           freshData.syncedAt = new Date().toISOString();
           // 寫入快取
           try { localStorage.setItem(cacheKey, JSON.stringify(freshData)); } catch(e) {}
-          renderParentDashboard(freshData, false);
-          document.getElementById('parentScanBox').classList.add('hidden');
-          const btnRefresh = document.getElementById('btnRefresh');
-          if (btnRefresh) btnRefresh.classList.remove('hidden');
+          
+          setParentLoadingProgress(100, '最新作業紀錄同步完成！', '所有科目已更新為最新雲端狀態');
+          clearParentLoadingTimers();
+          
+          setTimeout(() => {
+            renderParentDashboard(freshData, false);
+            document.getElementById('parentScanBox').classList.add('hidden');
+            document.getElementById('parentLoadingState').classList.add('hidden');
+            if (btnRefresh) btnRefresh.classList.remove('hidden');
+          }, 350);
         }
 
       } catch (err) {
         console.warn('Query error:', err);
+        clearParentLoadingTimers();
         if (!hasCache) {
           errBox.innerHTML = `
             <div class="font-bold text-rose-700">⚠️ 查詢發生錯誤</div>
@@ -836,9 +897,20 @@
           errBox.classList.remove('hidden');
           document.getElementById('parentScanBox').classList.remove('hidden');
           document.getElementById('parentLoadingState').classList.add('hidden');
+        } else {
+          showToast('⚠️ 雲端連線失敗，目前顯示為暫存手札資料', 'warning');
         }
       } finally {
-        document.getElementById('parentLoadingState').classList.add('hidden');
+        clearParentLoadingTimers();
+        if (btnRefresh) {
+          btnRefresh.disabled = false;
+          btnRefresh.classList.remove('opacity-75', 'cursor-wait');
+        }
+        if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+        // 若已有資料呈現，確保載入指示器在 400ms 內收起
+        setTimeout(() => {
+          document.getElementById('parentLoadingState').classList.add('hidden');
+        }, 400);
       }
     }
 
