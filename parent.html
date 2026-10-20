@@ -1013,15 +1013,12 @@
             if (rec) {
               timestamp = rec.timestamp || rec.fullTimestamp || '';
               const hasLateTag = (rec.timestamp && rec.timestamp.includes('[遲交]')) || (rec.fullTimestamp && rec.fullTimestamp.includes('[遲交]'));
-              const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
               if (hasLateTag || rec.manualStatus === 'late') {
                 status = '遲交';
               } else if (rec.manualStatus === 'ontime') {
                 status = '已交';
               } else if (rec.manualStatus) {
                 status = rec.manualStatus;
-              } else if (lateFn && assignedDate && assignedDate !== '近期' && lateFn(rec.fullTimestamp || timestamp, assignedDate)) {
-                status = '遲交';
               } else {
                 status = '已交';
               }
@@ -1265,15 +1262,10 @@
         };
       }
 
-      // 5. 遲交 (Late) - 標記[遲交]或逾期繳交
+      // 5. 遲交 (Late) - 只有教師明確註記[遲交]才計入遲交，不管時間點
       let isLate = false;
       if (s.includes('[遲交]') || ts.includes('[遲交]') || s === '遲交' || s === 'late') {
         isLate = true;
-      } else {
-        const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
-        if (lateFn && deadline && deadline !== '近期' && lateFn(ts || s, deadline)) {
-          isLate = true;
-        }
       }
 
       if (isLate) {

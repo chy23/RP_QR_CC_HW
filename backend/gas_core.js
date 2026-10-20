@@ -354,7 +354,8 @@ function(e, ss, getSheetNames) {
               if (!cleanStatus || cleanStatus === '缺交' || cleanStatus === '未交' || cleanStatus === '沒帶' || cleanStatus === 'missing') {
                 isMissing = true;
                 cleanStatus = cleanStatus || '缺交';
-              } else if (cleanStatus.indexOf('[遲交]') !== -1 || cleanStatus.indexOf('遲交') !== -1 || cleanStatus.toLowerCase().indexOf('late') !== -1 || isLateCheck(cleanStatus, tDate)) {
+              } else if (cleanStatus.indexOf('[遲交]') !== -1 || cleanStatus.indexOf('遲交') !== -1 || cleanStatus.toLowerCase().indexOf('late') !== -1) {
+                // 依教師指令：只有教師明確註記「遲交」才計入遲交，不管時間點
                 isLate = true;
                 if (cleanStatus.indexOf('[遲交]') === -1) {
                   cleanStatus = '[遲交] ' + cleanStatus;

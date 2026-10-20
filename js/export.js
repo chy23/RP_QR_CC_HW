@@ -2640,15 +2640,10 @@ function classifyParentTaskStatus(statusStr, timestamp, deadline) {
         };
     }
 
-    // 5. 遲交 (Late) - 標記[遲交]或逾期繳交
+    // 5. 遲交 (Late) - 只有教師明確註記[遲交]才計入遲交，不管時間點
     let isLate = false;
     if (s.includes('[遲交]') || ts.includes('[遲交]') || s === '遲交' || s === 'late') {
         isLate = true;
-    } else {
-        const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
-        if (lateFn && deadline && deadline !== '近期' && lateFn(ts || s, deadline)) {
-            isLate = true;
-        }
     }
 
     if (isLate) {
@@ -2881,6 +2876,7 @@ function renderParentSimulatorView(student, studentTasks, isLiveCloud = false, s
                 <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
                     <div class="text-[10px] text-slate-400 font-bold">準時率</div>
                     <div class="text-base font-black ${onTimeRate >= 90 ? 'text-emerald-600' : (onTimeRate >= 80 ? 'text-amber-600' : 'text-rose-600')} mt-0.5">${onTimeRate}%</div>
+                    <div class="text-[9px] text-slate-400">總繳交率 ${submittedRate}%</div>
                 </div>
                 <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
                     <div class="text-[10px] text-slate-400 font-bold">已準時交</div>
@@ -3254,11 +3250,6 @@ function updateParentSimulator(studentId, forceCloud = false) {
             let timestamp = '';
             if (rec) {
                 timestamp = rec.timestamp || rec.fullTimestamp || '';
-                const taskDef = tasks.find(x => x.id === t.id);
-                const taskDateStr = (typeof getTaskDate === 'function') ? getTaskDate(t.id, nn) : '';
-                const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : (taskDateStr || (dueDate !== '近期' ? dueDate : ''));
-                const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
-
                 const hasLateTag = (rec.timestamp && rec.timestamp.includes('[遲交]')) ||
                                    (rec.fullTimestamp && rec.fullTimestamp.includes('[遲交]'));
                 if (hasLateTag || rec.manualStatus === 'late') {
@@ -3267,8 +3258,6 @@ function updateParentSimulator(studentId, forceCloud = false) {
                     status = '已交';
                 } else if (rec.manualStatus) {
                     status = rec.manualStatus;
-                } else if (lateFn && deadlineStr && deadlineStr !== '近期' && lateFn(rec.fullTimestamp || timestamp, deadlineStr)) {
-                    status = '遲交';
                 } else {
                     status = '已交';
                 }
