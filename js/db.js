@@ -401,23 +401,6 @@
                 db.tasks.push({ id: 't_float_7', subject: '聯絡簿', name: '學習單', type: 'floating' });
             }
             sortTasks();
-
-            // Migration: 自動清洗歷史殘留的無效 manualStatus: 'late'
-            // 依據「試算表有註記[遲交]才計入遲交」之準則，若打卡時間戳記未包含 [遲交]，清除 manualStatus
-            if (db && db.records && Array.isArray(db.records)) {
-                let cleanedCount = 0;
-                db.records.forEach(r => {
-                    const hasLateTag = (r.timestamp && r.timestamp.includes('[遲交]')) || (r.fullTimestamp && r.fullTimestamp.includes('[遲交]'));
-                    if (r.manualStatus === 'late' && !hasLateTag) {
-                        delete r.manualStatus;
-                        cleanedCount++;
-                    }
-                });
-                if (cleanedCount > 0) {
-                    saveData(true);
-                }
-            }
-
             saveData();
 
             renderClassManager();

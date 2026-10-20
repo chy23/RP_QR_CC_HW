@@ -940,17 +940,16 @@
             let timestamp = '';
             if (rec) {
               timestamp = rec.timestamp || rec.fullTimestamp || '';
-              // 試算表有註記[遲交]才計入遲交：僅以時間戳記包含 [遲交] 為準
               const hasLateTag = (rec.timestamp && rec.timestamp.includes('[遲交]')) || (rec.fullTimestamp && rec.fullTimestamp.includes('[遲交]'));
-              if (hasLateTag) {
+              const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+              if (hasLateTag || rec.manualStatus === 'late') {
                 status = '遲交';
-              } else if (rec.manualStatus === 'late') {
-                delete rec.manualStatus;
-                status = '已交';
               } else if (rec.manualStatus === 'ontime') {
                 status = '已交';
               } else if (rec.manualStatus) {
                 status = rec.manualStatus;
+              } else if (lateFn && assignedDate && assignedDate !== '近期' && lateFn(rec.fullTimestamp || timestamp, assignedDate)) {
+                status = '遲交';
               } else {
                 status = '已交';
               }
@@ -1194,12 +1193,13 @@
         };
       }
 
-      // 5. 遲交 (Late) - 試算表有注記[遲交]才計入遲交
+      // 5. 遲交 (Late) - 標記[遲交]或逾期繳交
       let isLate = false;
-      if (s.includes('[遲交]') || ts.includes('[遲交]')) {
+      if (s.includes('[遲交]') || ts.includes('[遲交]') || s === '遲交' || s === 'late') {
         isLate = true;
-      } else if (s === '遲交' || s === 'late') {
-        if (!ts || ts.includes('[遲交]')) {
+      } else {
+        const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+        if (lateFn && deadline && deadline !== '近期' && lateFn(ts || s, deadline)) {
           isLate = true;
         }
       }

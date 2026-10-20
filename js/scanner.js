@@ -440,14 +440,18 @@
                             } else if (record.manualStatus === 'missing') {
                                 cellValue = loopMissingText;
                             }
+                            const loopTaskDateStr = (typeof getTaskDate === 'function') ? getTaskDate(k.taskId, k.noticeName) : '';
+                            const loopDeadlineStr = (loopTaskDef && loopTaskDef.deadline) ? loopTaskDef.deadline : loopTaskDateStr;
+                            const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+
                             let isLate = false;
                             const hasLateTag = (record.timestamp && record.timestamp.includes('[遲交]')) || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
-                            if (hasLateTag) {
-                                isLate = true;
-                            } else if (record.manualStatus === 'late' && hasLateTag) {
+                            if (hasLateTag || record.manualStatus === 'late') {
                                 isLate = true;
                             } else if (record.manualStatus === 'ontime') {
                                 isLate = false;
+                            } else if (lateFn && loopDeadlineStr && lateFn(record.fullTimestamp || record.timestamp, loopDeadlineStr)) {
+                                isLate = true;
                             }
                             
                             if (isLate) {
@@ -553,12 +557,23 @@
                                     } else {
                                         exemptLeaves++; // 其餘假別 (病假、事假等) 免計入分母
                                     }
-                                } else if ((r.timestamp && r.timestamp.includes('[遲交]')) || (r.fullTimestamp && r.fullTimestamp.includes('[遲交]')) || (r.manualStatus === 'late' && r.timestamp && r.timestamp.includes('[遲交]'))) {
-                                    late++;
-                                } else if (r.manualStatus === 'missing') {
-                                    missing++;
                                 } else {
-                                    onTime++;
+                                    const loopTaskDef = db.tasks.find(t => t.id === k.taskId);
+                                    const loopTaskDateStr = (typeof getTaskDate === 'function') ? getTaskDate(k.taskId, k.noticeName) : '';
+                                    const loopDeadlineStr = (loopTaskDef && loopTaskDef.deadline) ? loopTaskDef.deadline : loopTaskDateStr;
+                                    const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+                                    const isRecLate = (r.manualStatus === 'late') ||
+                                                      (r.timestamp && r.timestamp.includes('[遲交]')) ||
+                                                      (r.fullTimestamp && r.fullTimestamp.includes('[遲交]')) ||
+                                                      (lateFn && loopDeadlineStr && lateFn(r.fullTimestamp || r.timestamp, loopDeadlineStr));
+
+                                    if (isRecLate && r.manualStatus !== 'ontime') {
+                                        late++;
+                                    } else if (r.manualStatus === 'missing') {
+                                        missing++;
+                                    } else {
+                                        onTime++;
+                                    }
                                 }
                             } else {
                                 missing++;
@@ -1453,10 +1468,13 @@ function renderStatistics() {
                         // 判斷是否遲交
                         let isLate = false;
                         const hasLateTag = (record.timestamp && record.timestamp.includes('[遲交]')) || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
-                        if (hasLateTag) {
+                        const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+                        if (hasLateTag || record.manualStatus === 'late') {
                             isLate = true;
                         } else if (record.manualStatus === 'ontime') {
                             isLate = false;
+                        } else if (lateFn && deadlineStr && lateFn(record.fullTimestamp || record.timestamp, deadlineStr)) {
+                            isLate = true;
                         }
                         
                         if (isLeaveStatus(record.manualStatus)) {
@@ -1968,8 +1986,10 @@ let currentTargetRecord = null;
                 if (record) {
                     let isLate = false;
                     const hasLateTag = (record.timestamp && record.timestamp.includes('[遲交]')) || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
-                    if (hasLateTag) isLate = true;
+                    const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+                    if (hasLateTag || record.manualStatus === 'late') isLate = true;
                     else if (record.manualStatus === 'ontime') isLate = false;
+                    else if (lateFn && deadlineStr && lateFn(record.fullTimestamp || record.timestamp, deadlineStr)) isLate = true;
                     
                     if (isLeaveStatus(record.manualStatus)) {
                             const lName = getLeaveName(record.manualStatus);

@@ -354,9 +354,11 @@ function(e, ss, getSheetNames) {
               if (!cleanStatus || cleanStatus === '缺交' || cleanStatus === '未交' || cleanStatus === '沒帶' || cleanStatus === 'missing') {
                 isMissing = true;
                 cleanStatus = cleanStatus || '缺交';
-              } else if (cleanStatus.indexOf('[遲交]') !== -1 || cleanStatus.indexOf('遲交') !== -1 || cleanStatus.toLowerCase().indexOf('late') !== -1) {
-                // 試算表有注記[遲交]才計入遲交
+              } else if (cleanStatus.indexOf('[遲交]') !== -1 || cleanStatus.indexOf('遲交') !== -1 || cleanStatus.toLowerCase().indexOf('late') !== -1 || isLateCheck(cleanStatus, tDate)) {
                 isLate = true;
+                if (cleanStatus.indexOf('[遲交]') === -1) {
+                  cleanStatus = '[遲交] ' + cleanStatus;
+                }
               } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他'].indexOf(cleanStatus) !== -1) {
                 isExcused = true;
               } else {

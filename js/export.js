@@ -2640,12 +2640,13 @@ function classifyParentTaskStatus(statusStr, timestamp, deadline) {
         };
     }
 
-    // 5. 遲交 (Late) - 試算表有注記[遲交]才計入遲交
+    // 5. 遲交 (Late) - 標記[遲交]或逾期繳交
     let isLate = false;
-    if (s.includes('[遲交]') || ts.includes('[遲交]')) {
+    if (s.includes('[遲交]') || ts.includes('[遲交]') || s === '遲交' || s === 'late') {
         isLate = true;
-    } else if (s === '遲交' || s === 'late') {
-        if (!ts || ts.includes('[遲交]')) {
+    } else {
+        const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+        if (lateFn && deadline && deadline !== '近期' && lateFn(ts || s, deadline)) {
             isLate = true;
         }
     }
@@ -3044,19 +3045,21 @@ function updateParentSimulator(studentId, forceCloud = false) {
             let timestamp = '';
             if (rec) {
                 timestamp = rec.timestamp || rec.fullTimestamp || '';
-                // 試算表有註記[遲交]才計入遲交：唯有時間戳明確包含 [遲交] 註記時才認定為遲交
+                const taskDef = tasks.find(x => x.id === t.id);
+                const taskDateStr = (typeof getTaskDate === 'function') ? getTaskDate(t.id, nn) : '';
+                const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : (taskDateStr || (dueDate !== '近期' ? dueDate : ''));
+                const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
+
                 const hasLateTag = (rec.timestamp && rec.timestamp.includes('[遲交]')) ||
                                    (rec.fullTimestamp && rec.fullTimestamp.includes('[遲交]'));
-                if (hasLateTag) {
+                if (hasLateTag || rec.manualStatus === 'late') {
                     status = '遲交';
-                } else if (rec.manualStatus === 'late') {
-                    // 若舊資料殘留 manualStatus 為 late 但時間戳未註記 [遲交]，自動清洗為正常已交
-                    delete rec.manualStatus;
-                    status = '已交';
                 } else if (rec.manualStatus === 'ontime') {
                     status = '已交';
                 } else if (rec.manualStatus) {
                     status = rec.manualStatus;
+                } else if (lateFn && deadlineStr && deadlineStr !== '近期' && lateFn(rec.fullTimestamp || timestamp, deadlineStr)) {
+                    status = '遲交';
                 } else {
                     status = '已交';
                 }
