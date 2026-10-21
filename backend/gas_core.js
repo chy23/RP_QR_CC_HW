@@ -355,8 +355,11 @@ function(e, ss, getSheetNames) {
                 isMissing = true;
                 cleanStatus = cleanStatus || '缺交';
               } else if (cleanStatus.indexOf('[遲交]') !== -1 || cleanStatus.indexOf('遲交') !== -1 || cleanStatus.toLowerCase().indexOf('late') !== -1) {
-                // 試算表有注記[遲交]才計入遲交
+                // 依教師指令：只有教師明確註記「遲交」才計入遲交，不管時間點
                 isLate = true;
+                if (cleanStatus.indexOf('[遲交]') === -1) {
+                  cleanStatus = '[遲交] ' + cleanStatus;
+                }
               } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他'].indexOf(cleanStatus) !== -1) {
                 isExcused = true;
               } else {
@@ -1129,6 +1132,7 @@ function(e, ss, getSheetNames) {
       if (nameIndex === -1) nameIndex = 1;
       
       var students = [];
+      var seenIds = {};
       for (var i = 1; i < data.length; i++) {
         var row = data[i];
         var id = row[idIndex];
@@ -1136,7 +1140,13 @@ function(e, ss, getSheetNames) {
         var token = (tokenIndex !== -1 && row[tokenIndex]) ? row[tokenIndex].toString().trim() : '';
         var salt = (saltIndex !== -1 && row[saltIndex]) ? row[saltIndex].toString().trim() : '';
         if (id && name) {
-          students.push({ id: id.toString().trim(), name: name.toString().trim(), token: token, salt: salt });
+          var cleanId = id.toString().trim();
+          var idKey = parseInt(cleanId, 10);
+          var key = !isNaN(idKey) ? ('id_' + idKey) : ('raw_' + cleanId);
+          if (!seenIds[key]) {
+            seenIds[key] = true;
+            students.push({ id: cleanId, name: name.toString().trim(), token: token, salt: salt });
+          }
         }
       }
       return ContentService.createTextOutput(JSON.stringify({status: 'success', students: students, config: config})).setMimeType(ContentService.MimeType.JSON);
@@ -1324,9 +1334,17 @@ function(e, ss, getSheetNames) {
       
       var students = payload.students || [];
       var dataToPush = [["座號", "姓名", "系統代碼", "系統暗碼(勿動)"]];
+      var seenPushIds = {};
       
       students.forEach(function(s) {
-        dataToPush.push([s.id, s.name, s.token || '', s.salt || '']);
+        if (!s) return;
+        var sId = (s.id !== undefined && s.id !== null) ? s.id.toString().trim() : '';
+        var numId = parseInt(sId, 10);
+        var key = !isNaN(numId) ? ('id_' + numId) : ('raw_' + sId);
+        if (sId && !seenPushIds[key]) {
+          seenPushIds[key] = true;
+          dataToPush.push([s.id, s.name, s.token || '', s.salt || '']);
+        }
       });
       
       studentSheet.getRange(1, 1, dataToPush.length, 4).setValues(dataToPush);
