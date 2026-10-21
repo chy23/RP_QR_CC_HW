@@ -410,19 +410,19 @@ function deleteClass(id) {
                     showAlert('提示', '請輸入有效的座號！');
                     return;
                 }
-                const existingIdx = db.students.findIndex(s => s.id === newId);
+                const existingIdx = db.students.findIndex(s => isSameStudentId(s.id, newId));
                 if (existingIdx !== -1) {
                     const result = await showConfirm(`座號 ${newId} 已經存在（${db.students[existingIdx].name}）`, "是否要覆蓋該學生資料？", "warning", "覆蓋", "取消");
                     if (!result.isConfirmed) return;
                     db.students.splice(existingIdx, 1);
                 }
             } else {
-                newId = db.students.length > 0 ? Math.max(...db.students.map(s => s.id)) + 1 : 1;
+                newId = db.students.length > 0 ? Math.max(...db.students.map(s => parseInt(s.id, 10) || 0)) + 1 : 1;
             }
 
             const token = `STU${String(newId).padStart(3, '0')}`;
             db.students.push({ id: newId, name, token, salt: generateSalt(), createdAt: Date.now() });
-            db.students.sort((a, b) => a.id - b.id);
+            db.students = deduplicateStudents(db.students);
             
             nameInput.value = '';
             if(idInput) idInput.value = '';
@@ -436,12 +436,13 @@ function deleteClass(id) {
         }
 
         function batchAddStudents() {
-            const startId = db.students.length > 0 ? Math.max(...db.students.map(s => s.id)) + 1 : 1;
+            const startId = db.students.length > 0 ? Math.max(...db.students.map(s => parseInt(s.id, 10) || 0)) + 1 : 1;
             for(let i=0; i<25; i++) {
                 const newId = startId + i;
                 const token = `STU${String(newId).padStart(3, '0')}`;
                 db.students.push({ id: newId, name: `座號${i+1}`, token, salt: generateSalt(), createdAt: Date.now() });
             }
+            db.students = deduplicateStudents(db.students);
             saveData();
             renderStudents();
         }
@@ -468,14 +469,15 @@ function deleteClass(id) {
             showLoading();
             
             try {
+                db.students = deduplicateStudents(db.students);
                 const configPayload = appConfig;
-            fetch(gasUrl, {
+                fetch(gasUrl, {
                     method: 'POST',
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'sync_students', students: db.students.map(s => {
-                    if (!s.salt) s.salt = generateSalt();
-                    return s;
-                }), config: configPayload })
+                        if (!s.salt) s.salt = generateSalt();
+                        return { id: s.id, name: s.name, token: s.token, salt: s.salt };
+                    }), config: configPayload })
                 }).then(res => res.json())
                   .then(data => {
                       hideLoading();
@@ -563,11 +565,10 @@ function deleteClass(id) {
                       }
 
                       if (data.students && data.students.length > 0) {
-                          let addedCount = 0;
                           data.students.forEach(s => {
                               const idNum = parseInt(s.id, 10);
                               if (isNaN(idNum)) return;
-                              const existingIdx = db.students.findIndex(ex => ex.id === idNum);
+                              const existingIdx = db.students.findIndex(ex => isSameStudentId(ex.id, idNum));
                               if (existingIdx >= 0) {
                                   db.students[existingIdx].name = s.name;
                                   db.students[existingIdx].token = (s.token && s.token.trim() !== '') ? s.token : (db.students[existingIdx].token || generateSalt());
@@ -582,12 +583,11 @@ function deleteClass(id) {
                                       salt: (s.salt && s.salt.trim() !== '') ? s.salt.trim() : generateSalt()
                                   });
                               }
-                              addedCount++;
                           });
-                          db.students.sort((a, b) => a.id - b.id);
+                          db.students = deduplicateStudents(db.students);
                           saveData();
                           renderStudents();
-                          msg += `✅ 成功匯入/更新 ${addedCount} 位學生！`;
+                          msg += `✅ 成功匯入/更新 ${db.students.length} 位學生！`;
                       } else {
                           msg += '⚠️ 連線成功，但雲端「學生名單」沒有有效資料。';
                       }
@@ -808,7 +808,7 @@ function deleteClass(id) {
                         }
 
                         if (name && String(name).trim() !== "") {
-                            const existingIdx = db.students.findIndex(s => s.id === newId);
+                            const existingIdx = db.students.findIndex(s => isSameStudentId(s.id, newId));
                             if (existingIdx !== -1) {
                                 db.students[existingIdx].name = String(name).trim();
                             } else {
@@ -818,7 +818,7 @@ function deleteClass(id) {
                             addedCount++;
                         }
                     }
-                    db.students.sort((a, b) => a.id - b.id);
+                    db.students = deduplicateStudents(db.students);
 
                     saveData();
                     renderStudents();
@@ -838,8 +838,8 @@ function deleteClass(id) {
             const result = await showConfirm('確定要刪除這名學生嗎？', '這也會刪除他所有的繳交紀錄！', 'warning', '刪除', '取消');
             if(result.isConfirmed) {
                 saveStateForUndo();
-                db.students = db.students.filter(s => s.id !== id);
-                db.records = db.records.filter(r => r.studentId !== id);
+                db.students = db.students.filter(s => !isSameStudentId(s.id, id));
+                db.records = db.records.filter(r => !isSameStudentId(r.studentId, id));
                 saveData();
                 renderStudents();
                 showUndoToast('已刪除學生資料。');
@@ -847,6 +847,9 @@ function deleteClass(id) {
         }
 
         function renderStudents() {
+            if (db.students) {
+                db.students = deduplicateStudents(db.students);
+            }
             const list = document.getElementById('student-list');
             list.innerHTML = '';
             db.students.forEach(s => {
