@@ -144,6 +144,53 @@
 
         function generateSalt() { return Math.random().toString(36).substring(2, 8); }
 
+        function isSameStudentId(idA, idB) {
+            if (idA === idB) return true;
+            if (idA === null || idA === undefined || idB === null || idB === undefined) return false;
+            if (String(idA).trim() === String(idB).trim()) return true;
+            const numA = parseInt(idA, 10);
+            const numB = parseInt(idB, 10);
+            return !isNaN(numA) && !isNaN(numB) && numA === numB;
+        }
+        window.isSameStudentId = isSameStudentId;
+
+        function deduplicateStudents(students) {
+            if (!Array.isArray(students)) return [];
+            const map = new Map();
+            students.forEach(s => {
+                if (!s) return;
+                const idNum = parseInt(s.id, 10);
+                // 優先以座號 (數字) 為唯一鍵；若座號無效則依 token 或 姓名
+                const key = !isNaN(idNum) ? `id_${idNum}` : (s.token ? `tok_${s.token}` : `name_${s.name}`);
+                if (!map.has(key)) {
+                    map.set(key, {
+                        ...s,
+                        id: !isNaN(idNum) ? idNum : s.id,
+                        name: (s.name || '').toString().trim(),
+                        token: (s.token || '').toString().trim() || generateSalt(),
+                        salt: (s.salt || '').toString().trim() || generateSalt()
+                    });
+                } else {
+                    const existing = map.get(key);
+                    // 若現有名稱是「座號X」而新項目有真實姓名，則更新為真實姓名
+                    if ((!existing.name || existing.name.startsWith('座號')) && s.name && !s.name.startsWith('座號')) {
+                        existing.name = s.name.toString().trim();
+                    }
+                    if (!existing.token && s.token) existing.token = s.token.toString().trim();
+                    if (!existing.salt && s.salt) existing.salt = s.salt.toString().trim();
+                }
+            });
+            const result = Array.from(map.values());
+            result.sort((a, b) => {
+                const idA = parseInt(a.id, 10);
+                const idB = parseInt(b.id, 10);
+                if (!isNaN(idA) && !isNaN(idB)) return idA - idB;
+                return 0;
+            });
+            return result;
+        }
+        window.deduplicateStudents = deduplicateStudents;
+
         loadAppConfig();
 
         function getQRText(student, task, noticeName = '') {
@@ -383,6 +430,9 @@
             if (data) {
                 db = JSON.parse(data);
             }
+            if (!db.students) db.students = [];
+            // 自動去重與座號資料校正
+            db.students = deduplicateStudents(db.students);
             
             // 如果 tasks 為空，載入預設的作業清單
             if (db.tasks.length === 0) {
@@ -417,6 +467,9 @@
         }
 
         function saveData(skipUI = false) {
+            if (db.students) {
+                db.students = deduplicateStudents(db.students);
+            }
             localStorage.setItem(getActiveDbKey(), JSON.stringify(db));
             backupToIndexedDB(); // 自動備份到 IndexedDB
             if (!skipUI) {
