@@ -3,9 +3,12 @@
 // 多班級管理 UI 邏輯
 // ==========================================
 function renderClassManager() {
-    // 渲染設定頁面的 GAS URL
+    // 渲染設定頁面的 GAS URL (連線後不呈現明碼，安全遮罩)
     const gasInput = document.getElementById('global-gas-url');
-    if (gasInput) gasInput.value = appConfig.gasUrl || '';
+    if (gasInput) {
+        gasInput.value = appConfig.gasUrl || '';
+        updateGasUrlDisplay(false);
+    }
 
     // 渲染設定頁面的班級清單 (下拉選單版本)
     const container = document.getElementById('class-list-container');
@@ -83,6 +86,48 @@ function switchGlobalClass(classId) {
     }, 500);
 }
 
+function updateGasUrlDisplay(forcePlain = null) {
+    const input = document.getElementById('global-gas-url');
+    const eyeIcon = document.getElementById('gas-eye-icon');
+    const eyeText = document.getElementById('gas-eye-text');
+    const hint = document.getElementById('gas-url-masked-hint');
+    if (!input) return;
+
+    const val = input.value.trim() || (appConfig && appConfig.gasUrl) || '';
+    if (!val) {
+        input.type = 'text';
+        if (eyeIcon) eyeIcon.innerText = '👁️';
+        if (eyeText) eyeText.innerText = '顯示明碼';
+        if (hint) hint.innerHTML = '<span class="text-slate-400 text-xs">尚未填寫 GAS 雲端引擎網址</span>';
+        return;
+    }
+
+    if (forcePlain === true) {
+        input.type = 'text';
+        if (eyeIcon) eyeIcon.innerText = '🙈';
+        if (eyeText) eyeText.innerText = '隱藏網址';
+        if (hint) hint.innerHTML = '<span class="text-amber-600 text-xs font-bold">⚠️ 目前以明碼呈現中（點擊按鈕可隨時隱藏保護）</span>';
+    } else {
+        // 連線後不呈現明碼（安全密碼遮罩）
+        input.type = 'password';
+        if (eyeIcon) eyeIcon.innerText = '👁️';
+        if (eyeText) eyeText.innerText = '顯示明碼';
+        const masked = val.replace(/(\/macros\/s\/)[^\/]+(\/exec)/, '$1••••••••••••••••$2');
+        if (hint) {
+            hint.innerHTML = `<span class="text-emerald-700 text-xs font-bold flex items-center gap-1"><span>🔒</span><span>已安全連線綁定（網址已遮罩不呈現明碼）</span></span><span class="text-[11px] text-slate-400 font-mono">${masked.length > 38 ? masked.slice(0, 32) + '...' : masked}</span>`;
+        }
+    }
+}
+window.updateGasUrlDisplay = updateGasUrlDisplay;
+
+function toggleGasUrlVisibility() {
+    const input = document.getElementById('global-gas-url');
+    if (!input) return;
+    const isCurrentlyPassword = input.type === 'password';
+    updateGasUrlDisplay(isCurrentlyPassword);
+}
+window.toggleGasUrlVisibility = toggleGasUrlVisibility;
+
 function saveGasUrl() {
     return saveGlobalGasUrl(false);
 }
@@ -95,6 +140,7 @@ async function saveGlobalGasUrl(testConnection = false) {
     appConfig.gasUrl = url;
     saveAppConfig();
     window.gasUrl = url;
+    updateGasUrlDisplay(false); // 儲存與連線後一律不呈現明碼，自動遮罩保護
     
     if (testConnection) {
         if (!url) {
@@ -179,11 +225,12 @@ async function saveGlobalGasUrl(testConnection = false) {
                             }
                         }
                         
+                        updateGasUrlDisplay(false);
                         setTimeout(() => {
                             Swal.fire({
                                 title: '連線成功',
                                 icon: 'success',
-                                text: '系統已成功與您的雲端引擎建立連線，並自動綁定試算表！'
+                                text: '系統已成功與您的雲端引擎建立連線，並自動綁定試算表！網址已自動安全遮罩保護（不呈現明碼）。'
                             });
                         }, 500);
                     } else {
@@ -524,11 +571,15 @@ function deleteClass(id) {
                               if (existingIdx >= 0) {
                                   db.students[existingIdx].name = s.name;
                                   db.students[existingIdx].token = (s.token && s.token.trim() !== '') ? s.token : (db.students[existingIdx].token || generateSalt());
+                                  if (s.salt && s.salt.trim() !== '') {
+                                      db.students[existingIdx].salt = s.salt.trim();
+                                  }
                               } else {
                                   db.students.push({
                                       id: idNum,
                                       name: s.name,
-                                      token: (s.token && s.token.trim() !== '') ? s.token : generateSalt()
+                                      token: (s.token && s.token.trim() !== '') ? s.token : generateSalt(),
+                                      salt: (s.salt && s.salt.trim() !== '') ? s.salt.trim() : generateSalt()
                                   });
                               }
                               addedCount++;
@@ -669,17 +720,15 @@ function deleteClass(id) {
                         const leaves = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "其他假別"];
                         if (cellValue.startsWith('[遲交]') || cellValue.includes('遲交')) {
                             record.manualStatus = 'late';
-                            record.timestamp = cellValue.replace(/\[遲交\]|遲交/g, '').trim();
+                            record.timestamp = cellValue.startsWith('[遲交]') ? cellValue : (`[遲交] ${cellValue}`);
                         } else if (leaves.includes(cellValue)) {
                             record.manualStatus = cellValue;
                             record.timestamp = '1970-01-01T00:00:00';
-                        } else if (/^\d{1,2}\/\d{1,2} \d{1,2}:\d{1,2}/.test(cellValue) || /^20\d{2}[-\/]\d{1,2}[-\/]\d{1,2}/.test(cellValue)) {
-                            // Valid timestamp without [遲交] -> Teacher did not note [遲交], count as ontime
-                            record.timestamp = cellValue;
                         } else {
-                            // User typed custom string like "沒帶", "生理假"
-                            record.manualStatus = 'leave_custom_' + cellValue;
-                            record.timestamp = '1970-01-01T00:00:00';
+                            // 任何無 [遲交] 註記之正常登記時間戳或狀態（例如 10/18 08:30、10/18、2026/10/18、已交等）
+                            // 試算表無 [遲交] 註記一律視為準時繳交，清除任何舊有的 manualStatus
+                            delete record.manualStatus;
+                            record.timestamp = cellValue;
                         }
                         
                         db.records.push(record);
