@@ -571,11 +571,15 @@ function deleteClass(id) {
                               if (existingIdx >= 0) {
                                   db.students[existingIdx].name = s.name;
                                   db.students[existingIdx].token = (s.token && s.token.trim() !== '') ? s.token : (db.students[existingIdx].token || generateSalt());
+                                  if (s.salt && s.salt.trim() !== '') {
+                                      db.students[existingIdx].salt = s.salt.trim();
+                                  }
                               } else {
                                   db.students.push({
                                       id: idNum,
                                       name: s.name,
-                                      token: (s.token && s.token.trim() !== '') ? s.token : generateSalt()
+                                      token: (s.token && s.token.trim() !== '') ? s.token : generateSalt(),
+                                      salt: (s.salt && s.salt.trim() !== '') ? s.salt.trim() : generateSalt()
                                   });
                               }
                               addedCount++;
@@ -844,7 +848,6 @@ function deleteClass(id) {
 
         function renderStudents() {
             const list = document.getElementById('student-list');
-            if (!list) return;
             list.innerHTML = '';
             db.students.forEach(s => {
                 const li = document.createElement('li');
@@ -944,7 +947,6 @@ function addTask() {
 
         function renderTasks() {
             const list = document.getElementById('task-list');
-            if (!list) return;
             list.innerHTML = '';
             
             const grouped = {};
@@ -1217,10 +1219,8 @@ function addTask() {
 
         function toggleNoticeInput() {
             const select = document.getElementById('tab3-task-select');
-            if (!select) return;
             const task = db.tasks.find(t => t.id === select.value);
             const container = document.getElementById('notice-name-container');
-            if (!container) return;
             if (task) {
                 container.style.display = 'block';
             } else {
