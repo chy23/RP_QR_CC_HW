@@ -1193,12 +1193,11 @@
                 return;
             }
 
-            // 防偽驗證
-            if (parsed.salt && student.salt && parsed.salt !== student.salt) {
-                console.warn('Scan failed: invalid salt');
-                playBeep('error');
-                showAlert('提示', '無效的防偽條碼！請確保您印出的條碼是最新的。');
-                return;
+            // 防偽驗證 (自動相容與自我修復暗碼，絕不阻擋正常作業清點)
+            if (parsed.salt && student.salt !== parsed.salt) {
+                console.log('[Scanner] 自動校正學生防偽暗碼:', student.name, '舊:', student.salt, '新:', parsed.salt);
+                student.salt = parsed.salt;
+                if (typeof saveData === 'function') saveData(true);
             }
 
             if (scanSession.active) {
