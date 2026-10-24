@@ -292,6 +292,41 @@ function(e, ss, getSheetNames) {
       return null;
     }
 
+    // 自動修復曾被舊版 1970-01-01T00:00:00 覆寫之請假資料（從「所有掃描紀錄」找回原假別）
+    var _cachedLogLeaveMap = {};
+    function getLogLeaveMap(classPrefix) {
+      var key = classPrefix || '__default__';
+      if (_cachedLogLeaveMap[key]) return _cachedLogLeaveMap[key];
+      var map = {};
+      var lName1 = (classPrefix || '') + "所有掃描紀錄";
+      var lSheet = ss.getSheetByName(lName1);
+      if (lSheet && lSheet.getLastRow() > 1) {
+        var lVals = lSheet.getDataRange().getDisplayValues();
+        var leaveSet = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "其他假別", "請假", "免交", "請假補交"];
+        for (var r = 1; r < lVals.length; r++) {
+          var row = lVals[r];
+          var sub = (row[2] || '').toString().trim();
+          var tName = (row[3] || '').toString().trim();
+          var rng = (row[4] || '').toString().trim();
+          var sName = (row[5] || '').toString().trim();
+          var st = (row[6] || '').toString().trim().replace(/^leave_custom_|^leave_/, '');
+          if (sName && (leaveSet.indexOf(st) !== -1 || (row[6] && row[6].toString().indexOf('leave_') === 0))) {
+            map[sName + '|' + sub + '|' + tName + '|' + rng] = st;
+            map[sName + '|' + sub + '|' + tName] = st;
+          }
+        }
+      }
+      _cachedLogLeaveMap[key] = map;
+      return map;
+    }
+
+    function recoverLeaveFromLog(classPrefix, subject, taskName, rangeName, studentName) {
+      var map = getLogLeaveMap(classPrefix);
+      var k1 = (studentName || '').trim() + '|' + (subject || '').trim() + '|' + (taskName || '').trim() + '|' + (rangeName || '').trim();
+      var k2 = (studentName || '').trim() + '|' + (subject || '').trim() + '|' + (taskName || '').trim();
+      return map[k1] || map[k2] || '請假';
+    }
+
     // 取得學生作業現況與繳交摘要
     function getStudentStatusSummary(matchedPrefix, targetStudent) {
       var allSheets = ss.getSheets();
@@ -360,7 +395,10 @@ function(e, ss, getSheetNames) {
                 if (cleanStatus.indexOf('[遲交]') === -1) {
                   cleanStatus = '[遲交] ' + cleanStatus;
                 }
-              } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他'].indexOf(cleanStatus) !== -1) {
+              } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他', '其他假別', '請假補交'].indexOf(cleanStatus) !== -1) {
+                isExcused = true;
+              } else if (/^1970[-\/]/.test(cleanStatus)) {
+                cleanStatus = recoverLeaveFromLog(matchedPrefix, baseName, tName, tRange, targetStudent.name);
                 isExcused = true;
               } else {
                 onTimeCount++;
@@ -1316,6 +1354,24 @@ function(e, ss, getSheetNames) {
         if (targetSheet) {
             var data = targetSheet.getDataRange().getDisplayValues();
             if (data.length >= 4) {
+              var sheetModified = false;
+              var tRow = data[0] || [];
+              var rgRow = data[2] || [];
+              for (var rIdx = 3; rIdx < data.length; rIdx++) {
+                var sName = (data[rIdx][0] || '').toString().trim();
+                if (!sName) continue;
+                for (var cIdx = 1; cIdx < data[rIdx].length; cIdx++) {
+                  var cVal = (data[rIdx][cIdx] || '').toString().trim();
+                  if (/^1970[-\/]/.test(cVal)) {
+                    var recovered = recoverLeaveFromLog(prefix, baseName, tRow[cIdx] || baseName, rgRow[cIdx] || '', sName);
+                    data[rIdx][cIdx] = recovered;
+                    try {
+                      targetSheet.getRange(rIdx + 1, cIdx + 1).setValue(recovered);
+                      sheetModified = true;
+                    } catch (healErr) {}
+                  }
+                }
+              }
               sheetsData.push({
                 name: baseName, // 回傳給前端時拔掉前綴，這樣前端才認得
                 data: data

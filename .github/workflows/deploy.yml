@@ -6,6 +6,7 @@ on:
       - main
       - beta
       - 純清點作業版
+      - student
 
 permissions:
   contents: read
@@ -43,6 +44,13 @@ jobs:
           path: check-only-site
         continue-on-error: true
 
+      - name: Checkout student branch
+        uses: actions/checkout@v4
+        with:
+          ref: student
+          path: student-site
+        continue-on-error: true
+
       - name: Prepare deployment directory
         run: |
           mkdir -p public
@@ -64,12 +72,19 @@ jobs:
             mkdir -p public/check
             cp -r check-only-site/* public/check/
           fi
+
+          # If student branch exists, copy it to /student/
+          if [ -d "student-site" ]; then
+            mkdir -p public/student
+            cp -r student-site/* public/student/
+          fi
           
           # Clean up any potential git internal folders copied
           rm -rf public/.git || true
           rm -rf public/beta/.git || true
           rm -rf public/check-only/.git || true
           rm -rf public/check/.git || true
+          rm -rf public/student/.git || true
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
