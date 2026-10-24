@@ -126,11 +126,8 @@
             }
         }
         .page-break { page-break-after: always; }
-        /* 手機端掃描介面極大化 (RWD) */
-        @media (max-width: 768px) {
-            body.scanning-mode #main-header { display: none !important; }
-            body.scanning-mode #main-tabs { display: none !important; }
-        }
+        /* 學生版保留頂部導覽列與分頁切換按鈕於所有行動裝置顯示 */
+        #main-tabs { display: flex !important; }
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.2s ease-out; }
         .tab-btn.active { background-color: #ffffff !important; color: #1d4ed8 !important; font-weight: 700 !important; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important; }
@@ -494,14 +491,44 @@
             </button>
         </div>
 
+        <!-- 雲端連線與 GAS 網址設定列 (學生版直接輸入與同步區) -->
+        <div id="student-gas-config-card" class="mb-6 bg-white/95 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-blue-200/90">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-base font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>🔗</span>
+                        <span>雲端試算表連線 (GAS 網址設定)</span>
+                    </span>
+                    <span id="student-gas-status-badge" class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-300">尚未設定網址</span>
+                </div>
+                <div id="student-class-selector-wrap" class="hidden items-center gap-1.5 text-xs font-bold text-blue-800 bg-blue-50 border border-blue-200 px-3 py-1 rounded-xl">
+                    <span>🏫 當前班級：</span>
+                    <select id="student-class-select" class="bg-transparent font-bold text-blue-900 outline-none cursor-pointer" onchange="switchGlobalClass(this.value)"></select>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                <div class="relative flex-grow flex items-center">
+                    <input type="text" id="global-gas-url" placeholder="請貼上老師提供的 Google Apps Script 網址 (https://script.google.com/macros/s/.../exec)" autocomplete="off" spellcheck="false" class="border border-slate-300 p-2.5 pr-24 w-full rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-500 outline-none font-mono text-xs md:text-sm bg-slate-50 focus:bg-white transition-all">
+                    <button type="button" id="btn-toggle-gas-visibility" onclick="toggleGasUrlVisibility()" class="absolute right-2 px-2 py-1 text-xs text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer">
+                        <span id="gas-eye-icon">👁️</span>
+                        <span id="gas-eye-text">顯示</span>
+                    </button>
+                </div>
+                <button type="button" onclick="syncStudentWithGasInput()" class="min-h-[42px] bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap text-xs md:text-sm cursor-pointer">
+                    <span>🔄 儲存網址並同步名單</span>
+                </button>
+            </div>
+            <div id="gas-url-masked-hint" class="text-xs mt-1.5 px-1 flex items-center justify-between text-slate-500"></div>
+        </div>
+
         <!-- No Students Banner (若外接平板尚未同步名單時提示) -->
         <div id="no-students-banner" class="hidden mb-6 p-4 bg-amber-50 border-l-4 border-amber-400 rounded-r-2xl text-amber-900 text-sm shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
             <div>
                 <strong class="text-base flex items-center gap-1.5">📢 尚未載入班級學生名單！</strong>
-                <p class="text-xs text-amber-800 mt-0.5">如果您是在未儲存過班級名單的平板/新設備開啟，請點擊右側按鈕連線 Google 試算表以同步名單。</p>
+                <p class="text-xs text-amber-800 mt-0.5">請在上方「🔗 雲端試算表連線」輸入框貼上老師提供的 GAS 網址並點擊「儲存網址並同步名單」，或點擊右側按鈕輸入。</p>
             </div>
             <button onclick="promptStudentSync()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow transition active:scale-95 flex items-center gap-1.5 whitespace-nowrap">
-                🔄 同步雲端名單
+                🔄 彈窗輸入 GAS 網址
             </button>
         </div>
 
@@ -531,6 +558,17 @@
                     
                     <!-- 掃描前設定 -->
                     <div id="scan-setup-area" class="mb-4">
+                        <div id="pre-scan-refresh-banner" class="bg-amber-50 border border-amber-300 rounded-xl p-3 mb-3 text-amber-900 text-xs shadow-2xs">
+                            <div class="leading-relaxed">
+                                <div class="font-bold text-amber-900 flex items-center gap-1 text-sm mb-0.5">
+                                    <span>⚠️ 掃描前請先按「重整更新」</span>
+                                </div>
+                                <p class="text-amber-800">避免網頁跨日未關閉導致「掃描日期未更新」或「雲端請假/繳交資料重疊覆蓋」。</p>
+                            </div>
+                            <button type="button" onclick="refreshBeforeScan()" class="mt-2 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-3 rounded-lg shadow-xs transition-all duration-150 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-xs">
+                                <span>🔄 點此重整網頁（同步今日日期與最新雲端資料）</span>
+                            </button>
+                        </div>
                         <label class="block mb-1 font-semibold text-sm">1. 應繳交日期：</label>
                         <input type="date" id="scan-session-date" class="border p-2 rounded w-full mb-3" onchange="if(typeof updateContactBookRange === 'function'){ updateContactBookRange(); } if(typeof updateSelectedTasksPreviewUI === 'function'){ updateSelectedTasksPreviewUI(); }" />
                         
@@ -702,6 +740,75 @@
             if (m) m.classList.add('hidden');
         }
 
+        async function performStudentCloudSync(cleanUrl) {
+            if (!cleanUrl) {
+                showAlert('提示', '請先貼上老師提供的 Google Apps Script (GAS) 網址！');
+                return;
+            }
+            if (typeof appConfig !== 'undefined') {
+                appConfig.gasUrl = cleanUrl;
+                if (typeof saveAppConfig === 'function') saveAppConfig();
+            }
+            window.gasUrl = cleanUrl;
+            const gasInput = document.getElementById('global-gas-url');
+            if (gasInput) gasInput.value = cleanUrl;
+            if (typeof updateGasUrlDisplay === 'function') updateGasUrlDisplay(false);
+
+            showLoading();
+            const loadingText = document.getElementById('loading-text');
+            if (loadingText) loadingText.innerText = '正在從雲端載入班級學生名單...';
+            try {
+                const resp = await fetch(cleanUrl, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'get_students', classPrefix: (typeof getActiveClassPrefix === 'function' ? getActiveClassPrefix() : '') })
+                });
+                const data = await resp.json();
+                if (data.status === 'success') {
+                    if (data.students && data.students.length > 0) {
+                        db.students = data.students;
+                    }
+                    if (data.config && data.config.tasks) {
+                        db.tasks = data.config.tasks;
+                    }
+                    if (data.config && data.config.classes) {
+                        appConfig.classes = data.config.classes;
+                        if (!appConfig.activeClassId || !appConfig.classes.some(c => c.id === appConfig.activeClassId)) {
+                            appConfig.activeClassId = data.config.activeClassId || (appConfig.classes[0] ? appConfig.classes[0].id : null);
+                        }
+                        if (typeof saveAppConfig === 'function') saveAppConfig();
+                    }
+                    if (typeof saveData === 'function') saveData();
+                    if (typeof initAllSelects === 'function') initAllSelects();
+                    if (typeof renderClassManager === 'function') renderClassManager();
+                    if (typeof syncFromGoogleSheets === 'function') {
+                        await syncFromGoogleSheets(true);
+                    }
+                    updateHeaderClassInfo();
+                    hideLoading();
+                    showToast(`班級學生名單與作業已成功同步！(共 ${db.students ? db.students.length : 0} 位學生)`, 'success');
+                    const banner = document.getElementById('no-students-banner');
+                    if (banner) banner.classList.add('hidden');
+                } else {
+                    hideLoading();
+                    showAlert('同步失敗', data.message || '無法取得學生名單');
+                }
+            } catch (e) {
+                hideLoading();
+                showAlert('連線錯誤', '無法連線至該 GAS 網址，請確認網址正確且權限已設為所有人：' + e.message);
+            }
+        }
+
+        async function syncStudentWithGasInput() {
+            const input = document.getElementById('global-gas-url');
+            const val = (input && input.value.trim()) ? input.value.trim() : ((typeof getGasUrl === 'function') ? getGasUrl() : '');
+            if (!val) {
+                await promptStudentSync();
+                return;
+            }
+            await performStudentCloudSync(val);
+        }
+
         async function promptStudentSync() {
             let currentGas = (typeof getGasUrl === 'function') ? getGasUrl() : '';
             const { value: url } = await Swal.fire({
@@ -716,74 +823,51 @@
                 confirmButtonColor: '#2563eb'
             });
             if (url && url.trim()) {
-                const cleanUrl = url.trim();
-                if (typeof appConfig !== 'undefined') {
-                    appConfig.gasUrl = cleanUrl;
-                    if (typeof saveAppConfig === 'function') saveAppConfig();
-                }
-                window.gasUrl = cleanUrl;
-                showLoading();
-                const loadingText = document.getElementById('loading-text');
-                if (loadingText) loadingText.innerText = '正在從雲端載入班級學生名單...';
-                try {
-                    const resp = await fetch(cleanUrl, {
-                        method: 'POST',
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({ action: 'get_students', classPrefix: (typeof getActiveClassPrefix === 'function' ? getActiveClassPrefix() : '') })
-                    });
-                    const data = await resp.json();
-                    if (data.status === 'success') {
-                        if (data.students && data.students.length > 0) {
-                            db.students = data.students;
-                        }
-                        if (data.config && data.config.tasks) {
-                            db.tasks = data.config.tasks;
-                        }
-                        if (data.config && data.config.classes) {
-                            appConfig.classes = data.config.classes;
-                            if (data.config.activeClassId) {
-                                appConfig.activeClassId = data.config.activeClassId;
-                            }
-                            if (typeof saveAppConfig === 'function') saveAppConfig();
-                        }
-                        if (typeof saveData === 'function') saveData();
-                        if (typeof initAllSelects === 'function') initAllSelects();
-                        if (typeof renderClassManager === 'function') renderClassManager();
-                        if (typeof syncFromGoogleSheets === 'function') {
-                            await syncFromGoogleSheets(true);
-                        }
-                        if (typeof updateHeaderClassInfo === 'function') updateHeaderClassInfo();
-                        hideLoading();
-                        showToast('班級學生名單與作業已成功同步！', 'success');
-                        const banner = document.getElementById('no-students-banner');
-                        if (banner) banner.classList.add('hidden');
-                    } else {
-                        hideLoading();
-                        showAlert('同步失敗', data.message || '無法取得學生名單');
-                    }
-                } catch (e) {
-                    hideLoading();
-                    showAlert('連線錯誤', '無法連線至該 GAS 網址，請確認網址正確且權限已設為所有人：' + e.message);
-                }
+                await performStudentCloudSync(url.trim());
             }
         }
 
         function updateHeaderClassInfo() {
             const el = document.getElementById('header-class-info');
-            if (!el) return;
+            const statusBadge = document.getElementById('student-gas-status-badge');
+            const clsWrap = document.getElementById('student-class-selector-wrap');
+            const clsSelect = document.getElementById('student-class-select');
+            const currentGas = (typeof getGasUrl === 'function') ? getGasUrl() : '';
+
+            if (statusBadge) {
+                if (currentGas) {
+                    const stuCount = (db && db.students) ? db.students.length : 0;
+                    statusBadge.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
+                    statusBadge.innerText = `🟢 已連線 (${stuCount} 位學生)`;
+                } else {
+                    statusBadge.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-300';
+                    statusBadge.innerText = '尚未設定網址';
+                }
+            }
+
             if (!appConfig || !appConfig.classes || appConfig.classes.length === 0) {
-                el.classList.add('hidden');
+                if (el) el.classList.add('hidden');
+                if (clsWrap) clsWrap.classList.add('hidden');
                 return;
             }
-            el.classList.remove('hidden');
+            if (el) el.classList.remove('hidden');
+            if (clsWrap) {
+                clsWrap.classList.remove('hidden');
+                clsWrap.classList.add('flex');
+            }
             const current = appConfig.classes.find(c => c.id === appConfig.activeClassId) || appConfig.classes[0];
-            if (appConfig.classes.length === 1) {
-                el.innerHTML = `🏫 <span>${current.label || '預設班級'}</span>`;
-            } else {
-                let opts = appConfig.classes.map(c => 
-                    `<option value="${c.id}" ${c.id === appConfig.activeClassId ? 'selected' : ''}>${c.label}</option>`
-                ).join('');
-                el.innerHTML = `🏫 <select class="bg-transparent font-bold text-blue-800 outline-none cursor-pointer" onchange="switchGlobalClass(this.value)">${opts}</select>`;
+            let opts = appConfig.classes.map(c => 
+                `<option value="${c.id}" ${c.id === appConfig.activeClassId ? 'selected' : ''}>${c.label}</option>`
+            ).join('');
+            if (clsSelect) {
+                clsSelect.innerHTML = opts;
+            }
+            if (el) {
+                if (appConfig.classes.length === 1) {
+                    el.innerHTML = `🏫 <span>${current.label || '預設班級'}</span>`;
+                } else {
+                    el.innerHTML = `🏫 <select class="bg-transparent font-bold text-blue-800 outline-none cursor-pointer" onchange="switchGlobalClass(this.value)">${opts}</select>`;
+                }
             }
         }
 

@@ -364,6 +364,14 @@ function deleteClass(id) {
             if(tabIndex === 1) {
                 initScanner();
                 document.body.classList.add('scanning-mode');
+                if (typeof getTodayDateStr === 'function' && !(typeof scanSession !== 'undefined' && scanSession && scanSession.active)) {
+                    const todayStr = getTodayDateStr();
+                    const dateInput = document.getElementById('scan-session-date');
+                    if (dateInput && window._pageLoadDateStr && window._pageLoadDateStr !== todayStr) {
+                        dateInput.value = todayStr;
+                        if (typeof updateContactBookRange === 'function') updateContactBookRange();
+                    }
+                }
             } else {
                 stopScanner();
                 document.body.classList.remove('scanning-mode');
@@ -642,9 +650,30 @@ function deleteClass(id) {
         }
 
         function parseCloudDataToRecords(sheetsData, silent = false) {
-            // 解析前不完全清空，而是基於現有的 tasks / students 更新
-            // 但如果雲端有最新的手動狀態，我們要覆寫本機的 manualStatus。
-            // 比較暴力但安全的做法是：清空現有記錄，完全重新建立
+            // 在清空本機紀錄前，先保存現有本機與歷史備份中的假別對照表，用於自動修復曾遭舊版 1970-1-1 0:00 覆寫之請假資料
+            const prevLeaveMap = new Map();
+            const leavesList = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "其他假別", "請假", "免交", "請假補交"];
+            if (window._recoveredLeaveMap instanceof Map) {
+                window._recoveredLeaveMap.forEach((val, key) => prevLeaveMap.set(key, val));
+            }
+            if (Array.isArray(db.records)) {
+                db.records.forEach(r => {
+                    if (!r || !r.manualStatus) return;
+                    const isLv = (typeof isLeaveStatus === 'function' && isLeaveStatus(r.manualStatus)) || leavesList.includes(r.manualStatus);
+                    if (isLv) {
+                        const cleanLv = (typeof getLeaveName === 'function' && getLeaveName(r.manualStatus)) ? getLeaveName(r.manualStatus) : r.manualStatus;
+                        const tObj = (db.tasks || []).find(t => t.id === r.taskId);
+                        prevLeaveMap.set(`id_${r.studentId}_${r.taskId}_${r.noticeName || ''}`, cleanLv);
+                        if (tObj) {
+                            prevLeaveMap.set(`sub_${r.studentId}_${tObj.subject}_${tObj.name}_${r.noticeName || ''}`, cleanLv);
+                        }
+                    }
+                });
+            }
+
+            let hasHealed1970 = false;
+
+            // 清空現有記錄，從雲端重建
             db.records = [];
             db.ranges = []; // 清空並從雲端表頭重建，避免遺失舊的子欄位
             
@@ -717,13 +746,22 @@ function deleteClass(id) {
                             timestamp: ''
                         };
                         
-                        const leaves = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "其他假別"];
+                        const is1970Corrupted = /^1970[-\/]/.test(cellValue);
                         if (cellValue.startsWith('[遲交]') || cellValue.includes('遲交')) {
                             record.manualStatus = 'late';
                             record.timestamp = cellValue.startsWith('[遲交]') ? cellValue : (`[遲交] ${cellValue}`);
-                        } else if (leaves.includes(cellValue)) {
-                            record.manualStatus = cellValue;
-                            record.timestamp = '1970-01-01T00:00:00';
+                        } else if (leavesList.includes(cellValue) || (typeof isLeaveStatus === 'function' && isLeaveStatus(cellValue))) {
+                            const cleanLeave = (typeof getLeaveName === 'function' && getLeaveName(cellValue)) ? getLeaveName(cellValue) : cellValue;
+                            record.manualStatus = cleanLeave;
+                            record.timestamp = cleanLeave;
+                        } else if (is1970Corrupted) {
+                            // 自動修復曾被舊版 1970-01-01T00:00:00 覆寫之請假資料
+                            const recoveredLeave = prevLeaveMap.get(`id_${student.id}_${task.id}_${noticeName || ''}`)
+                                || prevLeaveMap.get(`sub_${student.id}_${subject}_${taskName}_${noticeName || ''}`)
+                                || '請假';
+                            record.manualStatus = recoveredLeave;
+                            record.timestamp = recoveredLeave;
+                            hasHealed1970 = true;
                         } else {
                             // 任何無 [遲交] 註記之正常登記時間戳或狀態（例如 10/18 08:30、10/18、2026/10/18、已交等）
                             // 試算表無 [遲交] 註記一律視為準時繳交，清除任何舊有的 manualStatus
@@ -738,6 +776,12 @@ function deleteClass(id) {
             
             saveData(silent);
             renderStatistics();
+
+            if (hasHealed1970 && typeof syncToGoogleSheets === 'function') {
+                setTimeout(() => {
+                    syncToGoogleSheets([]);
+                }, 500);
+            }
         }
 
         function importStudents(event) {
@@ -851,6 +895,7 @@ function deleteClass(id) {
                 db.students = deduplicateStudents(db.students);
             }
             const list = document.getElementById('student-list');
+            if (!list) return;
             list.innerHTML = '';
             db.students.forEach(s => {
                 const li = document.createElement('li');
@@ -950,6 +995,7 @@ function addTask() {
 
         function renderTasks() {
             const list = document.getElementById('task-list');
+            if (!list) return;
             list.innerHTML = '';
             
             const grouped = {};
@@ -1222,8 +1268,9 @@ function addTask() {
 
         function toggleNoticeInput() {
             const select = document.getElementById('tab3-task-select');
-            const task = db.tasks.find(t => t.id === select.value);
             const container = document.getElementById('notice-name-container');
+            if (!select || !container) return;
+            const task = db.tasks.find(t => t.id === select.value);
             if (task) {
                 container.style.display = 'block';
             } else {

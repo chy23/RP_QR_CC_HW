@@ -450,8 +450,29 @@
             if (!db.tasks.find(t => t.id === 't_float_7')) {
                 db.tasks.push({ id: 't_float_7', subject: '聯絡簿', name: '學習單', type: 'floating' });
             }
+
+            // 自動修復曾遭舊版 1970-01-01T00:00:00 覆寫之聯絡簿請假紀錄
+            if (Array.isArray(db.records)) {
+                db.records.forEach(r => {
+                    if (!r) return;
+                    const ts = (r.timestamp || '').toString().trim();
+                    if (/^1970[-\/]/.test(ts)) {
+                        const leaveLabel = (r.manualStatus && !['ontime', 'late', 'missing'].includes(r.manualStatus))
+                            ? r.manualStatus.replace(/^leave_custom_|^leave_/, '')
+                            : '請假';
+                        r.manualStatus = leaveLabel;
+                        r.timestamp = leaveLabel;
+                    }
+                });
+            }
+
             sortTasks();
             saveData();
+
+            // 非同步從 IndexedDB 歷史備份建立假別對照表並修復任何被覆寫為 1970 的紀錄
+            if (typeof recoverLeaveTypesFromBackups === 'function') {
+                recoverLeaveTypesFromBackups();
+            }
 
             renderClassManager();
             renderStudents();
@@ -606,6 +627,69 @@ async function getBackups() {
         });
     } catch(err) {
         return [];
+    }
+}
+
+async function recoverLeaveTypesFromBackups() {
+    try {
+        if (!(window._recoveredLeaveMap instanceof Map)) {
+            window._recoveredLeaveMap = new Map();
+        }
+        const leavesList = ["事假", "病假", "公假", "喪假", "曠課", "遲到", "其他", "其他假別", "請假", "免交", "請假補交"];
+        const backups = await getBackups();
+        // 由舊到新或由新到舊掃描，優先保留具體假別（如病假、事假）而非統稱「請假」
+        backups.forEach(b => {
+            try {
+                const parsed = JSON.parse(b.data);
+                const bTasks = parsed.tasks || [];
+                (parsed.records || []).forEach(r => {
+                    if (!r || !r.manualStatus) return;
+                    const rawStatus = r.manualStatus.toString();
+                    const isLv = rawStatus.startsWith('leave_') || leavesList.includes(rawStatus);
+                    if (isLv) {
+                        const cleanLv = rawStatus.replace(/^leave_custom_|^leave_/, '');
+                        const keyId = `id_${r.studentId}_${r.taskId}_${r.noticeName || ''}`;
+                        const existing = window._recoveredLeaveMap.get(keyId);
+                        if (!existing || (existing === '請假' && cleanLv !== '請假')) {
+                            window._recoveredLeaveMap.set(keyId, cleanLv);
+                        }
+                        const tObj = bTasks.find(t => t.id === r.taskId);
+                        if (tObj) {
+                            const keySub = `sub_${r.studentId}_${tObj.subject}_${tObj.name}_${r.noticeName || ''}`;
+                            const exSub = window._recoveredLeaveMap.get(keySub);
+                            if (!exSub || (exSub === '請假' && cleanLv !== '請假')) {
+                                window._recoveredLeaveMap.set(keySub, cleanLv);
+                            }
+                        }
+                    }
+                });
+            } catch (e) {}
+        });
+
+        // 若目前 db.records 中有剛從 1970 還原為「請假」的紀錄，且歷史備份中有具體假別（如病假/事假），自動升級還原
+        let updated = false;
+        if (Array.isArray(db.records)) {
+            db.records.forEach(r => {
+                if (!r) return;
+                const ts = (r.timestamp || '').toString().trim();
+                if (/^1970[-\/]/.test(ts) || r.manualStatus === '請假') {
+                    const tObj = (db.tasks || []).find(t => t.id === r.taskId);
+                    const exactLeave = window._recoveredLeaveMap.get(`id_${r.studentId}_${r.taskId}_${r.noticeName || ''}`)
+                        || (tObj ? window._recoveredLeaveMap.get(`sub_${r.studentId}_${tObj.subject}_${tObj.name}_${r.noticeName || ''}`) : null);
+                    if (exactLeave && exactLeave !== r.manualStatus) {
+                        r.manualStatus = exactLeave;
+                        r.timestamp = exactLeave;
+                        updated = true;
+                    }
+                }
+            });
+        }
+        if (updated) {
+            saveData(true);
+            if (typeof renderStatistics === 'function') renderStatistics();
+        }
+    } catch (err) {
+        console.warn('recoverLeaveTypesFromBackups error:', err);
     }
 }
 

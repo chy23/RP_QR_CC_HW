@@ -434,24 +434,28 @@
                         const loopMissingText = (loopTaskDef && loopTaskDef.subject === '聯絡簿') ? '沒帶' : '缺交';
                         let cellValue = loopMissingText;
                         if (record) {
-                            cellValue = record.timestamp;
-                            if (isLeaveStatus(record.manualStatus) || record.manualStatus === '其他假別' || ['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他'].includes(record.manualStatus)) {
-                                cellValue = getLeaveName(record.manualStatus) || record.manualStatus;
+                            const rawTs = (record.timestamp || '').toString().trim();
+                            if (isLeaveStatus(record.manualStatus) || record.manualStatus === '其他假別' || ['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他', '請假', '免交', '請假補交'].includes(record.manualStatus)) {
+                                cellValue = getLeaveName(record.manualStatus) || record.manualStatus || '請假';
                             } else if (record.manualStatus === 'missing') {
                                 cellValue = loopMissingText;
-                            }
-                            let isLate = false;
-                            const hasLateTag = (record.timestamp && record.timestamp.includes('[遲交]')) || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
-                            if (hasLateTag || record.manualStatus === 'late') {
-                                isLate = true;
-                            } else if (record.manualStatus === 'ontime') {
-                                isLate = false;
-                            }
-                            
-                            if (isLate) {
-                                cellValue = `[遲交] ${record.timestamp.replace(/\[遲交\]/g, '').trim()}`;
+                            } else if (/^1970[-\/]/.test(rawTs)) {
+                                // 自動修復曾被舊版 1970-01-01T00:00:00 覆寫之請假資料
+                                cellValue = isLeaveStatus(record.manualStatus) ? (getLeaveName(record.manualStatus) || '請假') : '請假';
                             } else {
-                                cellValue = record.timestamp.replace(/\[遲交\]/g, '').trim();
+                                let isLate = false;
+                                const hasLateTag = rawTs.includes('[遲交]') || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
+                                if (hasLateTag || record.manualStatus === 'late') {
+                                    isLate = true;
+                                } else if (record.manualStatus === 'ontime') {
+                                    isLate = false;
+                                }
+                                
+                                if (isLate) {
+                                    cellValue = `[遲交] ${rawTs.replace(/\[遲交\]/g, '').trim()}`;
+                                } else {
+                                    cellValue = rawTs.replace(/\[遲交\]/g, '').trim();
+                                }
                             }
                         }
                         row.push(cellValue);
@@ -846,6 +850,77 @@
         window.uncheckScanTask = uncheckScanTask;
         window.clearAllSelectedScanTasks = clearAllSelectedScanTasks;
 
+        function getTodayDateStr() {
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            return (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
+        }
+        window.getTodayDateStr = getTodayDateStr;
+        window._pageLoadDateStr = getTodayDateStr();
+        window._pageLoadTimestamp = Date.now();
+
+        function refreshBeforeScan() {
+            try {
+                const selected = getSelectedTasksList().map(t => ({
+                    id: t.id,
+                    range: (t.name === '聯絡簿' && t.type === 'fixed') ? getTodayDateStr().replace(/-/g, '/') : (t.range || '')
+                }));
+                sessionStorage.setItem('rp_pre_scan_state', JSON.stringify({
+                    tab: 1,
+                    tasks: selected,
+                    refreshedAt: Date.now()
+                }));
+            } catch (e) {}
+            window.location.reload();
+        }
+        window.refreshBeforeScan = refreshBeforeScan;
+
+        function restorePreScanRefreshState() {
+            try {
+                const raw = sessionStorage.getItem('rp_pre_scan_state');
+                if (!raw) return;
+                sessionStorage.removeItem('rp_pre_scan_state');
+                const state = JSON.parse(raw);
+                window._lastPreScanRefreshAt = state.refreshedAt || Date.now();
+                const dateInput = document.getElementById('scan-session-date');
+                const todayStr = getTodayDateStr();
+                if (dateInput) {
+                    dateInput.value = todayStr;
+                }
+                if (state.tab === 1 && typeof switchTab === 'function') {
+                    switchTab(1);
+                }
+                if (Array.isArray(state.tasks)) {
+                    state.tasks.forEach(item => {
+                        const cb = document.querySelector(`.scan-task-checkbox[value="${item.id}"]`);
+                        const input = document.getElementById(`range-input-${item.id}`);
+                        const taskDef = db.tasks.find(t => t.id === item.id);
+                        if (cb) {
+                            cb.checked = true;
+                            if (input) {
+                                input.style.display = 'block';
+                                input.value = (taskDef && taskDef.name === '聯絡簿' && taskDef.type === 'fixed')
+                                    ? todayStr.replace(/-/g, '/')
+                                    : (item.range || '');
+                            }
+                        }
+                    });
+                    updateContactBookRange();
+                    updateSelectedTasksPreviewUI();
+                }
+                if (gasUrl && typeof syncFromGoogleSheets === 'function') {
+                    syncFromGoogleSheets(true);
+                }
+                if (typeof showToast === 'function') {
+                    setTimeout(() => {
+                        showToast(`✅ 已重整更新！掃描日期已同步為今日 (${todayStr}) 並拉取最新雲端資料`, 'success');
+                    }, 300);
+                }
+            } catch (e) {
+                console.warn('restorePreScanRefreshState error:', e);
+            }
+        }
+        window.restorePreScanRefreshState = restorePreScanRefreshState;
+
         function initScanSessionDropdown() {
             const container = document.getElementById('scan-session-tasks');
             if(!container) return;
@@ -865,14 +940,13 @@
             });
             const dateInput = document.getElementById('scan-session-date');
             if(dateInput && !dateInput.value) {
-                const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
-                dateInput.value = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
+                dateInput.value = getTodayDateStr();
             }
             updateSelectedTasksPreviewUI();
         }
 
         async function startScanSession() {
-            const dateVal = document.getElementById('scan-session-date').value;
+            let dateVal = document.getElementById('scan-session-date').value;
             const checkboxes = document.querySelectorAll('.scan-task-checkbox:checked');
             
             if(!dateVal || checkboxes.length === 0) {
@@ -905,7 +979,7 @@
                 return; // 暫停，等待使用者在 Modal 中確認
             }
 
-            continueStartScanSession(selectedTasks);
+            await preScanRefreshAndOverlapCheck(selectedTasks);
         }
 
         async function confirmRangePrompts() {
@@ -923,7 +997,78 @@
             });
             
             document.getElementById('range-prompt-modal').style.display = 'none';
-            continueStartScanSession(tasks);
+            await preScanRefreshAndOverlapCheck(tasks);
+        }
+
+        async function preScanRefreshAndOverlapCheck(selectedTasks) {
+            const todayStr = getTodayDateStr();
+            const dateInput = document.getElementById('scan-session-date');
+            const dateVal = dateInput ? dateInput.value : todayStr;
+            const isDateMismatch = (dateVal !== todayStr) || (window._pageLoadDateStr && window._pageLoadDateStr !== todayStr);
+            const justRefreshedRecently = window._lastPreScanRefreshAt && (Date.now() - window._lastPreScanRefreshAt < 180000);
+
+            // 檢查所選作業與範圍是否已有舊紀錄 (可能造成資料重疊)
+            const overlapDetails = [];
+            selectedTasks.forEach(t => {
+                const existingCount = (db.records || []).filter(r => r.taskId === t.id && (r.noticeName || '') === (t.range || '')).length;
+                if (existingCount > 0) {
+                    overlapDetails.push(`${t.name}${t.range ? ' (' + t.range + ')' : ''}：已有 ${existingCount} 筆紀錄`);
+                }
+            });
+
+            if (typeof Swal !== 'undefined' && (!justRefreshedRecently || isDateMismatch || overlapDetails.length > 0)) {
+                const taskListHtml = selectedTasks.map(t => `<span class="inline-block bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-xs font-bold mr-1 mb-1">${t.name}${t.range ? ' (' + t.range + ')' : ''}</span>`).join('');
+                const dateWarnHtml = isDateMismatch
+                    ? `<div class="bg-red-50 border border-red-300 text-red-800 p-2.5 rounded-lg text-xs mb-2 text-left">
+                        <strong>⚠️ 注意：目前選擇的日期 (${dateVal}) 與今日 (${todayStr}) 不同！</strong><br>
+                        若網頁跨日未重整，直接掃描可能會覆蓋到舊日期的資料欄位。強烈建議點擊下方「🔄 重整並更新為今日」按鈕！
+                       </div>`
+                    : `<div class="bg-amber-50 border border-amber-200 text-amber-900 p-2.5 rounded-lg text-xs mb-2 text-left">
+                        <strong>💡 掃描前防重疊提醒：</strong><br>
+                        開始掃描前，若您剛才尚未按「重新整理」，建議先點選<strong>「🔄 重整更新網頁」</strong>，確保掃描時間更新為今日且雲端請假/繳交資料同步最新，避免資料重疊。
+                       </div>`;
+                const overlapHtml = overlapDetails.length > 0
+                    ? `<div class="bg-orange-50 border border-orange-200 text-orange-800 p-2.5 rounded-lg text-xs mb-2 text-left">
+                        <strong>📌 偵測到相同範圍已有紀錄（共 ${overlapDetails.length} 項）：</strong><br>
+                        ${overlapDetails.join('、')}<br>
+                        <span class="text-[11px] text-orange-700">（若為同日補掃或繼續掃描可放心繼續；若為新的一天請先重整更新日期）</span>
+                       </div>`
+                    : '';
+
+                const res = await Swal.fire({
+                    title: isDateMismatch ? '⚠️ 掃描日期未更新提醒' : '📋 掃描前確認（防資料重疊）',
+                    html: `
+                        <div class="text-left text-sm space-y-2">
+                            <div class="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                                <div class="text-xs text-slate-500">目前設定應繳日期：</div>
+                                <div class="font-bold text-base ${isDateMismatch ? 'text-red-600' : 'text-blue-700'}">${dateVal} ${isDateMismatch ? `(今日為 ${todayStr})` : '(今日)'}</div>
+                                <div class="text-xs text-slate-500 mt-1.5">待掃描作業與範圍：</div>
+                                <div class="mt-1">${taskListHtml}</div>
+                            </div>
+                            ${dateWarnHtml}
+                            ${overlapHtml}
+                        </div>
+                    `,
+                    icon: isDateMismatch ? 'warning' : 'info',
+                    showDenyButton: true,
+                    showCancelButton: true,
+                    confirmButtonText: '🔄 重整更新網頁 (推薦)',
+                    denyButtonText: isDateMismatch ? `仍以 ${dateVal} 開始掃描` : '✅ 已確認最新，開始掃描',
+                    cancelButtonText: '返回修改',
+                    confirmButtonColor: '#f59e0b',
+                    denyButtonColor: '#2563eb'
+                });
+
+                if (res.isConfirmed) {
+                    refreshBeforeScan();
+                    return;
+                }
+                if (!res.isDenied) {
+                    return;
+                }
+            }
+
+            await continueStartScanSession(selectedTasks);
         }
 
         async function continueStartScanSession(selectedTasks) {
@@ -1482,7 +1627,7 @@ function renderStatistics() {
 function isLeaveStatus(status) {
     if (!status) return false;
     if (status.startsWith('leave_')) return true;
-    return ['病假', '事假', '公假', '喪假', '其他假別', '曠課', '遲到', '其他'].includes(status);
+    return ['病假', '事假', '公假', '喪假', '其他假別', '曠課', '遲到', '其他', '請假', '免交', '請假補交'].includes(status);
 }
 function getLeaveName(status) {
     if (!status) return '';
@@ -1609,6 +1754,8 @@ let currentTargetRecord = null;
             
             const now = new Date();
             const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            const isLeave = isLeaveStatus(statusType);
+            const recordTs = isLeave ? (getLeaveName(statusType) || statusType) : (statusType === 'late' ? `[遲交] ${timeString}` : timeString);
 
             if (studentId === null) {
                 // Batch operation
@@ -1619,8 +1766,10 @@ let currentTargetRecord = null;
                     } else {
                         if (index !== -1) {
                             db.records[index].manualStatus = statusType;
+                            db.records[index].timestamp = recordTs;
+                            db.records[index].fullTimestamp = now.toISOString();
                         } else {
-                            db.records.push({ studentId: student.id, taskId, noticeName, timestamp: timeString, manualStatus: statusType, fullTimestamp: now.toISOString() });
+                            db.records.push({ studentId: student.id, taskId, noticeName, timestamp: recordTs, manualStatus: statusType, fullTimestamp: now.toISOString() });
                         }
                     }
                 });
@@ -1632,8 +1781,10 @@ let currentTargetRecord = null;
                 } else {
                     if (index !== -1) {
                         db.records[index].manualStatus = statusType;
+                        db.records[index].timestamp = recordTs;
+                        db.records[index].fullTimestamp = now.toISOString();
                     } else {
-                        db.records.push({ studentId, taskId, noticeName, timestamp: timeString, manualStatus: statusType, fullTimestamp: now.toISOString() });
+                        db.records.push({ studentId, taskId, noticeName, timestamp: recordTs, manualStatus: statusType, fullTimestamp: now.toISOString() });
                     }
                 }
             }
@@ -2021,6 +2172,8 @@ let currentTargetRecord = null;
         function updateStudentTaskStatus(studentId, taskId, noticeName, statusType) {
             const now = new Date();
             const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            const isLeave = isLeaveStatus(statusType);
+            const recordTs = isLeave ? (getLeaveName(statusType) || statusType) : (statusType === 'late' ? `[遲交] ${timeString}` : timeString);
             
             const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
             
@@ -2029,12 +2182,10 @@ let currentTargetRecord = null;
             } else {
                 if (index !== -1) {
                     db.records[index].manualStatus = statusType;
-                    // 如果原本不是當天掃描的，這裡 timestamp 可以選擇覆寫或保留。
-                    // 為了方便老師紀錄，我們將 timestamp 更新為當前時間。
-                    db.records[index].timestamp = timeString;
+                    db.records[index].timestamp = recordTs;
                     db.records[index].fullTimestamp = now.toISOString();
                 } else {
-                    db.records.push({ studentId, taskId, noticeName, timestamp: timeString, manualStatus: statusType, fullTimestamp: now.toISOString() });
+                    db.records.push({ studentId, taskId, noticeName, timestamp: recordTs, manualStatus: statusType, fullTimestamp: now.toISOString() });
                 }
             }
             
@@ -2063,6 +2214,9 @@ let currentTargetRecord = null;
         if (typeof document !== 'undefined') {
             document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
+                    if (typeof restorePreScanRefreshState === 'function') {
+                        restorePreScanRefreshState();
+                    }
                     if (typeof updateSyncStatusBadge === 'function') {
                         const qCount = getOfflineQueue().length;
                         if (qCount > 0) {
