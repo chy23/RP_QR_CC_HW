@@ -390,19 +390,36 @@ function(e, ss, getSheetNames) {
               if (!cleanStatus || cleanStatus === '缺交' || cleanStatus === '未交' || cleanStatus === '沒帶' || cleanStatus === 'missing') {
                 isMissing = true;
                 cleanStatus = cleanStatus || '缺交';
+              } else if (
+                cleanStatus.indexOf('請假補交') !== -1 ||
+                cleanStatus.indexOf('請假補繳交') !== -1 ||
+                cleanStatus.indexOf('leave_custom_請假補交') !== -1 ||
+                cleanStatus.indexOf('leave_custom_請假補繳交') !== -1 ||
+                ((cleanStatus.indexOf('補交') !== -1 || cleanStatus.indexOf('補繳交') !== -1) && cleanStatus.indexOf('缺交') === -1 && cleanStatus.indexOf('遲交') === -1 && cleanStatus.toLowerCase().indexOf('late') === -1)
+              ) {
+                // 請假補繳交皆視為準時繳交 (不計遲交、不計缺交、不免計分母，計入準時分子)
+                onTimeCount++;
               } else if (cleanStatus.indexOf('[遲交]') !== -1 || cleanStatus.indexOf('遲交') !== -1 || cleanStatus.toLowerCase().indexOf('late') !== -1) {
                 // 依教師指令：只有教師明確註記「遲交」才計入遲交，不管時間點
                 isLate = true;
                 if (cleanStatus.indexOf('[遲交]') === -1) {
                   cleanStatus = '[遲交] ' + cleanStatus;
                 }
-              } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他', '其他假別', '請假補交'].indexOf(cleanStatus) !== -1) {
+              } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他', '其他假別'].indexOf(cleanStatus) !== -1) {
                 isExcused = true;
                 excusedCount++;
               } else if (/^1970[-\/]/.test(cleanStatus)) {
                 cleanStatus = recoverLeaveFromLog(matchedPrefix, baseName, tName, tRange, targetStudent.name);
-                isExcused = true;
-                excusedCount++;
+                if (
+                  cleanStatus.indexOf('請假補交') !== -1 ||
+                  cleanStatus.indexOf('請假補繳交') !== -1 ||
+                  ((cleanStatus.indexOf('補交') !== -1 || cleanStatus.indexOf('補繳交') !== -1) && cleanStatus.indexOf('缺交') === -1 && cleanStatus.indexOf('遲交') === -1 && cleanStatus.toLowerCase().indexOf('late') === -1)
+                ) {
+                  onTimeCount++;
+                } else {
+                  isExcused = true;
+                  excusedCount++;
+                }
               } else {
                 onTimeCount++;
               }
