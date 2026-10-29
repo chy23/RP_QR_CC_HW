@@ -335,6 +335,7 @@ function(e, ss, getSheetNames) {
       var lateTasks = [];
       var onTimeCount = 0;
       var totalCount = 0;
+      var excusedCount = 0;
 
       for (var j = 0; j < allSheets.length; j++) {
         var sheet = allSheets[j];
@@ -397,9 +398,11 @@ function(e, ss, getSheetNames) {
                 }
               } else if (['事假', '病假', '公假', '喪假', '免交', '請假', '其他', '其他假別', '請假補交'].indexOf(cleanStatus) !== -1) {
                 isExcused = true;
+                excusedCount++;
               } else if (/^1970[-\/]/.test(cleanStatus)) {
                 cleanStatus = recoverLeaveFromLog(matchedPrefix, baseName, tName, tRange, targetStudent.name);
                 isExcused = true;
+                excusedCount++;
               } else {
                 onTimeCount++;
               }
@@ -424,9 +427,13 @@ function(e, ss, getSheetNames) {
         }
       }
 
-      var onTimeRateStr = totalCount > 0 ? Math.round((onTimeCount / totalCount) * 100) + "%" : "-";
+      // 準時率計算比照家長手札網頁端：請假／免交不計入應繳分母 (不應扣分)
+      var effectiveTotal = Math.max(0, totalCount - excusedCount);
+      var onTimeRateStr = effectiveTotal > 0 ? Math.round((onTimeCount / effectiveTotal) * 100) + "%" : (totalCount > 0 ? "100%" : "-");
       return {
         totalCount: totalCount,
+        effectiveTotal: effectiveTotal,
+        excusedCount: excusedCount,
         onTimeCount: onTimeCount,
         lateCount: lateTasks.length,
         missingCount: missingTasks.length,
@@ -679,7 +686,8 @@ function(e, ss, getSheetNames) {
                   replyLines.push("✨ 目前各科作業皆已準時繳交，無缺交！🎉");
                 }
                 var lateTip = summary.lateCount > 0 ? "，遲交 " + summary.lateCount + " 次" : "";
-                replyLines.push("📊 作業準時率：" + summary.onTimeRate + " (已登記 " + summary.totalCount + " 項作業" + lateTip + ")");
+                var excusedTip = summary.excusedCount > 0 ? "，請假 " + summary.excusedCount + " 次" : "";
+                replyLines.push("📊 作業準時率：" + summary.onTimeRate + " (累計準時 " + summary.onTimeCount + "/" + summary.effectiveTotal + " 項" + lateTip + excusedTip + ")");
                 replyLines.push("🔗 專屬手札：" + portalUrl + "\n");
               }
               replyLines.push("👉 點擊上方手札連結可隨時查看完整每日打卡時序日誌與常遲到排行！");
@@ -808,7 +816,8 @@ function(e, ss, getSheetNames) {
             }
 
             var lateTip = summary.lateCount > 0 ? "，遲交 " + summary.lateCount + " 次" : "";
-            replyLines.push("📊 作業準時率：" + summary.onTimeRate + " (已登記 " + summary.totalCount + " 項作業" + lateTip + ")\n");
+            var excusedTip = summary.excusedCount > 0 ? "，請假 " + summary.excusedCount + " 次" : "";
+            replyLines.push("📊 作業準時率：" + summary.onTimeRate + " (累計準時 " + summary.onTimeCount + "/" + summary.effectiveTotal + " 項" + lateTip + excusedTip + ")\n");
             replyLines.push("🔗 點此秒開專屬作業學習手札：");
             replyLines.push(directUrl);
             replyLines.push("\n（免帳密！隨時點開可查閱每日作業繳交足跡與常遲到排行）");
