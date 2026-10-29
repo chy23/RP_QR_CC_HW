@@ -2622,6 +2622,21 @@ function classifyParentTaskStatus(statusStr, timestamp, deadline) {
         };
     }
 
+    // 3.5 請假補交 / 補繳交 (視為準時繳交，不計缺交與遲交，計入準時分母分子)
+    if (
+        s.includes('請假補交') || s.includes('請假補繳交') ||
+        s.includes('leave_custom_請假補交') || s.includes('leave_custom_請假補繳交') ||
+        ((s.includes('補交') || s.includes('補繳交')) && !s.includes('缺交') && !s.includes('[遲交]') && s !== '遲交' && !s.toLowerCase().includes('late'))
+    ) {
+        return {
+            type: 'ontime',
+            label: '請假補交',
+            badge: '✅ 準時 (請假補交)',
+            badgeClass: 'bg-teal-50 text-teal-800 border-teal-200',
+            isPending: false
+        };
+    }
+
     // 4. 請假 / 免計入分母 (Excused Leaves)
     const standardLeaves = ['事假', '病假', '公假', '喪假', '免交', '請假', '其他假別', '其他'];
     const isLeave = standardLeaves.includes(s) || (
