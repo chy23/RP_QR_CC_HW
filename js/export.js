@@ -3145,6 +3145,8 @@ async function fetchSimulatorFromCloud(student, gas, forceCloud = false) {
             body: JSON.stringify({
                 action: 'parent_query',
                 token: token,
+                isSimulator: true,
+                skipLog: true,
                 source: '🖥️ 教師端模擬器即時連線'
             }),
             signal: simulatorAbortController.signal
@@ -4299,6 +4301,9 @@ function filterParentViewLogsTable() {
 
     const logs = currentParentViewLogs || [];
     const filtered = logs.filter(log => {
+        // 排除教師端模擬器即時連線的紀錄
+        if ((log.source || '').includes('模擬器') || (log.source || '').includes('Simulator')) return false;
+
         if (searchVal) {
             const matchName = (log.studentName || '').toLowerCase().includes(searchVal);
             const matchId = String(log.studentId || '').includes(searchVal);
