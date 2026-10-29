@@ -3145,12 +3145,15 @@ async function fetchSimulatorFromCloud(student, gas, forceCloud = false) {
             body: JSON.stringify({
                 action: 'parent_query',
                 token: token,
+                isSimulator: true,
+                skipLog: true,
                 source: '🖥️ 教師端模擬器即時連線'
             }),
             signal: simulatorAbortController.signal
         });
         const res = await response.json();
-        if (res && res.status === 'success' && currentSimulatorStudentId === targetStudentId) {
+        const isCurrentMatch = isSameStudentId(currentSimulatorStudentId, targetStudentId);
+        if (res && res.status === 'success' && isCurrentMatch) {
             const cloudTasks = (res.tasks || []).map(ct => ({
                 subject: ct.subject || '其他',
                 taskName: ct.taskName || '作業',
@@ -3164,18 +3167,28 @@ async function fetchSimulatorFromCloud(student, gas, forceCloud = false) {
             const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
             const syncDateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} (${weekdays[now.getDay()]}) ${now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
             finishSimulatorSyncAnimation(student, cloudTasks, syncDateStr);
-        } else if (currentSimulatorStudentId === targetStudentId) {
+        } else if (isCurrentMatch) {
             failSimulatorSyncAnimation(res ? res.message : '查無雲端手札資料');
         }
     } catch (e) {
         if (e.name !== 'AbortError') {
             console.warn('[ParentSimulator] Cloud query error:', e);
-            if (currentSimulatorStudentId === targetStudentId) {
+            if (isSameStudentId(currentSimulatorStudentId, targetStudentId)) {
                 failSimulatorSyncAnimation('網路連線逾時或 GAS 回應異常');
             }
         }
     }
 }
+
+function isSameStudentId(idA, idB) {
+    if (idA === idB) return true;
+    if (idA === null || idA === undefined || idB === null || idB === undefined) return false;
+    if (String(idA).trim() === String(idB).trim()) return true;
+    const numA = parseInt(idA, 10);
+    const numB = parseInt(idB, 10);
+    return !isNaN(numA) && !isNaN(numB) && numA === numB;
+}
+window.isSameStudentId = isSameStudentId;
 
 function refreshParentSimulatorFromCloud() {
     const sel = document.getElementById('parent-simulator-student-select');
@@ -3194,15 +3207,20 @@ function refreshParentSimulatorFromCloud() {
 window.refreshParentSimulatorFromCloud = refreshParentSimulatorFromCloud;
 
 function updateParentSimulator(studentId, forceCloud = false) {
-    currentSimulatorStudentId = parseInt(studentId, 10);
+    if (studentId === undefined || studentId === null || studentId === '') {
+        const sel = document.getElementById('parent-simulator-student-select');
+        studentId = sel ? sel.value : currentSimulatorStudentId;
+    }
     const frame = document.getElementById('parent-simulator-frame');
     if (!frame) return;
 
-    const student = db.students.find(s => s.id === currentSimulatorStudentId);
+    // 寬鬆比對學生座號/代碼 (支援數字與字串格式，例如 2 與 "02")
+    const student = db.students.find(s => isSameStudentId(s.id, studentId));
     if (!student) {
         frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">查無該生資料</div>';
         return;
     }
+    currentSimulatorStudentId = student.id;
 
     const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
     const tasks = db.tasks || [];
@@ -3245,7 +3263,7 @@ function updateParentSimulator(studentId, forceCloud = false) {
                 range = nn;
             }
 
-            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            const rec = records.find(r => isSameStudentId(r.studentId, student.id) && r.taskId === t.id && (r.noticeName || '') === nn);
             let status = '缺交';
             let timestamp = '';
             if (rec) {
@@ -3310,7 +3328,7 @@ function openSelectedStudentParentPage() {
         if (db.students.length > 0) currentSimulatorStudentId = db.students[0].id;
         else return;
     }
-    const student = db.students.find(s => s.id === currentSimulatorStudentId);
+    const student = db.students.find(s => isSameStudentId(s.id, currentSimulatorStudentId));
     if (!student) return;
 
     const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
@@ -3355,7 +3373,7 @@ function getStudentPendingTasks(student) {
             const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
             if (!subHasRecord && !subHasRange) return;
 
-            const rec = records.find(r => r.studentId === student.id && r.taskId === t.id && (r.noticeName || '') === nn);
+            const rec = records.find(r => isSameStudentId(r.studentId, student.id) && r.taskId === t.id && (r.noticeName || '') === nn);
             let status = '缺交';
             let timestamp = '';
             if (rec) {
@@ -4283,6 +4301,9 @@ function filterParentViewLogsTable() {
 
     const logs = currentParentViewLogs || [];
     const filtered = logs.filter(log => {
+        // 排除教師端模擬器即時連線的紀錄
+        if ((log.source || '').includes('模擬器') || (log.source || '').includes('Simulator')) return false;
+
         if (searchVal) {
             const matchName = (log.studentName || '').toLowerCase().includes(searchVal);
             const matchId = String(log.studentId || '').includes(searchVal);
