@@ -3691,7 +3691,7 @@ function copyLineInviteText() {
 // School LINE Hub 推播中樞客戶端設定與執行
 // ==========================================
 const DEFAULT_LINE_HUB_CONFIG = {
-    hubUrl: "https://script.google.com/macros/s/AKfycbx3FmbjzzlZ0AsEe7CXFMxQeW5aJEfVjN7kTA7DnY7IJ8H909MgjPWRRB3kFgxDdtu5sg/exec",
+    hubUrl: "https://script.google.com/macros/s/AKfycbzdGSGhHERp5WUsnXzTj-QomTjh4glPW8lAjNK9CdvdEsgrv89uDPawrTyGm_YZ0DQNJQ/exec",
     appId: "PROJECT_HW",
     appSecret: "sec_hw_demo_9823471"
 };
