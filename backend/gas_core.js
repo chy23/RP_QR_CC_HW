@@ -464,6 +464,12 @@ function(e, ss, getSheetNames) {
 
     function logParentView(classPrefix, student, source, note) {
       try {
+        var sSource = source || "📱 手機手札 (QR掃碼)";
+        // 若為教師端模擬器即時連線，不寫入家長閱覽紀錄
+        if (sSource.indexOf("模擬器") !== -1 || sSource.indexOf("Simulator") !== -1) {
+          return;
+        }
+
         var sheet = findParentViewSheet(classPrefix);
         if (!sheet) {
           var clean = (classPrefix || "").replace(/\[|\]/g, "").trim();
@@ -529,6 +535,11 @@ function(e, ss, getSheetNames) {
           var sToken = (row[3] || '').toString().trim().toUpperCase();
           var source = (row[4] || '').toString().trim();
           var note = (row[5] || '').toString().trim();
+
+          // 排除過去模擬器產生的測試紀錄，避免污染真實家長閱覽統計
+          if (source.indexOf('模擬器') !== -1 || source.indexOf('Simulator') !== -1) {
+            continue;
+          }
 
           if (sId) {
             if (!stats[sId]) {
@@ -1220,11 +1231,17 @@ function(e, ss, getSheetNames) {
       // 讀取該學生的各科作業紀錄與彙總
       var summary = getStudentStatusSummary(matchedPrefix, targetStudent);
 
-      // 自動記錄家長閱覽足跡
-      var viewNote = (summary.missingTasks && summary.missingTasks.length > 0)
-        ? ("待補交 " + summary.missingTasks.length + " 項")
-        : "作業全數繳齊";
-      logParentView(matchedPrefix, targetStudent, payload.source || "📱 手機手札 (QR掃碼)", viewNote);
+      // 自動記錄家長閱覽足跡 (排除教師端模擬器預覽與 skipLog 請求)
+      var isSimulator = payload.isSimulator === true ||
+                        payload.skipLog === true ||
+                        (payload.source && (payload.source.indexOf("模擬器") !== -1 || payload.source.indexOf("Simulator") !== -1));
+
+      if (!isSimulator) {
+        var viewNote = (summary.missingTasks && summary.missingTasks.length > 0)
+          ? ("待補交 " + summary.missingTasks.length + " 項")
+          : "作業全數繳齊";
+        logParentView(matchedPrefix, targetStudent, payload.source || "📱 手機手札 (QR掃碼)", viewNote);
+      }
       
       // 讀取該學生的近期打卡紀錄 (所有掃描紀錄)，並對照各科目分頁校正遲交與截止日狀態
       var logSheetName = matchedPrefix + "所有掃描紀錄";
