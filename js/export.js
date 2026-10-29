@@ -1309,17 +1309,19 @@
                                 const taskDateStr = (typeof getTaskDate === 'function') ? getTaskDate(k.taskId, k.noticeName) : '';
                                 const deadlineStr = (taskDef && taskDef.deadline) ? taskDef.deadline : taskDateStr;
                                 let isLate = false;
-                                if (record.manualStatus === 'late') {
+                                const hasLateTag = (record.timestamp && record.timestamp.includes('[遲交]')) || (record.fullTimestamp && record.fullTimestamp.includes('[遲交]'));
+                                if (hasLateTag) {
                                     isLate = true;
-                                } else if (record.manualStatus === 'ontime') {
-                                    isLate = false;
+                                } else if (record.manualStatus === 'late' && hasLateTag) {
+                                    isLate = true;
                                 } else {
-                                    const lateFn = (typeof isLateCheck === 'function') ? isLateCheck : window.isLateCheck;
-                                    if (lateFn && lateFn(record.fullTimestamp || record.timestamp, deadlineStr)) {
-                                        isLate = true;
-                                    }
+                                    isLate = false;
                                 }
-                                if (isLate) cellValue = `[遲交] ${record.timestamp}`;
+                                if (isLate) {
+                                    cellValue = `[遲交] ${record.timestamp.replace(/\[遲交\]/g, '').trim()}`;
+                                } else {
+                                    cellValue = record.timestamp.replace(/\[遲交\]/g, '').trim();
+                                }
                             }
                         }
                         row.push(cellValue);
@@ -1343,4 +1345,3042 @@
         function exportExcel() {
             return exportStatToExcel();
         }
+
+// ==========================================
+// 家長端查詢小卡自訂文字與設定模組 (比照 MPScore)
+// ==========================================
+const DEFAULT_PARENT_CARD_CONFIG = {
+    title: '作業繳交狀況查詢卡',
+    step1: '手機掃描查詢：直接開啟手機相機對準 QR Code 掃描，免密碼秒查孩子作業繳交狀況、各科明細與待補交清單。',
+    step2: 'LINE 自動通知：進入網頁點擊「一秒綁定 LINE」，放學有缺交主動發送推播通知！（亦可直接回傳查詢代碼至班級 LINE 完成綁定）',
+    note: '導師叮嚀：請家長每日協助督促孩子按時完成作業並落實訂正，親師攜手共創良好學習習慣！'
+};
+
+function getParentCardConfig() {
+    try {
+        const saved = localStorage.getItem('hw_parent_card_config');
+        if (saved) {
+            return Object.assign({}, DEFAULT_PARENT_CARD_CONFIG, JSON.parse(saved));
+        }
+    } catch(e) {}
+    return Object.assign({}, DEFAULT_PARENT_CARD_CONFIG);
+}
+
+function saveParentCardConfig(cfg) {
+    try {
+        localStorage.setItem('hw_parent_card_config', JSON.stringify(cfg));
+    } catch(e) {}
+}
+
+function syncParentCardTextsOnCards(cfg) {
+    if (!cfg) cfg = getParentCardConfig();
+    document.querySelectorAll('.card-editable-title').forEach(el => {
+        if (el.innerText !== cfg.title) el.innerText = cfg.title;
+    });
+    document.querySelectorAll('.card-editable-step1').forEach(el => {
+        if (el.innerText !== cfg.step1) el.innerText = cfg.step1;
+    });
+    document.querySelectorAll('.card-editable-step2').forEach(el => {
+        if (el.innerText !== cfg.step2) el.innerText = cfg.step2;
+    });
+    document.querySelectorAll('.card-editable-note').forEach(el => {
+        if (el.innerText !== cfg.note) el.innerText = cfg.note;
+    });
+}
+
+function syncTab8CustomInputs(cfg) {
+    if (!cfg) cfg = getParentCardConfig();
+    const t = document.getElementById('parent-card-cfg-title');
+    const s1 = document.getElementById('parent-card-cfg-step1');
+    const s2 = document.getElementById('parent-card-cfg-step2');
+    const n = document.getElementById('parent-card-cfg-note');
+    if (t) t.value = cfg.title || '';
+    if (s1) s1.value = cfg.step1 || '';
+    if (s2) s2.value = cfg.step2 || '';
+    if (n) n.value = cfg.note || '';
+}
+
+function syncModalCustomInputs(cfg) {
+    if (!cfg) cfg = getParentCardConfig();
+    const t = document.getElementById('modal-card-cfg-title');
+    const s1 = document.getElementById('modal-card-cfg-step1');
+    const s2 = document.getElementById('modal-card-cfg-step2');
+    const n = document.getElementById('modal-card-cfg-note');
+    if (t) t.value = cfg.title || '';
+    if (s1) s1.value = cfg.step1 || '';
+    if (s2) s2.value = cfg.step2 || '';
+    if (n) n.value = cfg.note || '';
+}
+
+function escapeCardHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function saveParentCardCustomTextFromUI() {
+    const tEl = document.getElementById('parent-card-cfg-title');
+    const s1El = document.getElementById('parent-card-cfg-step1');
+    const s2El = document.getElementById('parent-card-cfg-step2');
+    const nEl = document.getElementById('parent-card-cfg-note');
+    const current = getParentCardConfig();
+    const cfg = {
+        title: tEl ? tEl.value : current.title,
+        step1: s1El ? s1El.value : current.step1,
+        step2: s2El ? s2El.value : current.step2,
+        note: nEl ? nEl.value : current.note,
+    };
+    saveParentCardConfig(cfg);
+    syncParentCardTextsOnCards(cfg);
+    syncModalCustomInputs(cfg);
+}
+
+function saveParentCardCustomTextFromModalUI() {
+    const tEl = document.getElementById('modal-card-cfg-title');
+    const s1El = document.getElementById('modal-card-cfg-step1');
+    const s2El = document.getElementById('modal-card-cfg-step2');
+    const nEl = document.getElementById('modal-card-cfg-note');
+    const current = getParentCardConfig();
+    const cfg = {
+        title: tEl ? tEl.value : current.title,
+        step1: s1El ? s1El.value : current.step1,
+        step2: s2El ? s2El.value : current.step2,
+        note: nEl ? nEl.value : current.note,
+    };
+    saveParentCardConfig(cfg);
+    syncParentCardTextsOnCards(cfg);
+    syncTab8CustomInputs(cfg);
+}
+
+function handleCardDirectEdit(field, el) {
+    const text = el.innerText.replace(/^\n+|\n+$/g, '');
+    const cfg = getParentCardConfig();
+    cfg[field] = text;
+    saveParentCardConfig(cfg);
+
+    // 同步到預覽頁面上的其他所有小卡
+    const selectorMap = {
+        title: '.card-editable-title',
+        step1: '.card-editable-step1',
+        step2: '.card-editable-step2',
+        note: '.card-editable-note'
+    };
+    const targetClass = selectorMap[field];
+    if (targetClass) {
+        document.querySelectorAll(targetClass).forEach(target => {
+            if (target !== el && target.innerText !== text) {
+                target.innerText = text;
+            }
+        });
+    }
+
+    // 同步更新設定面板中的輸入框
+    syncTab8CustomInputs(cfg);
+    syncModalCustomInputs(cfg);
+}
+
+function resetParentCardCustomText() {
+    saveParentCardConfig(DEFAULT_PARENT_CARD_CONFIG);
+    syncParentCardTextsOnCards(DEFAULT_PARENT_CARD_CONFIG);
+    syncTab8CustomInputs(DEFAULT_PARENT_CARD_CONFIG);
+    syncModalCustomInputs(DEFAULT_PARENT_CARD_CONFIG);
+    if (typeof showToast === 'function') {
+        showToast('已重設為預設文字內容！', 'success');
+    }
+}
+
+function toggleParentTabCustomTextPanel() {
+    const panel = document.getElementById('parent-tab-custom-panel');
+    const icon = document.getElementById('parent-tab-custom-toggle-icon');
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+        panel.classList.remove('hidden');
+        if (icon) icon.innerText = '▲ 收合設定';
+        syncTab8CustomInputs();
+    } else {
+        panel.classList.add('hidden');
+        if (icon) icon.innerText = '▼ 展開設定';
+    }
+}
+
+function toggleModalCardCustomPanel() {
+    const panel = document.getElementById('modal-card-custom-panel');
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+        panel.classList.remove('hidden');
+        syncModalCustomInputs();
+    } else {
+        panel.classList.add('hidden');
+    }
+}
+
+function changeParentCardDensityInModal(val) {
+    const density = parseInt(val, 10) || 6;
+    window._currentParentCardsDensity = density;
+    const tab8Density = document.getElementById('parent-tab-card-density');
+    if (tab8Density) tab8Density.value = String(density);
+    const tab4Density = document.getElementById('parent-card-density');
+    if (tab4Density) tab4Density.value = String(density);
+    const studentIds = window._currentParentCardStudentIds || db.students.map(s => s.id);
+    renderParentCardsContent(studentIds, density);
+}
+
+// ==========================================
+// 家長端專屬查詢小卡預覽與列印模組 (比照 MPScore)
+// ==========================================
+async function previewParentCardsModal(explicitStudentIds, explicitDensity) {
+    let studentIds = explicitStudentIds;
+    if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+        const tab8Checked = Array.from(document.querySelectorAll('.parent-tab-stu-cb:checked')).map(cb => parseInt(cb.value, 10));
+        if (tab8Checked.length > 0) {
+            studentIds = tab8Checked;
+        } else {
+            studentIds = getCheckedStudentIds('tab4-student-checkboxes');
+        }
+    }
+    if (!studentIds || studentIds.length === 0) {
+        studentIds = db.students.map(s => s.id);
+    }
+    if (studentIds.length === 0) {
+        showAlert('提示', '尚未建立任何學生名單！');
+        return;
+    }
+
+    let cardsPerPage = explicitDensity;
+    if (!cardsPerPage) {
+        const densitySelect = document.getElementById('parent-tab-card-density') || document.getElementById('parent-card-density');
+        cardsPerPage = densitySelect ? parseInt(densitySelect.value, 10) || 6 : 6;
+    }
+
+    window._currentParentCardStudentIds = studentIds;
+    window._currentParentCardsDensity = cardsPerPage;
+
+    let modal = document.getElementById('parent-cards-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'parent-cards-modal';
+        modal.className = 'fixed inset-0 bg-black/60 z-50 flex flex-col justify-between p-2 sm:p-4 overflow-hidden';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-5xl max-h-[92vh] mx-auto overflow-hidden">
+                <!-- 模態框標頭 -->
+                <div class="p-3.5 bg-emerald-600 text-white flex flex-wrap justify-between items-center gap-2 no-print shadow-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">👨‍👩‍👧</span>
+                        <div>
+                            <h3 class="font-bold text-base sm:text-lg leading-tight">家長專屬查詢小卡列印預覽 (A4 排版)</h3>
+                            <p class="text-xs text-emerald-100">支援手機相機一鍵掃碼 ‧ 點擊卡片文字可直接線上編輯修改</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <!-- 密度切換 -->
+                        <div class="flex items-center gap-1.5 bg-emerald-700/80 px-2.5 py-1 rounded-xl border border-emerald-500/50 text-xs">
+                            <span class="text-emerald-100 font-bold hidden sm:inline">每頁密度：</span>
+                            <select id="modal-parent-card-density" onchange="changeParentCardDensityInModal(this.value)" class="bg-emerald-800 text-white text-xs font-bold rounded-lg px-2 py-1 border border-emerald-500 outline-none cursor-pointer">
+                                <option value="6">每頁 6 張 (3x2 推薦)</option>
+                                <option value="8">每頁 8 張 (4x2 經濟)</option>
+                                <option value="4">每頁 4 張 (2x2 大字)</option>
+                            </select>
+                        </div>
+                        <!-- 自訂文字開關 -->
+                        <button onclick="toggleModalCardCustomPanel()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3 py-1.5 rounded-xl text-xs border border-emerald-500/60 transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                            <span>✏️ 自訂文字</span>
+                        </button>
+                        <!-- 儲存 PDF 按鈕 (先產生 PDF 預覽，由使用者確認後按下載) -->
+                        <button id="btn-modal-download-pdf" onclick="downloadParentCardsPDF()" class="bg-amber-400 hover:bg-amber-300 text-amber-950 font-black px-3.5 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                            <span>📥 儲存 PDF (A4)</span>
+                        </button>
+                        <!-- 直接列印按鈕 -->
+                        <button id="btn-modal-print-a4" onclick="printParentCardsA4()" class="bg-white text-emerald-800 hover:bg-emerald-50 font-bold px-3.5 py-2 rounded-xl text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                            <span>🖨️ 直接列印 (A4)</span>
+                        </button>
+                        <button onclick="closeParentCardsModal()" class="text-white hover:bg-white/20 p-2 rounded-full text-xl transition active:scale-95 cursor-pointer leading-none">&times;</button>
+                    </div>
+                </div>
+
+                <!-- 模態框內的自訂文字面板 (預設隱藏，點擊按鈕展開) -->
+                <div id="modal-card-custom-panel" class="hidden p-3.5 bg-emerald-50 border-b border-emerald-200 no-print">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs mb-2">
+                        <div>
+                            <label class="block font-bold text-emerald-950 mb-0.5">小卡標題：</label>
+                            <input type="text" id="modal-card-cfg-title" class="w-full border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-800 bg-white outline-none focus:ring-1 focus:ring-emerald-500" oninput="saveParentCardCustomTextFromModalUI()">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-emerald-950 mb-0.5">導師叮嚀 / 親師配合叮嚀：</label>
+                            <input type="text" id="modal-card-cfg-note" class="w-full border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-800 bg-white outline-none focus:ring-1 focus:ring-emerald-500" oninput="saveParentCardCustomTextFromModalUI()">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-emerald-950 mb-0.5">步驟一 (查詢說明)：</label>
+                            <textarea id="modal-card-cfg-step1" rows="2" class="w-full border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-800 bg-white outline-none focus:ring-1 focus:ring-emerald-500" oninput="saveParentCardCustomTextFromModalUI()"></textarea>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-emerald-950 mb-0.5">步驟二 (LINE 綁定說明)：</label>
+                            <textarea id="modal-card-cfg-step2" rows="2" class="w-full border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-800 bg-white outline-none focus:ring-1 focus:ring-emerald-500" oninput="saveParentCardCustomTextFromModalUI()"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-emerald-800 font-medium">💡 亦可直接在下方卡片點選文字即時編輯（會自動同步至全班卡片並儲存）</span>
+                        <div class="space-x-2">
+                            <button onclick="resetParentCardCustomText()" class="text-rose-600 hover:text-rose-800 font-bold px-2 py-1 rounded hover:bg-rose-100 transition cursor-pointer">恢復預設文字</button>
+                            <button onclick="toggleModalCardCustomPanel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded-lg transition active:scale-95 cursor-pointer">完成收合</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PDF 檔案確認與手動下載檢視區 (點擊「📥 儲存 PDF」後顯示，確認版面無誤再按下載鍵) -->
+                <div id="parent-cards-pdf-preview-wrapper" class="hidden flex-col flex-1 bg-slate-800 overflow-hidden no-print">
+                    <div class="p-3 bg-amber-50 border-b border-amber-200 flex flex-wrap justify-between items-center gap-2">
+                        <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-950">
+                            <span class="text-lg">📄</span>
+                            <span>A4 PDF 成品已生成！請於下方確認版面無誤後，點擊右側「⬇️ 下載 PDF 檔案」儲存：</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="backToParentCardsHtmlView()" class="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold rounded-xl text-xs shadow-2xs transition active:scale-95 cursor-pointer">
+                                🔙 返回修改文字 / 調整版面
+                            </button>
+                            <button onclick="confirmDownloadGeneratedPDF()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs sm:text-sm shadow transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                                <span>⬇️ 確認版面無誤，下載 PDF 檔案</span>
+                            </button>
+                        </div>
+                    </div>
+                    <iframe id="parent-cards-pdf-preview-iframe" class="w-full flex-1 border-0 bg-slate-700" style="min-height: 68vh;"></iframe>
+                </div>
+
+                <!-- 預覽容器 (A4 表格滾動區) -->
+                <div id="parent-cards-print-container" class="p-4 sm:p-6 overflow-y-auto bg-slate-100 flex-1 space-y-6">
+                    <div class="text-center py-10 text-gray-500 font-bold">正在生成 QR Code 排版中...</div>
+                </div>
+
+                <!-- 底部操作列 -->
+                <div class="p-3 bg-gray-50 border-t flex flex-wrap justify-between items-center gap-2 text-xs text-gray-500 no-print">
+                    <span id="parent-cards-page-stats">全班預計產生 A4 列印頁面</span>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-footer-confirm-pdf-dl" onclick="confirmDownloadGeneratedPDF()" class="hidden px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow transition active:scale-95 cursor-pointer">⬇️ 下載 PDF 檔案</button>
+                        <button id="btn-footer-preview-pdf" onclick="downloadParentCardsPDF()" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg shadow-2xs transition active:scale-95 cursor-pointer">📥 儲存 PDF 檔</button>
+                        <button onclick="printParentCardsA4()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-2xs transition active:scale-95 cursor-pointer">🖨️ 直接列印</button>
+                        <button onclick="closeParentCardsModal()" class="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition active:scale-95 cursor-pointer">關閉視窗</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    backToParentCardsHtmlView();
+
+    const modalDensitySelect = document.getElementById('modal-parent-card-density');
+    if (modalDensitySelect) {
+        modalDensitySelect.value = String(cardsPerPage);
+    }
+    syncModalCustomInputs();
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+
+    await renderParentCardsContent(studentIds, cardsPerPage);
+}
+
+function closeParentCardsModal() {
+    const modal = document.getElementById('parent-cards-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
+
+function backToParentCardsHtmlView() {
+    const pdfWrapper = document.getElementById('parent-cards-pdf-preview-wrapper');
+    const htmlContainer = document.getElementById('parent-cards-print-container');
+    const footerConfirmBtn = document.getElementById('btn-footer-confirm-pdf-dl');
+    const footerPreviewBtn = document.getElementById('btn-footer-preview-pdf');
+    if (pdfWrapper) {
+        pdfWrapper.classList.add('hidden');
+        pdfWrapper.style.display = 'none';
+    }
+    if (htmlContainer) {
+        htmlContainer.classList.remove('hidden');
+        htmlContainer.style.display = '';
+    }
+    if (footerConfirmBtn) footerConfirmBtn.classList.add('hidden');
+    if (footerPreviewBtn) footerPreviewBtn.classList.remove('hidden');
+}
+
+async function renderParentCardsContent(studentIds, cardsPerPage) {
+    backToParentCardsHtmlView();
+    const container = document.getElementById('parent-cards-print-container');
+    if (!container) return;
+    container.innerHTML = '<div class="text-center py-10 text-gray-500 font-bold">正在生成 QR Code 排版中...</div>';
+
+    const pool = db.students.filter(s => studentIds.includes(s.id));
+    const totalStudents = pool.length;
+    const totalPages = Math.ceil(totalStudents / cardsPerPage);
+
+    const statsEl = document.getElementById('parent-cards-page-stats');
+    if (statsEl) {
+        statsEl.innerText = `全班共 ${totalStudents} 位學生 ‧ 預計產生 ${totalPages} 頁 A4 (每頁 ${cardsPerPage} 張)`;
+    }
+
+    let classLabel = '本班級';
+    try {
+        const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+        if (cls && cls.label) classLabel = cls.label;
+    } catch(e) {}
+
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const parentBaseUrl = window.location.origin + basePath + 'parent.html';
+
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+
+    const cfg = getParentCardConfig();
+
+    // 精準調校 A4 (794x1123px) 內各密度的高度與字級，確保 6張/8張/4張 絕不超出單頁高度
+    let gridClass = 'grid-cols-2 grid-rows-3 gap-3';
+    let qrPixelSize = 240;
+    let qrDisplaySize = 95;
+    let cardPadding = 'p-2.5';
+    let nameSize = 'text-xl';
+    let stepPadding = 'p-1.5';
+    let stepTextSize = 'text-[9.5px]';
+    let middlePy = 'py-1';
+    let bottomSpace = 'space-y-1 pt-1.5';
+
+    if (cardsPerPage === 8) {
+        gridClass = 'grid-cols-2 grid-rows-4 gap-2';
+        qrPixelSize = 200;
+        qrDisplaySize = 72;
+        cardPadding = 'p-2';
+        nameSize = 'text-lg';
+        stepPadding = 'p-1';
+        stepTextSize = 'text-[8.5px]';
+        middlePy = 'py-0.5';
+        bottomSpace = 'space-y-1 pt-1';
+    } else if (cardsPerPage === 4) {
+        gridClass = 'grid-cols-2 grid-rows-2 gap-4';
+        qrPixelSize = 300;
+        qrDisplaySize = 128;
+        cardPadding = 'p-4';
+        nameSize = 'text-3xl';
+        stepPadding = 'p-2.5';
+        stepTextSize = 'text-xs';
+        middlePy = 'py-2';
+        bottomSpace = 'space-y-2 pt-2';
+    }
+
+    container.innerHTML = '';
+
+    if (window.location.protocol === 'file:') {
+        container.innerHTML += `
+            <div class="p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs text-rose-800 font-bold mb-4 no-print flex items-center gap-2">
+                <span class="text-lg">🚨</span>
+                <span>注意：您目前以本地檔案模式 (file://) 開啟，產生的 QR Code 為本機電腦路徑，家長手機無法連線！請務必部署至 GitHub Pages 後再列印發放！</span>
+            </div>
+        `;
+    } else if (!gas) {
+        container.innerHTML += `
+            <div class="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-800 font-bold mb-4 no-print flex items-center gap-2">
+                <span class="text-lg">⚠️</span>
+                <span>溫馨提醒：尚未設定 Google 試算表 GAS 網址！若未設定雲端 API，家長手機掃碼後將無法連線讀取即時作業資料。請先至【0. 資料建置】填入 GAS 網址！</span>
+            </div>
+        `;
+    }
+
+    for (let p = 0; p < totalPages; p++) {
+        const start = p * cardsPerPage;
+        const pageStudents = pool.slice(start, start + cardsPerPage);
+
+        const sheetEl = document.createElement('div');
+        sheetEl.className = 'a4-print-sheet flex flex-col justify-between';
+
+        const gridEl = document.createElement('div');
+        gridEl.className = `grid ${gridClass} flex-1 min-h-0`;
+        sheetEl.appendChild(gridEl);
+
+        for (const st of pageStudents) {
+            const token = st.token || ('STU' + String(st.id).padStart(3, '0'));
+            const queryUrl = `${parentBaseUrl}?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+
+            let qrDataUrl = '';
+            try {
+                qrDataUrl = await QRCode.toDataURL(queryUrl, {
+                    width: qrPixelSize,
+                    margin: 1,
+                    errorCorrectionLevel: 'M'
+                });
+            } catch(e) {
+                console.warn('QR code gen error:', e);
+            }
+
+            const card = document.createElement('div');
+            card.className = `border-2 border-dashed border-slate-300 rounded-2xl ${cardPadding} bg-white flex flex-col justify-between relative shadow-2xs h-full min-h-0 overflow-hidden`;
+            card.innerHTML = `
+                <!-- 頂部標頭 (強制單行不換行) -->
+                <div class="flex justify-between items-center gap-1 border-b border-slate-200 pb-1 flex-shrink-0">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 select-none whitespace-nowrap shrink-0">${escapeCardHtml(classLabel)}</span>
+                        <span class="card-editable-title text-xs sm:text-sm font-black text-slate-800 tracking-tight cursor-text whitespace-nowrap truncate" contenteditable="true" spellcheck="false" title="點擊可直接修改全班標題" oninput="handleCardDirectEdit('title', this)">${escapeCardHtml(cfg.title)}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-mono flex items-center gap-0.5 select-none whitespace-nowrap shrink-0">✂️ 裁切發放</span>
+                </div>
+                
+                <!-- 中間核心資訊 (學生姓名、座號、查詢代碼與大 QR Code) -->
+                <div class="flex items-center justify-between gap-2.5 ${middlePy} flex-1 min-h-0">
+                    <div class="space-y-1 flex-1 min-w-0 flex flex-col justify-center">
+                        <div class="${nameSize} font-black text-slate-900 tracking-tight leading-tight truncate">${escapeCardHtml(st.name)}</div>
+                        <div class="text-xs font-bold text-slate-600 flex items-center gap-1 whitespace-nowrap">
+                            <span>座號：</span>
+                            <span class="font-mono text-sm font-black text-slate-900">${String(st.id).padStart(2, '0')} 號</span>
+                        </div>
+                        <div class="bg-emerald-50/90 border border-emerald-300 rounded-xl px-2.5 py-0.5 inline-block shadow-2xs self-start">
+                            <div class="text-[9px] text-emerald-800 font-bold leading-tight whitespace-nowrap">專屬查詢代碼</div>
+                            <div class="text-xs sm:text-sm font-mono font-black text-emerald-950 tracking-wider leading-tight whitespace-nowrap">${escapeCardHtml(token)}</div>
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 flex flex-col items-center justify-center p-1 bg-white border border-slate-200 rounded-xl shadow-xs">
+                        <img src="${qrDataUrl}" width="${qrDisplaySize}" height="${qrDisplaySize}" alt="QR" class="rounded">
+                        <span class="text-[8.5px] text-slate-400 font-bold mt-0.5 select-none whitespace-nowrap">相機掃描免帳密</span>
+                    </div>
+                </div>
+
+                <!-- 底部指引：如何查詢、如何綁定與導師叮嚀 -->
+                <div class="${bottomSpace} border-t border-slate-100 flex-shrink-0">
+                    <div class="bg-slate-50/90 border border-slate-200/80 rounded-lg ${stepPadding} flex items-start gap-1.5">
+                        <div class="w-4 h-4 rounded-md bg-emerald-500 text-white flex items-center justify-center font-bold text-[9px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
+                            1
+                        </div>
+                        <div class="${stepTextSize} text-slate-700 leading-tight card-editable-step1 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟一說明" oninput="handleCardDirectEdit('step1', this)">${escapeCardHtml(cfg.step1)}</div>
+                    </div>
+                    <div class="bg-slate-50/90 border border-slate-200/80 rounded-lg ${stepPadding} flex items-start gap-1.5">
+                        <div class="w-4 h-4 rounded-md bg-blue-500 text-white flex items-center justify-center font-bold text-[9px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
+                            2
+                        </div>
+                        <div class="${stepTextSize} text-slate-700 leading-tight card-editable-step2 cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改步驟二說明" oninput="handleCardDirectEdit('step2', this)">${escapeCardHtml(cfg.step2)}</div>
+                    </div>
+                    <div class="bg-amber-50/70 border border-amber-200/70 rounded-lg ${stepPadding} flex items-start gap-1.5">
+                        <div class="w-4 h-4 rounded-md bg-amber-500 text-white flex items-center justify-center font-bold text-[9px] flex-shrink-0 mt-0.5 shadow-2xs select-none">
+                            💡
+                        </div>
+                        <div class="${stepTextSize} text-amber-950 leading-tight card-editable-note font-medium cursor-text" contenteditable="true" spellcheck="false" title="點擊可直接修改導師叮嚀" oninput="handleCardDirectEdit('note', this)">${escapeCardHtml(cfg.note)}</div>
+                    </div>
+                </div>
+            `;
+            gridEl.appendChild(card);
+        }
+
+        const footerEl = document.createElement('div');
+        footerEl.className = 'text-center text-[10px] text-slate-400 pt-1.5 border-t border-slate-200 mt-1.5 flex justify-between items-center flex-shrink-0';
+        footerEl.innerHTML = `
+            <span>✂️ 請沿虛線裁切發給家長</span>
+            <span class="font-bold text-slate-600">第 ${p + 1} / ${totalPages} 頁 ‧ 👨‍👩‍👧【家長發放版】(每頁 ${cardsPerPage} 張)</span>
+            <span>QRcode 自動清點作業系統</span>
+        `;
+        sheetEl.appendChild(footerEl);
+        container.appendChild(sheetEl);
+    }
+}
+
+// Canvas 圓角矩形輔助函式
+function drawRoundRectPath(ctx, x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+// Canvas 自動斷行輔助函式
+function wrapCanvasLines(ctx, text, maxWidth) {
+    const str = (text || '').toString().trim();
+    if (!str) return [''];
+    const lines = [];
+    let currentLine = '';
+    for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (ch === '\n') {
+            lines.push(currentLine);
+            currentLine = '';
+            continue;
+        }
+        const testLine = currentLine + ch;
+        if (ctx.measureText(testLine).width > maxWidth && currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = ch;
+        } else {
+            currentLine = testLine;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+}
+
+// 載入 Image Promise
+function loadCanvasImage(src) {
+    return new Promise((resolve) => {
+        if (!src) return resolve(null);
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    });
+}
+
+// 使用原生 HTML5 2D Canvas 高解析度繪製單頁 A4 小卡 (徹底根除 html2canvas 中文字底部裁切與位移問題)
+async function renderParentCardPageToCanvas(pageStudents, pageIndex, totalPages, cardsPerPage, cfg, classLabel, parentBaseUrl, apiParam) {
+    const scale = 2.5; // 2.5x 超高解析度 (1985 x 2808 px)
+    const sheetW = 794;
+    const sheetH = 1123;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(sheetW * scale);
+    canvas.height = Math.round(sheetH * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    const fontSans = '-apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", "Heiti TC", sans-serif';
+    const fontMono = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+
+    // 1. 繪製 A4 白底
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, sheetW, sheetH);
+
+    const padX = 26;
+    const padTop = 24;
+    const footerY = sheetH - 36;
+
+    // 2. 繪製底部頁尾
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padX, footerY);
+    ctx.lineTo(sheetW - padX, footerY);
+    ctx.stroke();
+
+    ctx.textBaseline = 'middle';
+    const footerTextY = footerY + 14;
+    ctx.font = `500 10px ${fontSans}`;
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'left';
+    ctx.fillText('✂️ 請沿虛線裁切發給家長', padX, footerTextY);
+
+    ctx.font = `700 10px ${fontSans}`;
+    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'center';
+    ctx.fillText(`第 ${pageIndex + 1} / ${totalPages} 頁 ‧ 👨‍👩‍👧【家長發放版】(每頁 ${cardsPerPage} 張)`, sheetW / 2, footerTextY);
+
+    ctx.font = `500 10px ${fontSans}`;
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'right';
+    ctx.fillText('QRcode 自動清點作業系統', sheetW - padX, footerTextY);
+
+    // 3. 計算小卡網格配置
+    const gridW = sheetW - padX * 2;
+    const gridH = footerY - 10 - padTop;
+    const cols = 2;
+    const rows = Math.ceil(cardsPerPage / 2);
+    const gap = cardsPerPage === 8 ? 8 : (cardsPerPage === 4 ? 16 : 12);
+    const cardW = (gridW - gap * (cols - 1)) / cols;
+    const cardH = (gridH - gap * (rows - 1)) / rows;
+
+    const qrPixelSize = cardsPerPage === 8 ? 220 : (cardsPerPage === 4 ? 320 : 260);
+
+    for (let idx = 0; idx < pageStudents.length; idx++) {
+        const st = pageStudents[idx];
+        const col = idx % cols;
+        const row = Math.floor(idx / cols);
+        const cx = padX + col * (cardW + gap);
+        const cy = padTop + row * (cardH + gap);
+
+        // 卡片外框 (圓角虛線)
+        ctx.save();
+        drawRoundRectPath(ctx, cx, cy, cardW, cardH, 14);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([6, 4]);
+        ctx.stroke();
+        ctx.restore();
+
+        const cPad = cardsPerPage === 8 ? 9 : (cardsPerPage === 4 ? 16 : 12);
+        const ix = cx + cPad;
+        const iy = cy + cPad;
+        const iw = cardW - cPad * 2;
+        const ih = cardH - cPad * 2;
+
+        // --- 頂部標頭列 ---
+        const headerH = cardsPerPage === 8 ? 22 : (cardsPerPage === 4 ? 30 : 25);
+        const headerCenterY = iy + headerH / 2 - 2;
+
+        // 班級綠色膠囊
+        ctx.font = `700 ${cardsPerPage === 8 ? 10 : 11}px ${fontSans}`;
+        const clsTextW = ctx.measureText(classLabel).width;
+        const pillW = clsTextW + 16;
+        const pillH = cardsPerPage === 8 ? 18 : 20;
+        const pillY = headerCenterY - pillH / 2;
+
+        drawRoundRectPath(ctx, ix, pillY, pillW, pillH, pillH / 2);
+        ctx.fillStyle = '#ecfdf5';
+        ctx.fill();
+        ctx.strokeStyle = '#a7f3d0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = '#065f46';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(classLabel, ix + pillW / 2, headerCenterY);
+
+        // 右側「✂️ 裁切發放」
+        ctx.font = `500 10px ${fontSans}`;
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'right';
+        ctx.fillText('✂️ 裁切發放', ix + iw, headerCenterY);
+        const cutLabelW = ctx.measureText('✂️ 裁切發放').width + 8;
+
+        // 小卡標題
+        const titleFontPx = cardsPerPage === 8 ? 12 : (cardsPerPage === 4 ? 15 : 13.5);
+        ctx.font = `900 ${titleFontPx}px ${fontSans}`;
+        ctx.fillStyle = '#1e293b';
+        ctx.textAlign = 'left';
+        const titleMaxW = Math.max(40, iw - pillW - cutLabelW - 8);
+        ctx.fillText(cfg.title || '作業繳交狀況查詢卡', ix + pillW + 7, headerCenterY, titleMaxW);
+
+        // 標頭底線
+        const headerLineY = iy + headerH;
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ix, headerLineY);
+        ctx.lineTo(ix + iw, headerLineY);
+        ctx.stroke();
+
+        // --- 底部三步驟說明區 (由下往上計算精確高度) ---
+        const stepFontPx = cardsPerPage === 8 ? 8.6 : (cardsPerPage === 4 ? 11.2 : 9.6);
+        const lineH = stepFontPx * 1.38;
+        const bPadX = cardsPerPage === 8 ? 6 : 8;
+        const bPadY = cardsPerPage === 8 ? 3.5 : (cardsPerPage === 4 ? 7 : 5);
+        const iconSize = cardsPerPage === 8 ? 14 : (cardsPerPage === 4 ? 19 : 16);
+        const textMaxW = iw - bPadX * 2 - iconSize - 7;
+
+        ctx.font = `500 ${stepFontPx}px ${fontSans}`;
+        const lines1 = wrapCanvasLines(ctx, cfg.step1, textMaxW);
+        const lines2 = wrapCanvasLines(ctx, cfg.step2, textMaxW);
+        ctx.font = `700 ${stepFontPx}px ${fontSans}`;
+        const lines3 = wrapCanvasLines(ctx, cfg.note, textMaxW);
+
+        const box1H = Math.max(iconSize + bPadY * 2, lines1.length * lineH + bPadY * 2);
+        const box2H = Math.max(iconSize + bPadY * 2, lines2.length * lineH + bPadY * 2);
+        const box3H = Math.max(iconSize + bPadY * 2, lines3.length * lineH + bPadY * 2);
+        const stepGap = cardsPerPage === 8 ? 3 : (cardsPerPage === 4 ? 6 : 4.5);
+        const totalBottomH = box1H + box2H + box3H + stepGap * 2 + (cardsPerPage === 8 ? 5 : 7);
+
+        const bottomTopY = iy + ih - totalBottomH;
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ix, bottomTopY);
+        ctx.lineTo(ix + iw, bottomTopY);
+        ctx.stroke();
+
+        const stepsData = [
+            { lines: lines1, boxH: box1H, bg: '#f8fafc', border: '#e2e8f0', badgeBg: '#10b981', badgeText: '1', textColor: '#334155', weight: '500' },
+            { lines: lines2, boxH: box2H, bg: '#f8fafc', border: '#e2e8f0', badgeBg: '#3b82f6', badgeText: '2', textColor: '#334155', weight: '500' },
+            { lines: lines3, boxH: box3H, bg: '#fffbeb', border: '#fde68a', badgeBg: '#f59e0b', badgeText: '💡', textColor: '#451a03', weight: '700' }
+        ];
+
+        let curStepY = bottomTopY + (cardsPerPage === 8 ? 5 : 7);
+        for (const sItem of stepsData) {
+            drawRoundRectPath(ctx, ix, curStepY, iw, sItem.boxH, 8);
+            ctx.fillStyle = sItem.bg;
+            ctx.fill();
+            ctx.strokeStyle = sItem.border;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // 步驟編號方塊
+            const badgeX = ix + bPadX;
+            const badgeY = curStepY + bPadY + 1;
+            drawRoundRectPath(ctx, badgeX, badgeY, iconSize, iconSize, 5);
+            ctx.fillStyle = sItem.badgeBg;
+            ctx.fill();
+
+            ctx.font = `700 ${cardsPerPage === 8 ? 8.5 : 9.5}px ${fontSans}`;
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(sItem.badgeText, badgeX + iconSize / 2, badgeY + iconSize / 2);
+
+            // 步驟內文
+            ctx.font = `${sItem.weight} ${stepFontPx}px ${fontSans}`;
+            ctx.fillStyle = sItem.textColor;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            const textStartX = badgeX + iconSize + 7;
+            for (let lIdx = 0; lIdx < sItem.lines.length; lIdx++) {
+                const lineCenterY = curStepY + bPadY + (lIdx + 0.5) * lineH;
+                ctx.fillText(sItem.lines[lIdx], textStartX, lineCenterY);
+            }
+
+            curStepY += sItem.boxH + stepGap;
+        }
+
+        // --- 中間核心資訊區 (姓名、座號、代碼與 QR Code) ---
+        const midTopY = headerLineY + 2;
+        const midBotY = bottomTopY - 2;
+        const midH = Math.max(60, midBotY - midTopY);
+
+        // 右側 QR Code 區塊
+        const token = st.token || ('STU' + String(st.id).padStart(3, '0'));
+        const queryUrl = `${parentBaseUrl}?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+        let qrDataUrl = '';
+        try {
+            qrDataUrl = await QRCode.toDataURL(queryUrl, {
+                width: qrPixelSize,
+                margin: 1,
+                errorCorrectionLevel: 'M'
+            });
+        } catch(e) {}
+
+        const maxQrByHeight = Math.max(56, midH - 22);
+        const targetQr = cardsPerPage === 8 ? 72 : (cardsPerPage === 4 ? 128 : 96);
+        const qrDisplaySize = Math.min(targetQr, maxQrByHeight);
+        const qrBoxW = qrDisplaySize + 10;
+        const qrBoxH = qrDisplaySize + 20;
+        const qrBoxX = ix + iw - qrBoxW;
+        const qrBoxY = midTopY + (midH - qrBoxH) / 2;
+
+        drawRoundRectPath(ctx, qrBoxX, qrBoxY, qrBoxW, qrBoxH, 10);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        const qrImg = await loadCanvasImage(qrDataUrl);
+        if (qrImg) {
+            ctx.drawImage(qrImg, qrBoxX + 5, qrBoxY + 4, qrDisplaySize, qrDisplaySize);
+        }
+        ctx.font = `700 8.5px ${fontSans}`;
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('相機掃描免帳密', qrBoxX + qrBoxW / 2, qrBoxY + 4 + qrDisplaySize + 8);
+
+        // 左側學生姓名、座號與專屬查詢代碼
+        const leftMaxW = Math.max(80, qrBoxX - ix - 10);
+        const nameFontPx = cardsPerPage === 8 ? 19 : (cardsPerPage === 4 ? 28 : 22);
+        const seatFontPx = cardsPerPage === 8 ? 12 : (cardsPerPage === 4 ? 15 : 13);
+        const tokenBoxH = cardsPerPage === 8 ? 30 : (cardsPerPage === 4 ? 38 : 34);
+        const blockGap = cardsPerPage === 8 ? 5 : (cardsPerPage === 4 ? 10 : 7);
+        const totalLeftH = nameFontPx + seatFontPx + tokenBoxH + blockGap * 2;
+        let curLeftY = midTopY + (midH - totalLeftH) / 2;
+
+        // 學生姓名
+        ctx.font = `900 ${nameFontPx}px ${fontSans}`;
+        ctx.fillStyle = '#0f172a';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(st.name || '', ix, curLeftY + nameFontPx / 2, leftMaxW);
+        curLeftY += nameFontPx + blockGap;
+
+        // 座號
+        const seatCenterY = curLeftY + seatFontPx / 2;
+        ctx.font = `700 ${seatFontPx}px ${fontSans}`;
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'left';
+        ctx.fillText('座號：', ix, seatCenterY);
+        const seatLabelW = ctx.measureText('座號：').width;
+
+        ctx.font = `900 ${seatFontPx + 2}px ${fontMono}`;
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(`${String(st.id).padStart(2, '0')} 號`, ix + seatLabelW, seatCenterY);
+        curLeftY += seatFontPx + blockGap;
+
+        // 專屬查詢代碼框
+        ctx.font = `900 ${cardsPerPage === 8 ? 12.5 : 14}px ${fontMono}`;
+        const tokenValW = ctx.measureText(token).width;
+        ctx.font = `700 9px ${fontSans}`;
+        const tokenTitleW = ctx.measureText('專屬查詢代碼').width;
+        const tokenBoxW = Math.max(tokenValW, tokenTitleW) + 20;
+
+        drawRoundRectPath(ctx, ix, curLeftY, tokenBoxW, tokenBoxH, 9);
+        ctx.fillStyle = '#ecfdf5';
+        ctx.fill();
+        ctx.strokeStyle = '#6ee7b7';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.font = `700 9px ${fontSans}`;
+        ctx.fillStyle = '#065f46';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('專屬查詢代碼', ix + 10, curLeftY + tokenBoxH * 0.32);
+
+        ctx.font = `900 ${cardsPerPage === 8 ? 12.5 : 14}px ${fontMono}`;
+        ctx.fillStyle = '#022c22';
+        ctx.fillText(token, ix + 10, curLeftY + tokenBoxH * 0.72);
+    }
+
+    return canvas;
+}
+
+let currentParentCardsPdfBlobUrl = null;
+
+// 將所選學生小卡透過原生 Canvas 轉為高解析度多頁 A4 PDF Blob (零文字重疊/零截斷)
+async function buildParentCardsPdfBlob(onProgress) {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+    }
+
+    const studentIds = window._currentParentCardStudentIds || db.students.map(s => s.id);
+    const cardsPerPage = window._currentParentCardsDensity || 6;
+    const pool = db.students.filter(s => studentIds.includes(s.id));
+    if (pool.length === 0) throw new Error('目前沒有可匯出的學生資料');
+
+    const totalPages = Math.ceil(pool.length / cardsPerPage);
+    let classLabel = '本班級';
+    try {
+        const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+        if (cls && cls.label) classLabel = cls.label;
+    } catch(e) {}
+
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const parentBaseUrl = window.location.origin + basePath + 'parent.html';
+
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+
+    const cfg = getParentCardConfig();
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    const a4W = 595.28;
+    const a4H = 841.89;
+
+    for (let p = 0; p < totalPages; p++) {
+        if (typeof onProgress === 'function') {
+            onProgress(p + 1, totalPages);
+        }
+        const start = p * cardsPerPage;
+        const pageStudents = pool.slice(start, start + cardsPerPage);
+        const canvas = await renderParentCardPageToCanvas(
+            pageStudents,
+            p,
+            totalPages,
+            cardsPerPage,
+            cfg,
+            classLabel,
+            parentBaseUrl,
+            apiParam
+        );
+        const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
+        const jpgBytes = await fetch(jpgDataUrl).then(r => r.arrayBuffer());
+        const jpgImg = await pdfDoc.embedJpg(jpgBytes);
+        const page = pdfDoc.addPage([a4W, a4H]);
+        page.drawImage(jpgImg, {
+            x: 0,
+            y: 0,
+            width: a4W,
+            height: a4H
+        });
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    return new Blob([pdfBytes], { type: 'application/pdf' });
+}
+
+// 點擊「📥 儲存 PDF (A4)」：產生 PDF 成品並顯示於預覽視窗，由使用者確認版面無誤後自行按「下載 PDF 檔案」鍵
+async function downloadParentCardsPDF() {
+    const btn = document.getElementById('btn-modal-download-pdf');
+    const origHtml = btn ? btn.innerHTML : '';
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 產生 PDF 預覽中...</span>';
+        }
+        showToast('正在產生 A4 PDF 版面預覽，請稍候...', 'info');
+
+        const blob = await buildParentCardsPdfBlob((curr, total) => {
+            if (btn) btn.innerHTML = `<span>⏳ 轉換第 ${curr}/${total} 頁...</span>`;
+        });
+
+        if (currentParentCardsPdfBlobUrl) {
+            try { URL.revokeObjectURL(currentParentCardsPdfBlobUrl); } catch(e) {}
+        }
+        currentParentCardsPdfBlobUrl = URL.createObjectURL(blob);
+
+        const pdfWrapper = document.getElementById('parent-cards-pdf-preview-wrapper');
+        const pdfIframe = document.getElementById('parent-cards-pdf-preview-iframe');
+        const htmlContainer = document.getElementById('parent-cards-print-container');
+        const footerConfirmBtn = document.getElementById('btn-footer-confirm-pdf-dl');
+        const footerPreviewBtn = document.getElementById('btn-footer-preview-pdf');
+
+        if (pdfIframe) {
+            pdfIframe.src = currentParentCardsPdfBlobUrl;
+        }
+        if (htmlContainer) {
+            htmlContainer.classList.add('hidden');
+            htmlContainer.style.display = 'none';
+        }
+        if (pdfWrapper) {
+            pdfWrapper.classList.remove('hidden');
+            pdfWrapper.style.display = 'flex';
+        }
+        if (footerConfirmBtn) footerConfirmBtn.classList.remove('hidden');
+        if (footerPreviewBtn) footerPreviewBtn.classList.add('hidden');
+
+        showToast('📄 PDF 預覽已產生！確認版面無誤後請點擊「⬇️ 下載 PDF 檔案」', 'success');
+    } catch (err) {
+        console.error('downloadParentCardsPDF error:', err);
+        showAlert('產生 PDF 預覽失敗', err.message || String(err));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml || '<span>📥 儲存 PDF (A4)</span>';
+        }
+    }
+}
+
+// 使用者確認 PDF 版面沒問題後，點擊「⬇️ 確認版面無誤，下載 PDF 檔案」才執行實際下載
+function confirmDownloadGeneratedPDF() {
+    if (!currentParentCardsPdfBlobUrl) {
+        downloadParentCardsPDF();
+        return;
+    }
+    let classLabel = '全班';
+    try {
+        const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+        if (cls && cls.label) classLabel = cls.label;
+    } catch(e) {}
+
+    const a = document.createElement('a');
+    a.href = currentParentCardsPdfBlobUrl;
+    a.download = `作業繳交狀況查詢卡_${classLabel}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('✅ PDF 檔案已開始下載！', 'success');
+}
+
+// 從 Tab 8 點擊「📥 儲存 PDF」：開啟預覽並切換至 PDF 成品檢視，待使用者確認無誤後自行點擊下載鍵
+async function downloadParentCardsPDFFromTab8() {
+    const density = parseInt(document.getElementById('parent-tab-card-density').value, 10) || 6;
+    const checkedIds = Array.from(document.querySelectorAll('.parent-tab-stu-cb:checked')).map(cb => parseInt(cb.value, 10));
+    if (checkedIds.length === 0) {
+        showAlert('提示', '請至少勾選一位學生！');
+        return;
+    }
+    await previewParentCardsModal(checkedIds, density);
+    await downloadParentCardsPDF();
+}
+
+// 直接列印 (A4)：產生精準 A4 PDF 並透過瀏覽器內建 PDF 列印引擎列印 (避免網頁滾動條截斷)
+async function printParentCardsA4() {
+    const btn = document.getElementById('btn-modal-print-a4');
+    const origHtml = btn ? btn.innerHTML : '';
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 準備列印頁面...</span>';
+        }
+        const blob = await buildParentCardsPdfBlob((curr, total) => {
+            if (btn) btn.innerHTML = `<span>⏳ 排版第 ${curr}/${total} 頁...</span>`;
+        });
+        const pdfUrl = URL.createObjectURL(blob);
+
+        let printFrame = document.getElementById('parent-cards-pdf-print-frame');
+        if (printFrame) printFrame.remove();
+        printFrame = document.createElement('iframe');
+        printFrame.id = 'parent-cards-pdf-print-frame';
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        printFrame.src = pdfUrl;
+        document.body.appendChild(printFrame);
+
+        printFrame.onload = () => {
+            setTimeout(() => {
+                try {
+                    printFrame.contentWindow.focus();
+                    printFrame.contentWindow.print();
+                } catch (e) {
+                    window.print();
+                }
+            }, 300);
+        };
+    } catch (err) {
+        console.warn('PDF print fallback to window.print():', err);
+        window.print();
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml || '<span>🖨️ 直接列印 (A4)</span>';
+        }
+    }
+}
+
+// ==========================================
+// Tab 8: 家長手札與專屬查詢小卡中心
+// ==========================================
+let currentSimulatorStudentId = null;
+let currentParentViewStats = {};
+let currentParentViewLogs = [];
+
+function renderParentTab() {
+    const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+    const classLabel = cls ? cls.label : '目前班級';
+    const labelEl = document.getElementById('parent-tab-class-label');
+    if (labelEl) labelEl.innerText = classLabel;
+
+    // 1. 渲染學生勾選框清單
+    const selector = document.getElementById('parent-tab-students-selector');
+    if (selector) {
+        selector.innerHTML = '';
+        db.students.forEach(s => {
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-1.5 p-1.5 hover:bg-white rounded cursor-pointer border border-transparent hover:border-slate-200 transition';
+            label.innerHTML = `
+                <input type="checkbox" value="${s.id}" checked class="parent-tab-stu-cb rounded text-emerald-600 focus:ring-emerald-500" onchange="updateParentTabSelectedCount()">
+                <span class="font-bold text-slate-700">${String(s.id).padStart(2, '0')} ${s.name}</span>
+            `;
+            selector.appendChild(label);
+        });
+        updateParentTabSelectedCount();
+    }
+
+    // 2. 渲染全班 Token 代碼表
+    const tbody = document.getElementById('parent-tab-tokens-tbody');
+    if (tbody) {
+        tbody.innerHTML = '';
+        const gas = appConfig.gasUrl || '';
+        let apiParam = '';
+        if (gas && gas.includes('/macros/s/')) {
+            apiParam = gas.split('/macros/s/')[1].split('/')[0];
+        }
+        const currentPath = window.location.pathname;
+        let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+        const parentBaseUrl = window.location.origin + basePath + 'parent.html';
+
+        db.students.forEach(s => {
+            const token = s.token || ('STU' + String(s.id).padStart(3, '0'));
+            const directUrl = `${parentBaseUrl}?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+            
+            const vStat = currentParentViewStats ? currentParentViewStats[String(s.id)] : null;
+            let viewHtml = '<span class="text-slate-300 font-bold text-[11px]">尚未閱覽</span>';
+            if (vStat && vStat.totalViews > 0) {
+                const shortTime = formatShortViewTime(vStat.lastViewedAt);
+                const isLine = vStat.lastSource && vStat.lastSource.indexOf('LINE') !== -1;
+                const icon = isLine ? '💬' : '📱';
+                viewHtml = `
+                    <button type="button" onclick="openParentViewLogsModal('${s.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition cursor-pointer active:scale-95" title="點擊查看 ${escapeCardHtml(s.name)} 的完整閱覽足跡\n最後管道：${vStat.lastSource}\n最後時間：${vStat.lastViewedAt}\n備註：${vStat.lastNote || '無'}">
+                        <span>${icon} ${shortTime}</span>
+                        <span class="bg-indigo-200/80 text-indigo-900 rounded-full px-1 text-[10px] leading-tight">${vStat.totalViews}次</span>
+                    </button>
+                `;
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50 transition';
+            tr.innerHTML = `
+                <td class="p-2 text-center font-bold text-slate-500">${String(s.id).padStart(2, '0')}</td>
+                <td class="p-2 font-bold text-slate-800">${escapeCardHtml(s.name)}</td>
+                <td class="p-2 font-mono font-bold text-emerald-700 bg-emerald-50/50 rounded px-1.5 py-0.5">${token}</td>
+                <td class="p-2 text-center parent-view-cell" data-student-id="${s.id}">${viewHtml}</td>
+                <td class="p-2 text-center space-x-1">
+                    <button onclick="navigator.clipboard.writeText('${directUrl}').then(() => showToast('已複製 ${escapeCardHtml(s.name)} 專屬手札網址！', 'success'))" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-bold active:scale-95 transition cursor-pointer">複製</button>
+                    <a href="${directUrl}" target="_blank" class="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[11px] font-bold transition inline-block">開啟</a>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 3. 渲染手機模擬器學生下拉選單
+    const sel = document.getElementById('parent-simulator-student-select');
+    if (sel) {
+        sel.innerHTML = '';
+        db.students.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.innerText = `${String(s.id).padStart(2, '0')} ${s.name}`;
+            sel.appendChild(opt);
+        });
+        if (db.students.length > 0) {
+            updateParentSimulator(db.students[0].id);
+        } else {
+            const frame = document.getElementById('parent-simulator-frame');
+            if (frame) frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">目前班級尚無學生資料</div>';
+        }
+    }
+
+    // 4. 自動載入 LINE 官方帳號推播與綁定狀態
+    if (typeof fetchLineBindingStatus === 'function') {
+        fetchLineBindingStatus();
+    }
+
+    // 5. 同步小卡自訂文字至 Tab 8 面板輸入框
+    syncTab8CustomInputs();
+}
+
+function updateParentTabSelectedCount() {
+    const total = db.students.length;
+    const checked = document.querySelectorAll('.parent-tab-stu-cb:checked').length;
+    const el = document.getElementById('parent-tab-selected-count');
+    if (el) el.innerText = `已勾選 ${checked} / ${total} 人`;
+}
+
+function selectAllParentTabStudents(check) {
+    document.querySelectorAll('.parent-tab-stu-cb').forEach(cb => cb.checked = check);
+    updateParentTabSelectedCount();
+}
+
+function previewParentCardsFromTab8() {
+    const density = parseInt(document.getElementById('parent-tab-card-density').value, 10) || 6;
+    const checkedIds = Array.from(document.querySelectorAll('.parent-tab-stu-cb:checked')).map(cb => parseInt(cb.value, 10));
+    if (checkedIds.length === 0) {
+        showAlert('提示', '請至少勾選一位學生！');
+        return;
+    }
+    previewParentCardsModal(checkedIds, density);
+}
+
+// 學生姓名去識別化函式（個資法保護規範：三個字中間變圈圈，兩個字第二個字變圈圈）
+function maskStudentName(name) {
+    if (!name) return '';
+    const s = name.toString().trim();
+    if (s.length <= 1) return s;
+    if (s.length === 2) {
+        return s.charAt(0) + '○';
+    }
+    if (s.length === 3) {
+        return s.charAt(0) + '○' + s.charAt(2);
+    }
+    let mid = '';
+    for (let i = 1; i < s.length - 1; i++) {
+        mid += '○';
+    }
+    return s.charAt(0) + mid + s.charAt(s.length - 1);
+}
+
+// 通用家長端作業狀態分類器
+function classifyParentTaskStatus(statusStr, timestamp, deadline) {
+    const s = (statusStr || '').toString().trim();
+    const ts = (timestamp || '').toString().trim();
+
+    // 1. 缺交 / 未交 (Missing)
+    if (
+        s === '缺交' || s === '未交' || s === 'missing' || s === '曠課' ||
+        s.includes('leave_custom_缺交') || s.includes('leave_custom_未交') ||
+        s === ''
+    ) {
+        return {
+            type: 'missing',
+            label: '缺交',
+            badge: '❌ 缺交',
+            badgeClass: 'bg-rose-100 text-rose-700 border-rose-200',
+            isPending: true
+        };
+    }
+
+    // 2. 沒帶 (Forgot)
+    if (s === '沒帶' || s === 'forgot' || s.includes('leave_custom_沒帶')) {
+        return {
+            type: 'forgot',
+            label: '沒帶',
+            badge: '🎒 聯絡簿沒帶',
+            badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+            isPending: true
+        };
+    }
+
+    // 3. 退回待訂正 (Returned)
+    if (s === '退回' || s === 'returned' || s.includes('訂正') || s.includes('重交')) {
+        return {
+            type: 'returned',
+            label: '待訂正',
+            badge: '⚠️ 需訂正重交',
+            badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+            isPending: true
+        };
+    }
+
+    // 4. 請假 / 免計入分母 (Excused Leaves)
+    const standardLeaves = ['事假', '病假', '公假', '喪假', '免交', '請假', '其他假別', '其他'];
+    const isLeave = standardLeaves.includes(s) || (
+        s.startsWith('leave_') &&
+        !s.includes('曠課') && !s.includes('遲到') && !s.includes('沒帶') && !s.includes('缺交')
+    );
+    if (isLeave) {
+        let leaveName = s.replace(/^leave_custom_/, '').replace(/^leave_/, '');
+        if (!leaveName || leaveName === '其他') leaveName = '請假免交';
+        return {
+            type: 'excused',
+            label: leaveName,
+            badge: leaveName,
+            badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+            isPending: false
+        };
+    }
+
+    // 5. 遲交 (Late) - 只有教師明確註記[遲交]才計入遲交，不管時間點
+    let isLate = false;
+    if (s.includes('[遲交]') || ts.includes('[遲交]') || s === '遲交' || s === 'late') {
+        isLate = true;
+    }
+
+    if (isLate) {
+        return {
+            type: 'late',
+            label: '遲交',
+            badge: '⏰ 遲交',
+            badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+            isPending: false
+        };
+    }
+
+    // 6. 準時繳交 (On-time)
+    return {
+        type: 'ontime',
+        label: '準時',
+        badge: '✅ 準時',
+        badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        isPending: false
+    };
+}
+
+let simulatorAbortController = null;
+
+function renderParentSimulatorView(student, studentTasks, isLiveCloud = false, syncDateStr = null) {
+    const frame = document.getElementById('parent-simulator-frame');
+    if (!frame || !student) return;
+
+    // 統計計算 (採用統一分類標準)
+    let totalAssigned = studentTasks.length;
+    let onTimeCount = 0;
+    let lateCount = 0;
+    let missingCount = 0;
+    let forgotCount = 0;
+    let returnedCount = 0;
+    let excusedCount = 0;
+    const pendingItems = [];
+    const lateCountsPerTask = {};
+    const lateDetailsPerTask = {};
+
+    studentTasks.forEach(t => {
+        const c = classifyParentTaskStatus(t.status, t.timestamp, t.deadline || t.date);
+        if (c.type === 'ontime') {
+            onTimeCount++;
+        } else if (c.type === 'late') {
+            lateCount++;
+            const key = `[${t.subject}] ${t.taskName}`;
+            lateCountsPerTask[key] = (lateCountsPerTask[key] || 0) + 1;
+            if (!lateDetailsPerTask[key]) lateDetailsPerTask[key] = [];
+            lateDetailsPerTask[key].push(t.range || (t.date !== '近期' ? t.date : '日常作業'));
+        } else if (c.type === 'missing') {
+            missingCount++;
+            pendingItems.push({ subject: t.subject, taskName: t.taskName, range: t.range, date: t.date, badge: c.badge });
+        } else if (c.type === 'forgot') {
+            forgotCount++;
+            pendingItems.push({ subject: t.subject, taskName: t.taskName, range: t.range, date: t.date, badge: c.badge });
+        } else if (c.type === 'returned') {
+            returnedCount++;
+            pendingItems.push({ subject: t.subject, taskName: t.taskName, range: t.range, date: t.date, badge: c.badge });
+        } else if (c.type === 'excused') {
+            excusedCount++;
+        }
+    });
+
+    const effTotal = Math.max(1, totalAssigned - excusedCount);
+    const onTimeRate = totalAssigned > 0 ? Math.round((onTimeCount / effTotal) * 100) : 100;
+    const totalSubmitted = onTimeCount + lateCount;
+    const submittedRate = totalAssigned > 0 ? Math.round((totalSubmitted / effTotal) * 100) : 100;
+    const totalMissing = missingCount + forgotCount;
+    const delayEntries = Object.entries(lateCountsPerTask).sort((a, b) => b[1] - a[1]);
+
+    // 依科目群組化
+    const groupedSubjects = {};
+    studentTasks.forEach(t => {
+        const sub = t.subject || '其他';
+        if (!groupedSubjects[sub]) groupedSubjects[sub] = [];
+        groupedSubjects[sub].push(t);
+    });
+
+    let subjectsHtml = '';
+    Object.entries(groupedSubjects).forEach(([sub, subTasks], idx) => {
+        const sTotal = subTasks.length;
+        let sOnTime = 0;
+        let sLate = 0;
+        let sMiss = 0;
+        let sExc = 0;
+        const taskMap = {};
+
+        subTasks.forEach(st => {
+            const tn = st.taskName;
+            if (!taskMap[tn]) taskMap[tn] = { total: 0, ontime: 0, late: 0, miss: 0, exc: 0, items: [] };
+            taskMap[tn].total++;
+            
+            const c = classifyParentTaskStatus(st.status, st.timestamp, st.deadline || st.date);
+            taskMap[tn].items.push({
+                range: st.range,
+                date: st.date,
+                status: st.status,
+                timestamp: st.timestamp,
+                c: c
+            });
+            if (c.type === 'ontime') {
+                sOnTime++;
+                taskMap[tn].ontime++;
+            } else if (c.type === 'late') {
+                sLate++;
+                taskMap[tn].late++;
+            } else if (c.type === 'excused') {
+                sExc++;
+                taskMap[tn].exc++;
+            } else {
+                sMiss++;
+                taskMap[tn].miss++;
+            }
+        });
+
+        const sEff = Math.max(1, sTotal - sExc);
+        const sRate = Math.round((sOnTime / sEff) * 100);
+        const simAccId = 'sim-acc-' + idx;
+
+        let details = '';
+        Object.entries(taskMap).forEach(([tn, ts], tIdx) => {
+            const trEff = Math.max(1, ts.total - ts.exc);
+            const tr = Math.round((ts.ontime / trEff) * 100);
+            const taskDetailId = `sim-task-detail-${idx}-${tIdx}`;
+
+            // 排序子項目：缺交/沒帶/需訂正 -> 遲交 -> 免計 -> 準時
+            const orderWeight = { missing: 1, forgot: 1, returned: 1, late: 2, excused: 3, ontime: 4 };
+            const sortedItems = ts.items.slice().sort((a, b) => (orderWeight[a.c.type] || 5) - (orderWeight[b.c.type] || 5));
+
+            const itemRowsHtml = sortedItems.map((it, iIdx) => {
+                const labelText = it.range ? `範圍：${escapeCardHtml(it.range)}` : (it.date && it.date !== '近期' ? `日期：${escapeCardHtml(it.date)}` : `第 ${iIdx + 1} 次作業`);
+                const dateSub = (it.range && it.date && it.date !== '近期' && it.date !== it.range) ? ` ‧ 應繳：${escapeCardHtml(it.date)}` : '';
+                const cleanTs = (it.timestamp || '').replace(/\[遲交\]/g, '').trim();
+                const tsSub = (cleanTs && it.c.type !== 'missing' && it.c.type !== 'forgot' && it.c.type !== 'excused') ? `<div class="text-[9px] text-slate-400">登記時間：${escapeCardHtml(cleanTs)}</div>` : '';
+                const rowBg = it.c.type === 'late' ? 'bg-amber-50/70 border-amber-200' : (it.c.isPending ? 'bg-rose-50/70 border-rose-200' : 'bg-slate-50/80 border-slate-100');
+
+                return `
+                    <div class="p-1.5 rounded-lg border ${rowBg} flex items-center justify-between gap-1.5 text-[10px]">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-slate-700 truncate">${labelText}${dateSub}</div>
+                            ${tsSub}
+                        </div>
+                        <span class="px-1.5 py-0.5 rounded border text-[9px] font-bold flex-shrink-0 ${it.c.badgeClass}">${it.c.badge}</span>
+                    </div>
+                `;
+            }).join('');
+
+            details += `
+                <div class="bg-white rounded-lg border border-slate-100 overflow-hidden">
+                    <button type="button" onclick="toggleSimTaskDetail('${taskDetailId}')" class="w-full flex items-center justify-between text-[11px] p-1.5 hover:bg-slate-50 transition cursor-pointer text-left">
+                        <div class="flex items-center gap-1">
+                            <span class="font-bold text-slate-700">${escapeCardHtml(tn)}</span>
+                            <span class="text-[9px] text-slate-400">(${ts.ontime}/${trEff})</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-bold ${tr >= 90 ? 'text-emerald-600' : (tr >= 80 ? 'text-amber-600' : 'text-rose-600')}">${tr}%</span>
+                            ${ts.late > 0 ? '<span class="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1 rounded font-bold">遲' + ts.late + '</span>' : ''}
+                            ${ts.miss > 0 ? '<span class="text-[9px] bg-rose-50 text-rose-700 border border-rose-200 px-1 rounded font-bold">缺' + ts.miss + '</span>' : ''}
+                            ${ts.exc > 0 ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded">免' + ts.exc + '</span>' : ''}
+                            <svg id="${taskDetailId}-arrow" class="w-3 h-3 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </button>
+                    <div id="${taskDetailId}" class="hidden p-1.5 pt-1 space-y-1 bg-white border-t border-slate-100">
+                        ${itemRowsHtml}
+                    </div>
+                </div>
+            `;
+        });
+
+        subjectsHtml += `
+            <div class="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                <button type="button" onclick="toggleSimAccordion('${simAccId}')" class="w-full p-2.5 flex flex-col gap-1 text-left hover:bg-slate-50 transition active:scale-[0.99] cursor-pointer">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-black text-slate-800">${sub}</span>
+                        <span class="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">${sRate}% 準時</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div class="${sRate >= 90 ? 'bg-emerald-500' : (sRate >= 80 ? 'bg-amber-500' : 'bg-rose-500')} h-1.5 rounded-full transition-all duration-500" style="width: ${sRate}%"></div>
+                    </div>
+                </button>
+                <div id="${simAccId}" class="accordion-panel border-t border-transparent">
+                    <div>
+                        <div class="p-2 pt-1.5 space-y-1 bg-slate-50/50 border-t border-slate-100">
+                            <div class="text-[9px] text-slate-400 px-0.5">💡 點擊下方任一作業可展開查看哪幾份遲交或各次明細：</div>
+                            ${details}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    const simNow = new Date();
+    const simWeekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    const simW = simWeekdays[simNow.getDay()];
+    const defaultTimeStr = `${simNow.getFullYear()}/${String(simNow.getMonth() + 1).padStart(2, '0')}/${String(simNow.getDate()).padStart(2, '0')} (${simW}) ${simNow.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+    const displayTimeStr = syncDateStr || defaultTimeStr;
+
+    const badgeDotColor = isLiveCloud ? 'bg-emerald-500 animate-pulse' : 'bg-blue-500';
+    const badgeBg = isLiveCloud ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-blue-700 bg-blue-50 border-blue-200';
+    const badgeLabel = isLiveCloud ? '試算表即時連線' : '本地即時資料';
+
+    frame.innerHTML = `
+        <!-- 手機頂部英雄卡 -->
+        <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-2xs flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black text-base shadow-xs">
+                    ${String(student.id).padStart(2, '0')}
+                </div>
+                <div>
+                    <div class="text-sm font-black text-slate-900">${maskStudentName(student.name)}</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <span id="sim-sync-badge" class="inline-flex items-center gap-1 text-[9px] ${badgeBg} px-2 py-0.5 rounded-full border font-bold transition-all">
+                    <span class="w-1.5 h-1.5 rounded-full ${badgeDotColor}"></span>
+                    ${badgeLabel} ${displayTimeStr}
+                </span>
+            </div>
+        </div>
+
+        <!-- 雲端同步進度容器（動態插入點） -->
+        <div id="sim-sync-banner-container"></div>
+
+        <!-- 模擬器主要內容區 -->
+        <div id="sim-content-body" class="space-y-3 transition-opacity duration-300">
+            <!-- 三大指標 -->
+            <div class="grid grid-cols-3 gap-1.5 text-center">
+                <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                    <div class="text-[10px] text-slate-400 font-bold">準時率</div>
+                    <div class="text-base font-black ${onTimeRate >= 90 ? 'text-emerald-600' : (onTimeRate >= 80 ? 'text-amber-600' : 'text-rose-600')} mt-0.5">${onTimeRate}%</div>
+                    <div class="text-[9px] text-slate-400">總繳交率 ${submittedRate}%</div>
+                </div>
+                <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                    <div class="text-[10px] text-slate-400 font-bold">已準時交</div>
+                    <div class="text-xs font-black text-slate-800 mt-0.5">${onTimeCount} / ${effTotal}</div>
+                    <div class="text-[9px] text-slate-400">${lateCount > 0 ? `遲${lateCount} ‧ ` : ''}缺${totalMissing}</div>
+                </div>
+                <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                    <div class="text-[10px] text-slate-400 font-bold">待補交</div>
+                    <div class="text-base font-black ${pendingItems.length > 0 ? 'text-rose-600' : 'text-emerald-600'}">${pendingItems.length}</div>
+                    <div class="text-[9px] ${pendingItems.length > 0 ? 'text-rose-500 font-bold' : 'text-emerald-500'}">${pendingItems.length > 0 ? '待補交' : '全數交齊'}</div>
+                </div>
+            </div>
+
+            <!-- 🚨 待補交作業清單 -->
+            <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
+                <div class="flex justify-between items-center text-[11px] font-black text-slate-800 border-b pb-1">
+                    <span>🚨 待補交作業清單</span>
+                    <span class="text-[10px] text-rose-600 font-bold">${pendingItems.length} 項</span>
+                </div>
+                ${pendingItems.length === 0 ? '<div class="text-[11px] text-emerald-600 font-bold py-1.5 text-center">沒有任何缺交作業，請給孩子一個大大的讚賞與鼓勵！ 🎉</div>' : ''}
+                ${pendingItems.map(p => `
+                    <div class="flex items-center justify-between text-[11px] py-0.5">
+                        <span class="font-bold text-slate-700">[${p.subject}] ${p.taskName}${p.range ? ' (' + escapeCardHtml(p.range) + ')' : ''}</span>
+                        <span class="text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold">${p.badge}</span>
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- ⚠️ 常遲到作業排行 -->
+            <div class="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-2xs space-y-1.5">
+                <div class="text-[11px] font-black text-slate-800 border-b pb-1">⚠️ 常遲到作業排行</div>
+                ${delayEntries.length === 0 ? '<div class="text-[11px] text-slate-400 py-1 text-center font-bold">目前無任何遲到紀錄 模範生！</div>' : ''}
+                ${delayEntries.slice(0, 3).map(([taskKey, count], idx) => `
+                    <div class="flex flex-col text-[11px] py-0.5 border-b border-slate-50 last:border-0">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-700">#${idx + 1} ${taskKey}</span>
+                            <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">遲交 ${count} 次</span>
+                        </div>
+                        ${lateDetailsPerTask[taskKey] && lateDetailsPerTask[taskKey].length > 0 ? `<div class="text-[9.5px] text-amber-700 mt-0.5 pl-2">↳ 遲交項目：${lateDetailsPerTask[taskKey].map(d => escapeCardHtml(d)).join('、')}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- 📊 各科習慣與展開明細 -->
+            <div class="space-y-1.5">
+                <div class="text-[11px] font-black text-slate-800 px-1">📊 各科長條圖 (點擊科目與作業可查看明細)</div>
+                ${subjectsHtml}
+            </div>
+        </div>
+    `;
+}
+
+let simulatorSyncTimers = [];
+
+function clearSimulatorSyncTimers() {
+    if (simulatorSyncTimers && simulatorSyncTimers.length > 0) {
+        simulatorSyncTimers.forEach(t => clearTimeout(t));
+        simulatorSyncTimers = [];
+    }
+}
+
+function setSimulatorSyncButtonState(isSyncing) {
+    const btn = document.getElementById('btn-sim-cloud-sync');
+    const txt = document.getElementById('sim-refresh-text');
+    const icon = document.getElementById('sim-refresh-icon');
+    if (btn) {
+        btn.disabled = isSyncing;
+        if (isSyncing) {
+            btn.classList.add('opacity-75', 'cursor-wait');
+        } else {
+            btn.classList.remove('opacity-75', 'cursor-wait');
+        }
+    }
+    if (txt) {
+        txt.textContent = isSyncing ? '試算表同步中...' : '試算表同步';
+    }
+    if (icon) {
+        if (isSyncing) {
+            icon.classList.add('animate-spin');
+        } else {
+            icon.classList.remove('animate-spin');
+        }
+    }
+}
+
+function startSimulatorSyncAnimation(student) {
+    clearSimulatorSyncTimers();
+    setSimulatorSyncButtonState(true);
+
+    const badge = document.getElementById('sim-sync-badge');
+    if (badge) {
+        badge.className = 'inline-flex items-center gap-1 text-[9px] text-amber-700 bg-amber-50 border-amber-200 px-2 py-0.5 rounded-full border font-bold transition-all';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span> 雲端連線同步中...';
+    }
+
+    const contentBody = document.getElementById('sim-content-body');
+    if (contentBody) {
+        contentBody.classList.add('opacity-50', 'pointer-events-none');
+    }
+
+    const bannerContainer = document.getElementById('sim-sync-banner-container');
+    if (bannerContainer) {
+        bannerContainer.innerHTML = `
+            <div id="sim-sync-banner" class="rounded-2xl p-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white shadow-md transition-all duration-300 relative overflow-hidden my-1">
+                <!-- 光暈光束滑過動畫 (Shimmer) -->
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer pointer-events-none"></div>
+
+                <div class="relative z-10 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold">
+                        <div class="flex items-center gap-1.5">
+                            <span id="sim-sync-icon" class="inline-block animate-spin text-sm">🔄</span>
+                            <span id="sim-sync-step-title" class="tracking-wide">正在連線 Google 試算表...</span>
+                        </div>
+                        <span id="sim-sync-percent" class="text-[10px] font-black bg-white/25 backdrop-blur-xs px-2 py-0.5 rounded-full font-mono">28%</span>
+                    </div>
+
+                    <!-- 進度條軌道 -->
+                    <div class="w-full bg-black/25 rounded-full h-2 p-0.5 overflow-hidden">
+                        <div id="sim-sync-progress-fill" class="bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-200 h-full rounded-full transition-all duration-500 ease-out shadow-xs" style="width: 28%"></div>
+                    </div>
+
+                    <!-- 步驟描述與三點彈跳動畫 -->
+                    <div class="flex items-center justify-between text-[10px] text-emerald-100">
+                        <span id="sim-sync-step-desc" class="truncate">驗證金鑰並向雲端發送手札查詢請求</span>
+                        <span class="flex gap-1 items-center font-mono opacity-80 shrink-0">
+                            <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay: 0ms"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay: 150ms"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay: 300ms"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // 第 2 階段: 850ms -> 65% (比對各科目繳交與遲交)
+    simulatorSyncTimers.push(setTimeout(() => {
+        const title = document.getElementById('sim-sync-step-title');
+        const desc = document.getElementById('sim-sync-step-desc');
+        const pct = document.getElementById('sim-sync-percent');
+        const fill = document.getElementById('sim-sync-progress-fill');
+        if (title) title.textContent = '正在讀取並比對各科作業紀錄...';
+        if (desc) desc.textContent = '逐科核對最新打卡時間、免計與遲交狀態';
+        if (pct) pct.textContent = '65%';
+        if (fill) fill.style.width = '65%';
+    }, 850));
+
+    // 第 3 階段: 2000ms -> 88% (彙整即時準時率與待辦清單)
+    simulatorSyncTimers.push(setTimeout(() => {
+        const title = document.getElementById('sim-sync-step-title');
+        const desc = document.getElementById('sim-sync-step-desc');
+        const pct = document.getElementById('sim-sync-percent');
+        const fill = document.getElementById('sim-sync-progress-fill');
+        if (title) title.textContent = '正在彙整即時準時率與待辦清單...';
+        if (desc) desc.textContent = '即將完成同步，數據與家長端 100% 同步';
+        if (pct) pct.textContent = '88%';
+        if (fill) fill.style.width = '88%';
+    }, 2000));
+
+    // 第 4 階段: 3400ms -> 94% (應對冷啟動或龐大試算表)
+    simulatorSyncTimers.push(setTimeout(() => {
+        const title = document.getElementById('sim-sync-step-title');
+        const desc = document.getElementById('sim-sync-step-desc');
+        const pct = document.getElementById('sim-sync-percent');
+        const fill = document.getElementById('sim-sync-progress-fill');
+        if (title) title.textContent = '雲端資料回傳中，正進行最後整理...';
+        if (desc) desc.textContent = '已接收試算表資料，即將呈現權威手札內容';
+        if (pct) pct.textContent = '94%';
+        if (fill) fill.style.width = '94%';
+    }, 3400));
+}
+
+function finishSimulatorSyncAnimation(student, cloudTasks, syncDateStr) {
+    clearSimulatorSyncTimers();
+
+    const banner = document.getElementById('sim-sync-banner');
+    const title = document.getElementById('sim-sync-step-title');
+    const desc = document.getElementById('sim-sync-step-desc');
+    const pct = document.getElementById('sim-sync-percent');
+    const fill = document.getElementById('sim-sync-progress-fill');
+    const icon = document.getElementById('sim-sync-icon');
+
+    if (banner) {
+        banner.className = 'rounded-2xl p-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md transition-all duration-300 relative overflow-hidden my-1';
+    }
+    if (icon) {
+        icon.classList.remove('animate-spin');
+        icon.textContent = '✅';
+    }
+    if (title) title.textContent = '試算表最新手札同步完成！';
+    if (desc) desc.textContent = '各科繳交紀錄與準時率已是最新資料';
+    if (pct) pct.textContent = '100%';
+    if (fill) {
+        fill.style.width = '100%';
+        fill.className = 'bg-white h-full rounded-full transition-all duration-300 ease-out shadow-xs';
+    }
+
+    // 停留 450ms 讓使用者看見 100% 完成動畫反饋，隨後重繪模擬器視圖
+    setTimeout(() => {
+        setSimulatorSyncButtonState(false);
+        renderParentSimulatorView(student, cloudTasks, true, syncDateStr);
+        if (typeof showToast === 'function') {
+            showToast('✅ 試算表最新手札已同步完成！', 'success');
+        }
+    }, 450);
+}
+
+function failSimulatorSyncAnimation(errMsg) {
+    clearSimulatorSyncTimers();
+    setSimulatorSyncButtonState(false);
+
+    const banner = document.getElementById('sim-sync-banner');
+    const title = document.getElementById('sim-sync-step-title');
+    const desc = document.getElementById('sim-sync-step-desc');
+    const pct = document.getElementById('sim-sync-percent');
+    const icon = document.getElementById('sim-sync-icon');
+    const fill = document.getElementById('sim-sync-progress-fill');
+
+    if (banner) {
+        banner.className = 'rounded-2xl p-3 bg-gradient-to-r from-amber-600 to-rose-600 text-white shadow-md transition-all duration-300 relative overflow-hidden my-1';
+    }
+    if (icon) {
+        icon.classList.remove('animate-spin');
+        icon.textContent = '⚠️';
+    }
+    if (title) title.textContent = '雲端試算表連線逾時或受限';
+    if (desc) desc.textContent = errMsg || '已維持顯示本地最新暫存手札資料';
+    if (pct) pct.textContent = '中斷';
+    if (fill) {
+        fill.style.width = '100%';
+        fill.className = 'bg-amber-300 h-full rounded-full shadow-xs';
+    }
+
+    // 2.5 秒後淡出並恢復正常內容
+    setTimeout(() => {
+        const bannerContainer = document.getElementById('sim-sync-banner-container');
+        if (bannerContainer) bannerContainer.innerHTML = '';
+        const contentBody = document.getElementById('sim-content-body');
+        if (contentBody) contentBody.classList.remove('opacity-50', 'pointer-events-none');
+    }, 2500);
+
+    const badge = document.getElementById('sim-sync-badge');
+    if (badge) {
+        badge.className = 'inline-flex items-center gap-1 text-[9px] text-amber-700 bg-amber-50 border-amber-200 px-2 py-0.5 rounded-full border font-bold';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> 本地暫存 (雲端未更新)';
+    }
+}
+
+async function fetchSimulatorFromCloud(student, gas, forceCloud = false) {
+    if (!student || !gas) return;
+    const targetStudentId = student.id;
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+
+    if (simulatorAbortController) {
+        simulatorAbortController.abort();
+    }
+    simulatorAbortController = new AbortController();
+
+    // 啟動多階段動畫過程
+    startSimulatorSyncAnimation(student);
+
+    try {
+        const response = await fetch(gas, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'parent_query',
+                token: token,
+                isSimulator: true,
+                skipLog: true,
+                source: '🖥️ 教師端模擬器即時連線'
+            }),
+            signal: simulatorAbortController.signal
+        });
+        const res = await response.json();
+        const isCurrentMatch = isSameStudentId(currentSimulatorStudentId, targetStudentId);
+        if (res && res.status === 'success' && isCurrentMatch) {
+            const cloudTasks = (res.tasks || []).map(ct => ({
+                subject: ct.subject || '其他',
+                taskName: ct.taskName || '作業',
+                range: ct.range || '',
+                date: ct.date || ct.deadline || '近期',
+                status: ct.status || '',
+                timestamp: ct.timestamp || ct.status || '',
+                deadline: ct.deadline || ct.date || ''
+            }));
+            const now = new Date();
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            const syncDateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} (${weekdays[now.getDay()]}) ${now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+            finishSimulatorSyncAnimation(student, cloudTasks, syncDateStr);
+        } else if (isCurrentMatch) {
+            failSimulatorSyncAnimation(res ? res.message : '查無雲端手札資料');
+        }
+    } catch (e) {
+        if (e.name !== 'AbortError') {
+            console.warn('[ParentSimulator] Cloud query error:', e);
+            if (isSameStudentId(currentSimulatorStudentId, targetStudentId)) {
+                failSimulatorSyncAnimation('網路連線逾時或 GAS 回應異常');
+            }
+        }
+    }
+}
+
+function isSameStudentId(idA, idB) {
+    if (idA === idB) return true;
+    if (idA === null || idA === undefined || idB === null || idB === undefined) return false;
+    if (String(idA).trim() === String(idB).trim()) return true;
+    const numA = parseInt(idA, 10);
+    const numB = parseInt(idB, 10);
+    return !isNaN(numA) && !isNaN(numB) && numA === numB;
+}
+window.isSameStudentId = isSameStudentId;
+
+function refreshParentSimulatorFromCloud() {
+    const sel = document.getElementById('parent-simulator-student-select');
+    const studentId = sel ? sel.value : currentSimulatorStudentId;
+    if (studentId) {
+        const gas = (typeof getGasUrl === 'function') ? getGasUrl() : (window.gasUrl || '');
+        if (!gas) {
+            if (typeof showToast === 'function') {
+                showToast('尚未設定 Google 試算表 GAS 網址，目前僅呈現本地資料', 'warning');
+            }
+            return;
+        }
+        updateParentSimulator(studentId, true);
+    }
+}
+window.refreshParentSimulatorFromCloud = refreshParentSimulatorFromCloud;
+
+function updateParentSimulator(studentId, forceCloud = false) {
+    if (studentId === undefined || studentId === null || studentId === '') {
+        const sel = document.getElementById('parent-simulator-student-select');
+        studentId = sel ? sel.value : currentSimulatorStudentId;
+    }
+    const frame = document.getElementById('parent-simulator-frame');
+    if (!frame) return;
+
+    // 寬鬆比對學生座號/代碼 (支援數字與字串格式，例如 2 與 "02")
+    const student = db.students.find(s => isSameStudentId(s.id, studentId));
+    if (!student) {
+        frame.innerHTML = '<div class="py-10 text-center text-slate-400 font-bold">查無該生資料</div>';
+        return;
+    }
+    currentSimulatorStudentId = student.id;
+
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+    const tasks = db.tasks || [];
+    const records = db.records || [];
+    const ranges = db.ranges || [];
+
+    // 計算各作業狀況 (排除從未掃描統計過、且未設定範圍的作業)
+    const studentTasks = [];
+    tasks.forEach(t => {
+        // 檢查全班是否有任何繳交打卡紀錄
+        const hasAnyRecord = (records || []).some(r => r.taskId === t.id);
+        // 檢查是否有設定範圍或日期
+        const hasAnyRange = (ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
+
+        // 若全班完全沒有任何掃描/打卡紀錄，且未設定範圍日期，表示尚未開始清點，不計入準時率與待辦
+        if (!hasAnyRecord && !hasAnyRange) {
+            return;
+        }
+
+        let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
+        if (ranges) {
+            const rangeNotices = ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
+            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
+        }
+        if (noticeNames.length === 0) noticeNames = [''];
+
+        noticeNames.forEach(nn => {
+            // 確認該子項目在全班是否有紀錄或範圍
+            const subHasRecord = (records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
+            if (!subHasRecord && !subHasRange) return;
+
+            let range = '';
+            let dueDate = nn || '近期';
+            const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            if (rObj) {
+                range = rObj.range || nn || '';
+                if (rObj.date) dueDate = rObj.date;
+            } else if (nn) {
+                range = nn;
+            }
+
+            const rec = records.find(r => isSameStudentId(r.studentId, student.id) && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+                timestamp = rec.timestamp || rec.fullTimestamp || '';
+                const hasLateTag = (rec.timestamp && rec.timestamp.includes('[遲交]')) ||
+                                   (rec.fullTimestamp && rec.fullTimestamp.includes('[遲交]'));
+                if (hasLateTag || rec.manualStatus === 'late') {
+                    status = '遲交';
+                } else if (rec.manualStatus === 'ontime') {
+                    status = '已交';
+                } else if (rec.manualStatus) {
+                    status = rec.manualStatus;
+                } else {
+                    status = '已交';
+                }
+            }
+
+            studentTasks.push({
+                subject: t.subject || '其他',
+                taskName: t.name,
+                range: range,
+                date: dueDate,
+                status: status,
+                timestamp: timestamp,
+                deadline: t.deadline || (dueDate !== '近期' ? dueDate : '')
+            });
+        });
+    });
+
+    // 先以本地清洗後的資料即時呈現（零延遲）
+    renderParentSimulatorView(student, studentTasks, false);
+
+    // 啟動雲端連線查詢（SWR）：若有設定 GAS 且在線，直接向試算表取得權威資料
+    const gas = (typeof getGasUrl === 'function') ? getGasUrl() : (window.gasUrl || '');
+    if (gas && navigator.onLine) {
+        fetchSimulatorFromCloud(student, gas, forceCloud);
+    }
+}
+
+function toggleSimAccordion(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('open');
+}
+
+function toggleSimTaskDetail(id) {
+    const el = document.getElementById(id);
+    const arrow = document.getElementById(id + '-arrow');
+    if (!el) return;
+    const isHidden = el.classList.contains('hidden');
+    if (isHidden) {
+        el.classList.remove('hidden');
+        if (arrow) arrow.classList.add('rotate-180');
+    } else {
+        el.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
+    }
+}
+
+function openSelectedStudentParentPage() {
+    if (!currentSimulatorStudentId) {
+        if (db.students.length > 0) currentSimulatorStudentId = db.students[0].id;
+        else return;
+    }
+    const student = db.students.find(s => isSameStudentId(s.id, currentSimulatorStudentId));
+    if (!student) return;
+
+    const token = student.token || ('STU' + String(student.id).padStart(3, '0'));
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const directUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+    window.open(directUrl, '_blank');
+}
+
+// ==========================================
+// LINE 官方帳號推播中心邏輯
+// ==========================================
+let currentLineBindings = [];
+
+// 取得單一學生目前待補交之作業清單
+function getStudentPendingTasks(student) {
+    if (!student) return [];
+    const tasks = db.tasks || [];
+    const records = db.records || [];
+    const ranges = db.ranges || [];
+
+    const pendingList = [];
+    tasks.forEach(t => {
+        const hasAnyRecord = (records || []).some(r => r.taskId === t.id);
+        const hasAnyRange = (ranges || []).some(r => r.taskId === t.id && (r.range || r.date));
+        if (!hasAnyRecord && !hasAnyRange) return;
+
+        let noticeNames = [...new Set(records.filter(r => r.taskId === t.id).map(r => r.noticeName || ''))];
+        if (ranges) {
+            const rangeNotices = ranges.filter(r => r.taskId === t.id && (r.range || r.date)).map(r => r.noticeName || '');
+            rangeNotices.forEach(rn => { if (!noticeNames.includes(rn)) noticeNames.push(rn); });
+        }
+        if (noticeNames.length === 0) noticeNames = [''];
+
+        noticeNames.forEach(nn => {
+            const subHasRecord = (records || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            const subHasRange = (ranges || []).some(r => r.taskId === t.id && (r.noticeName || '') === nn && (r.range || r.date));
+            if (!subHasRecord && !subHasRange) return;
+
+            const rec = records.find(r => isSameStudentId(r.studentId, student.id) && r.taskId === t.id && (r.noticeName || '') === nn);
+            let status = '缺交';
+            let timestamp = '';
+            if (rec) {
+                status = rec.manualStatus || '已交';
+                timestamp = rec.timestamp || rec.fullTimestamp || '';
+            }
+            let range = '';
+            let dueDate = nn || '近期';
+            const rObj = ranges.find(r => r.taskId === t.id && (r.noticeName || '') === nn);
+            if (rObj) {
+                range = rObj.range || nn || '';
+                if (rObj.date) dueDate = rObj.date;
+            } else if (nn) {
+                range = nn;
+            }
+
+            const c = classifyParentTaskStatus(status, timestamp, t.deadline || dueDate);
+            if (c.type === 'missing' || c.type === 'forgot' || c.type === 'returned') {
+                pendingList.push({
+                    subject: t.subject || '其他',
+                    taskName: t.name,
+                    range: range,
+                    date: dueDate,
+                    status: status,
+                    badge: c.badge
+                });
+            }
+        });
+    });
+    return pendingList;
+}
+
+// 篩選出今日有缺交且已綁定 LINE 的學生名單（onlyChecked 為 true 時僅回傳教師有勾選的學生）
+function getBoundStudentsWithMissing(boundMap, onlyChecked = false) {
+    if (!boundMap) {
+        boundMap = {};
+        (currentLineBindings || []).forEach(b => {
+            if (b.isBound) boundMap[b.studentId.toString()] = b;
+        });
+    }
+
+    let checkedIdSet = null;
+    if (onlyChecked) {
+        const cbs = document.querySelectorAll('.line-missing-stu-cb');
+        if (cbs.length > 0) {
+            checkedIdSet = new Set(
+                Array.from(document.querySelectorAll('.line-missing-stu-cb:checked')).map(cb => cb.value.toString())
+            );
+        }
+    }
+
+    const targets = [];
+    (db.students || []).forEach(s => {
+        const sidStr = s.id.toString();
+        const binding = boundMap[sidStr];
+        if (!binding) return; // 家長尚未綁定 LINE，跳過
+        if (checkedIdSet && !checkedIdSet.has(sidStr)) return; // 教師取消勾選，跳過
+
+        const missingTasks = getStudentPendingTasks(s);
+        if (missingTasks.length > 0) {
+            targets.push({
+                studentId: s.id,
+                studentName: s.name,
+                token: s.token || ('STU' + String(s.id).padStart(3, '0')),
+                lineUserId: binding.lineUserId,
+                missingTasks: missingTasks
+            });
+        }
+    });
+    return targets;
+}
+
+// 渲染待補交且已綁定 LINE 之可勾選學生清單
+function renderLineMissingTargetsSelector(targets) {
+    const box = document.getElementById('line-missing-targets-box');
+    const selector = document.getElementById('line-missing-targets-selector');
+    const badge = document.getElementById('line-missing-selected-badge');
+    if (!box || !selector) return;
+
+    if (!targets || targets.length === 0) {
+        box.classList.add('hidden');
+        selector.innerHTML = '';
+        if (badge) badge.classList.add('hidden');
+        return;
+    }
+
+    box.classList.remove('hidden');
+    selector.innerHTML = '';
+
+    targets.forEach(t => {
+        const summaryStr = t.missingTasks.map(m => `${m.taskName}${m.range ? '(' + m.range + ')' : ''}`).join('、');
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between gap-1.5 p-1.5 bg-white hover:bg-rose-50/60 rounded-lg border border-rose-200/80 transition';
+        item.innerHTML = `
+            <label class="flex items-center gap-1.5 cursor-pointer min-w-0 flex-1">
+                <input type="checkbox" value="${t.studentId}" checked class="line-missing-stu-cb rounded text-rose-600 focus:ring-rose-500 flex-shrink-0" onchange="updateLineMissingSelectedCount()">
+                <div class="min-w-0 flex-1">
+                    <div class="font-bold text-slate-800 truncate">${String(t.studentId).padStart(2, '0')} ${escapeCardHtml(t.studentName)} <span class="text-rose-600 font-black">(${t.missingTasks.length}項)</span></div>
+                    <div class="text-[10px] text-slate-500 truncate" title="${escapeCardHtml(summaryStr)}">${escapeCardHtml(summaryStr)}</div>
+                </div>
+            </label>
+            <button type="button" onclick="openSingleStudentLinePushModal('${t.studentId}')" class="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded text-[10px] font-bold flex-shrink-0 transition active:scale-95 cursor-pointer" title="只單獨發送給這位學生家長">
+                📨 單發
+            </button>
+        `;
+        selector.appendChild(item);
+    });
+
+    updateLineMissingSelectedCount();
+}
+
+function updateLineMissingSelectedCount() {
+    const total = document.querySelectorAll('.line-missing-stu-cb').length;
+    const checked = document.querySelectorAll('.line-missing-stu-cb:checked').length;
+    const badge = document.getElementById('line-missing-selected-badge');
+    const btn = document.getElementById('btn-send-line-push');
+    if (badge) {
+        if (total > 0) {
+            badge.classList.remove('hidden');
+            badge.innerText = `已勾選 ${checked} / ${total} 人`;
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+    if (btn) {
+        btn.innerHTML = checked > 0 && checked < total
+            ? `<span>🚀 發送勾選學生 (${checked}人)</span>`
+            : `<span>🚀 發送 LINE 缺交通知</span>`;
+    }
+}
+
+function toggleAllLineMissingTargets(check) {
+    document.querySelectorAll('.line-missing-stu-cb').forEach(cb => cb.checked = check);
+    updateLineMissingSelectedCount();
+}
+
+// 單獨發送指定學生的 LINE 通知（支援有缺交提醒或自訂親師留言，具備對象核對防呆機制）
+function openSingleStudentLinePushModal(studentId, initialMsg = null) {
+    const s = (db.students || []).find(st => st.id.toString() === studentId.toString());
+    if (!s) return;
+
+    const binding = (currentLineBindings || []).find(b => b.isBound && b.studentId.toString() === studentId.toString());
+    if (!binding) {
+        showAlert('提示', `${s.name} 的家長尚未綁定 LINE 官方帳號，無法發送私訊！`);
+        return;
+    }
+
+    const missingTasks = getStudentPendingTasks(s);
+    const token = s.token || ('STU' + String(s.id).padStart(3, '0'));
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const portalUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(token)}${apiParam ? '&a=' + apiParam : ''}`;
+
+    let defaultMsg = initialMsg;
+    if (!defaultMsg) {
+        if (missingTasks.length > 0) {
+            const taskLines = missingTasks.map(mt => `‧ 【${mt.subject}】${mt.taskName}${mt.range ? ' (' + mt.range + ')' : ''}`).join('\n');
+            defaultMsg = `🚨 【作業待補交提醒】\n\n` +
+                `${maskStudentName(s.name)} 家長您好：\n` +
+                `今日學校清點作業，孩子尚有 ${missingTasks.length} 項作業待補交：\n` +
+                `${taskLines}\n\n` +
+                `請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！\n\n` +
+                `🔗 點此秒開專屬手札查看明細：\n${portalUrl}\n\n` +
+                `（由 班級作業管理系統 自動推播）`;
+        } else {
+            defaultMsg = `🌱 【班級作業手札與親師通知】\n\n` +
+                `${maskStudentName(s.name)} 家長您好：\n` +
+                `孩子目前的應交作業皆已按時完成，表現非常棒！🎉\n\n` +
+                `🔗 點此可隨時查看孩子最新作業手札與各科明細：\n${portalUrl}\n\n` +
+                `（由 班級作業管理系統 推播）`;
+        }
+    }
+
+    Swal.fire({
+        title: `📨 指定發送 LINE 通知 — ${String(s.id).padStart(2, '0')} ${s.name}`,
+        html: `
+            <div class="text-left text-xs space-y-2.5">
+                <div class="p-2.5 rounded-xl border ${missingTasks.length > 0 ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'} font-bold">
+                    ${missingTasks.length > 0 ? `⚠️ 該生目前共有 ${missingTasks.length} 項待補交作業，已自動帶入缺交提醒範本。` : `🎉 該生目前無缺交作業，已帶入正面鼓勵與手札通知範本。`}
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">✏️ 推播私訊內容（可直接修改或加註給家長的話）：</label>
+                    <textarea id="single-line-push-textarea" rows="10" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs font-mono text-slate-800 bg-white focus:ring-2 focus:ring-emerald-500 outline-none leading-relaxed">${escapeCardHtml(defaultMsg)}</textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '下一步：核對發送對象 ➜',
+        cancelButtonText: '取消',
+        confirmButtonColor: '#059669',
+        preConfirm: () => {
+            const ta = document.getElementById('single-line-push-textarea');
+            return ta ? ta.value.trim() : defaultMsg;
+        }
+    }).then(async (res) => {
+        if (!res || !res.isConfirmed || !res.value) return;
+        const customMsg = res.value;
+
+        // 第二步：核對發送對象確認對話窗
+        const taskLinesHtml = missingTasks.length > 0
+            ? missingTasks.map(mt => `‧ 【${escapeCardHtml(mt.subject)}】${escapeCardHtml(mt.taskName)}${mt.range ? ' (' + escapeCardHtml(mt.range) + ')' : ''}`).join('<br>')
+            : '無缺交作業（一般親師通知）';
+
+        const confirmRes = await Swal.fire({
+            title: '🔍 確認發送對象是否正確',
+            html: `
+                <div class="text-left text-xs space-y-3">
+                    <div class="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-7 h-7 rounded-md bg-emerald-600 text-white font-mono font-bold flex items-center justify-center text-xs">
+                                    ${String(s.id).padStart(2, '0')}
+                                </span>
+                                <span class="font-bold text-slate-800 text-base">${escapeCardHtml(s.name)} 家長</span>
+                            </div>
+                            <span class="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">LINE 已綁定</span>
+                        </div>
+                        <div class="text-[11px] text-slate-600 font-mono pl-1">
+                            ${taskLinesHtml}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-700 mb-1">即將送出的私訊內容：</div>
+                        <div class="p-2.5 bg-slate-100 rounded-xl font-mono text-[11px] text-slate-700 max-h-36 overflow-y-auto whitespace-pre-wrap leading-relaxed border border-slate-200">${escapeCardHtml(customMsg)}</div>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '✅ 正確，立即送出提醒',
+            cancelButtonText: '❌ 有誤，回前一頁修改',
+            confirmButtonColor: '#059669',
+            cancelButtonColor: '#64748b',
+            reverseButtons: true
+        });
+
+        if (!confirmRes.isConfirmed) {
+            // 點擊錯誤則回前一頁確認錯誤（帶著原本輸入的訊息重新開啟）
+            openSingleStudentLinePushModal(studentId, customMsg);
+            return;
+        }
+
+        // 點擊正確後才送出提醒
+        await executeLinePushRequest([{
+            studentId: s.id,
+            studentName: s.name,
+            token: token,
+            lineUserId: binding.lineUserId,
+            missingTasks: missingTasks,
+            customMessage: customMsg
+        }]);
+    });
+}
+
+// 切換 Token 密碼/明文顯示
+function toggleLineTokenVisibility() {
+    const input = document.getElementById('line-access-token');
+    const btn = event ? event.target : null;
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (btn) btn.innerText = '隱藏';
+    } else {
+        input.type = 'password';
+        if (btn) btn.innerText = '顯示';
+    }
+}
+
+// 複製邀請文案供導師發送至班群
+function copyLineInviteText() {
+    const botIdInput = document.getElementById('line-bot-id');
+    const botId = (botIdInput && botIdInput.value.trim()) || (appConfig.lineBotBasicId || '');
+    const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+    const classLabel = cls ? cls.label : '班級';
+    
+    const botText = botId ? `LINE ID 搜尋：${botId.startsWith('@') ? botId : ('@' + botId)}` : '【請向導師洽詢班級 LINE 帳號】';
+
+    const text = `📢 【${classLabel} LINE 智慧作業通知服務】家長邀請函\n\n` +
+      `親愛的家長您好：\n` +
+      `為了讓您能第一時間掌握孩子的每日作業繳交進度，本班已啟用 LINE 官方帳號作業提醒服務！\n\n` +
+      `📱 【兩步驟輕鬆綁定】：\n` +
+      `1. 請加入班級官方 LINE：\n` +
+      `   ${botText}\n` +
+      `2. 加入好友後，請直接傳送孩子的「專屬代碼」（請參考隨聯絡簿發放的作業查詢小卡，例如：V9UPK4）。\n\n` +
+      `🎉 綁定完成後，若放學有點名缺交，系統將於放學後自動發送私訊提醒您；您也可以隨時在 LINE 中傳送「查詢」查看孩子完整的作業手札。\n` +
+      `感謝各位家長的配合與支持！`;
+
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('已複製家長加好友與綁定說明文案！', 'success');
+    }).catch(() => {
+        showToast('複製失敗，請手動複製', 'error');
+    });
+}
+
+// 儲存 LINE 設定至雲端試算表 SystemConfig
+async function saveLineSettings() {
+    const botIdInput = document.getElementById('line-bot-id');
+    const tokenInput = document.getElementById('line-access-token');
+    const botId = botIdInput ? botIdInput.value.trim() : '';
+    const token = tokenInput ? tokenInput.value.trim() : '';
+
+    if (!botId && !token) {
+        showAlert('提示', '請至少填寫 LINE Bot Basic ID 或 Channel Access Token！');
+        return;
+    }
+
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    if (!gasUrl) {
+        showAlert('提示', '尚未設定 Google Apps Script (GAS) 網址，請先至【系統設定】設定！');
+        return;
+    }
+
+    if (botId) {
+        appConfig.lineBotBasicId = botId;
+        try { localStorage.setItem('line_bot_id', botId); } catch(e) {}
+    }
+    if (token) {
+        appConfig.lineChannelAccessToken = token;
+        try { localStorage.setItem('line_access_token', token); } catch(e) {}
+    }
+    if (typeof saveData === 'function') saveData();
+
+    showLoading();
+    const loadText = document.getElementById('loading-text');
+    if (loadText) loadText.innerText = '正在同步 LINE 設定至雲端...';
+
+    try {
+        const payload = {
+            action: 'line_save_config',
+            classPrefix: getActiveClassPrefix(),
+            lineBotBasicId: botId,
+            lineChannelAccessToken: token
+        };
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+            showToast('LINE 設定已成功儲存並同步至雲端！', 'success');
+            fetchLineBindingStatus();
+        } else {
+            showAlert('儲存失敗', res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        showAlert('連線錯誤', '無法連線至 GAS，請檢查網路或 GAS 發布狀態！');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 讀取全班 LINE 綁定狀態並刷新介面
+async function fetchLineBindingStatus() {
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    const badge = document.getElementById('line-config-status-badge');
+    const botIdInput = document.getElementById('line-bot-id');
+    const tokenInput = document.getElementById('line-access-token');
+    const statsEl = document.getElementById('line-bound-stats');
+    const progressEl = document.getElementById('line-bound-progress');
+    const gridEl = document.getElementById('line-students-bound-grid');
+    const targetCountEl = document.getElementById('line-missing-target-count');
+
+    // 預先帶入本機暫存
+    if (botIdInput && !botIdInput.value) {
+        botIdInput.value = appConfig.lineBotBasicId || localStorage.getItem('line_bot_id') || '';
+    }
+    if (tokenInput && !tokenInput.value) {
+        tokenInput.value = appConfig.lineChannelAccessToken || localStorage.getItem('line_access_token') || '';
+    }
+
+    if (!gasUrl) {
+        if (badge) {
+            badge.innerText = '未設定 GAS';
+            badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200';
+        }
+        if (statsEl) statsEl.innerText = '請先設定 GAS 網址';
+        return;
+    }
+
+    if (statsEl) statsEl.innerText = '檢查連線中...';
+
+    try {
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'line_get_status',
+                classPrefix: getActiveClassPrefix()
+            })
+        });
+        const res = await resp.json();
+
+        if (res.status === 'success') {
+            if (res.config && res.config.isConfigured) {
+                if (badge) {
+                    badge.innerText = '已連線 (金鑰有效)';
+                    badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300';
+                }
+                if (res.config.botBasicId && botIdInput && !botIdInput.value) {
+                    botIdInput.value = res.config.botBasicId;
+                    appConfig.lineBotBasicId = res.config.botBasicId;
+                }
+            } else {
+                if (badge) {
+                    badge.innerText = '未設定金鑰';
+                    badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
+                }
+            }
+
+            currentLineBindings = res.bindings || [];
+            if (res.parentViewStats) {
+                currentParentViewStats = res.parentViewStats || {};
+                currentParentViewLogs = res.parentViewLogs || [];
+                updateParentViewCellsInTable();
+            }
+
+            // 建立已綁定的 ID map
+            const boundMap = {};
+            currentLineBindings.forEach(b => {
+                if (b.isBound) {
+                    boundMap[b.studentId.toString()] = b;
+                }
+            });
+
+            const totalStudents = db.students ? db.students.length : 0;
+            let boundCount = 0;
+
+            if (gridEl) {
+                gridEl.innerHTML = '';
+                (db.students || []).forEach(s => {
+                    const isBound = !!boundMap[s.id.toString()];
+                    if (isBound) boundCount++;
+
+                    const pill = document.createElement('div');
+                    pill.className = `flex items-center justify-between p-1.5 rounded-lg border text-[11px] ${
+                        isBound
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800 font-bold'
+                            : 'bg-white border-slate-200 text-slate-400'
+                    }`;
+                    pill.innerHTML = `
+                        <span class="truncate">${String(s.id).padStart(2, '0')} ${escapeCardHtml(s.name)}</span>
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            ${isBound ? `
+                                <button type="button" onclick="openSingleStudentLinePushModal('${s.id}')" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white rounded px-1.5 py-0.5 transition cursor-pointer font-bold" title="單獨發送 LINE 通知給此學生家長">📨推播</button>
+                                <button type="button" onclick="unbindLineStudent('${s.id}', '${s.name}')" class="text-[10px] text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded px-1 py-0.5 transition cursor-pointer" title="解除此學生綁定">✕解除</button>
+                            ` : `
+                                <span class="text-slate-300 font-black text-xs">未綁定</span>
+                            `}
+                        </div>
+                    `;
+                    gridEl.appendChild(pill);
+                });
+            } else {
+                (db.students || []).forEach(s => {
+                    if (boundMap[s.id.toString()]) boundCount++;
+                });
+            }
+
+            const percent = totalStudents > 0 ? Math.round((boundCount / totalStudents) * 100) : 0;
+            if (statsEl) statsEl.innerText = `${boundCount} / ${totalStudents} 人 (${percent}%)`;
+            if (progressEl) progressEl.style.width = `${percent}%`;
+
+            // 計算今日缺交且已綁定的學生名單並渲染勾選框
+            const targetMissing = getBoundStudentsWithMissing(boundMap, false);
+            if (targetCountEl) targetCountEl.innerText = targetMissing.length;
+            renderLineMissingTargetsSelector(targetMissing);
+
+        } else {
+            if (statsEl) statsEl.innerText = '讀取失敗：' + (res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        if (statsEl) statsEl.innerText = '連線失敗，請檢查網路';
+        if (badge) {
+            badge.innerText = '連線異常';
+            badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300';
+        }
+    }
+}
+
+// 預覽 LINE 推播私訊樣式
+function previewLinePushModal() {
+    const targets = getBoundStudentsWithMissing(null, true);
+    if (targets.length === 0) {
+        Swal.fire({
+            title: '📱 LINE 訊息預覽',
+            html: `
+                <div class="text-left text-xs space-y-3">
+                    <div class="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 font-bold">
+                        🎉 目前沒有勾選任何待補交且已綁定 LINE 的學生（或全班皆已交齊）！
+                    </div>
+                    <div class="text-slate-500">
+                        若有勾選缺交學生，系統將會為每位家長生成 1 對 1 客製化私訊如下範例（作業全齊之家庭不會收到打擾）：
+                    </div>
+                    <div class="p-3 bg-slate-100 rounded-xl font-mono text-[11px] text-slate-800 leading-relaxed border border-slate-200">
+                        🚨 【作業待補交提醒】<br><br>
+                        王○明 家長您好：<br>
+                        今日學校清點作業，孩子尚有 1 項作業待補交：<br>
+                        ‧ 【國語】甲本 (P.10~12)<br><br>
+                        請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！<br><br>
+                        🔗 點此秒開專屬手札查看明細：<br>
+                        https://chy23.github.io/RP_QR_CC_HW/parent.html?t=DEMO<br><br>
+                        （由 班級作業管理系統 自動推播）
+                    </div>
+                </div>
+            `,
+            confirmButtonText: '關閉'
+        });
+        return;
+    }
+
+    const first = targets[0];
+    const currentPath = window.location.pathname;
+    const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    const gas = appConfig.gasUrl || '';
+    let apiParam = '';
+    if (gas && gas.includes('/macros/s/')) {
+        apiParam = gas.split('/macros/s/')[1].split('/')[0];
+    }
+    const demoUrl = `${window.location.origin}${basePath}parent.html?t=${encodeURIComponent(first.token)}${apiParam ? '&a=' + apiParam : ''}`;
+    const taskLines = (first.missingTasks || []).map(mt => `‧ 【${escapeCardHtml(mt.subject)}】${escapeCardHtml(mt.taskName)}${mt.range ? ' (' + escapeCardHtml(mt.range) + ')' : ''}`).join('<br>');
+
+    const targetListHtml = targets.map(t => `
+        <span class="inline-block bg-white border border-rose-200 text-rose-800 text-[11px] font-bold px-2 py-0.5 rounded-md">
+            ${String(t.studentId).padStart(2, '0')} ${escapeCardHtml(t.studentName)} (${t.missingTasks.length}項)
+        </span>
+    `).join(' ');
+
+    Swal.fire({
+        title: '📱 LINE 缺交通知預覽',
+        html: `
+            <div class="text-left text-xs space-y-3">
+                <div class="p-2.5 bg-rose-50 text-rose-800 rounded-xl border border-rose-200">
+                    <div class="font-bold">本次已勾選預計發送對象共 ${targets.length} 人（僅發送給以下名單）：</div>
+                    <div class="mt-1 flex flex-wrap gap-1 max-h-24 overflow-y-auto">${targetListHtml}</div>
+                </div>
+                <div class="font-bold text-slate-700">私訊內容範例（以 ${escapeCardHtml(first.studentName)} 為例）：</div>
+                <div class="p-3 bg-slate-100 rounded-xl font-mono text-[11px] text-slate-800 leading-relaxed border border-slate-200">
+                    🚨 【作業待補交提醒】<br><br>
+                    ${escapeCardHtml(maskStudentName(first.studentName))} 家長您好：<br>
+                    今日學校清點作業，孩子尚有 ${first.missingTasks.length} 項作業待補交：<br>
+                    ${taskLines}<br><br>
+                    請您今晚撥冗提醒並陪伴孩子於明日到校前補齊！<br><br>
+                    🔗 點此秒開專屬手札查看明細：<br>
+                    ${demoUrl}<br><br>
+                    （由 班級作業管理系統 自動推播）
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: `🚀 立即發送推播 (${targets.length}人)`,
+        cancelButtonText: '關閉預覽',
+        confirmButtonColor: '#e11d48'
+    }).then(r => {
+        if (r && r.isConfirmed) {
+            sendLinePushMissing();
+        }
+    });
+}
+
+// 執行 LINE 推播 API 請求共用函式
+async function executeLinePushRequest(targets) {
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    if (!gasUrl) {
+        showAlert('提示', '尚未設定 Google Apps Script (GAS) 網址！');
+        return;
+    }
+
+    const tokenInput = document.getElementById('line-access-token');
+    const token = (tokenInput && tokenInput.value.trim()) || appConfig.lineChannelAccessToken || localStorage.getItem('line_access_token') || '';
+
+    showLoading();
+    const loadText = document.getElementById('loading-text');
+    if (loadText) loadText.innerText = `正在透過 LINE 官方帳號發送 ${targets.length} 則通知...`;
+
+    try {
+        const payload = {
+            action: 'line_push_missing',
+            classPrefix: getActiveClassPrefix(),
+            lineChannelAccessToken: token,
+            targets: targets
+        };
+
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+
+        if (res.status === 'success') {
+            showAlert(
+                '推播發送完成！',
+                `成功發送：${res.successCount} 位\n失敗：${res.failCount} 位\n未綁定跳過：${res.skippedCount} 位`,
+                'success'
+            );
+        } else {
+            showAlert('發送失敗', res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        showAlert('連線錯誤', '發送失敗，請確認網路連線與金鑰有效性！');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 一鍵發送今日缺交私訊推播（支援核對確認發送對象機制）
+async function sendLinePushMissing() {
+    const targets = getBoundStudentsWithMissing(null, true);
+    if (targets.length === 0) {
+        showAlert('提示', '目前沒有勾選任何「待補交且已綁定 LINE」的學生！請先於清單中勾選欲提醒的學生。');
+        return;
+    }
+
+    const targetCardsHtml = targets.map(t => {
+        const taskNames = (t.missingTasks || []).map(m => `‧ 【${escapeCardHtml(m.subject)}】${escapeCardHtml(m.taskName)}${m.range ? ' (' + escapeCardHtml(m.range) + ')' : ''}`).join('<br>');
+        return `
+            <div class="p-2.5 bg-white rounded-xl border border-rose-200/90 shadow-2xs text-left">
+                <div class="flex items-center justify-between border-b border-rose-100 pb-1.5 mb-1.5">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-md bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-xs flex-shrink-0">
+                            ${String(t.studentId).padStart(2, '0')}
+                        </span>
+                        <span class="font-bold text-slate-800 text-sm">${escapeCardHtml(t.studentName)}</span>
+                    </div>
+                    <span class="text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full flex-shrink-0">
+                        待補交 ${t.missingTasks.length} 項
+                    </span>
+                </div>
+                <div class="text-[11px] text-slate-600 leading-relaxed font-mono pl-1">
+                    ${taskNames}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const confirmHtml = `
+        <div class="text-left text-xs space-y-3">
+            <div class="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-900 font-bold flex items-start gap-2.5">
+                <span class="text-2xl flex-shrink-0">⚠️</span>
+                <div>
+                    <div class="text-sm font-black text-amber-950">即將發送 LINE 缺交私訊給以下學生家長：</div>
+                    <div class="text-[11px] text-amber-800 font-normal mt-0.5 leading-relaxed">請核對發送名單與缺交作業是否正確。點擊「正確」後才正式送出提醒；若有誤請點擊「回前一頁檢查」重新調整！</div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center px-1">
+                <span class="font-bold text-slate-700">📋 本次發送對象清單 (共 ${targets.length} 位)：</span>
+                <span class="text-[11px] text-emerald-700 font-bold">已全數綁定 LINE</span>
+            </div>
+
+            <div class="max-h-60 overflow-y-auto space-y-2 pr-1 p-1 bg-slate-50/80 rounded-xl border border-slate-200">
+                ${targetCardsHtml}
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-[11px] text-slate-500 leading-relaxed">
+                🛡️ <strong>防呆機制保護</strong>：未缺交、未勾選或未綁定 LINE 的學生<strong>絕不會收到任何私訊打擾</strong>。
+            </div>
+        </div>
+    `;
+
+    const confirmResult = await Swal.fire({
+        title: '🔍 核對 LINE 缺交通知發送對象',
+        html: confirmHtml,
+        icon: null,
+        showCancelButton: true,
+        confirmButtonText: '✅ 正確，立即送出提醒',
+        cancelButtonText: '❌ 有誤，回前一頁檢查',
+        confirmButtonColor: '#059669',
+        cancelButtonColor: '#64748b',
+        reverseButtons: true,
+        focusCancel: false,
+        customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'font-bold text-sm px-4 py-2.5 rounded-xl shadow',
+            cancelButton: 'font-bold text-sm px-4 py-2.5 rounded-xl'
+        }
+    });
+
+    if (!confirmResult.isConfirmed) {
+        // 點擊錯誤則回前一頁確認錯誤
+        const targetBox = document.getElementById('line-missing-targets-box');
+        if (targetBox) {
+            targetBox.classList.remove('hidden');
+            targetBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetBox.classList.add('ring-2', 'ring-rose-400', 'transition-all');
+            setTimeout(() => {
+                targetBox.classList.remove('ring-2', 'ring-rose-400');
+            }, 2500);
+        }
+        showToast('已取消發送。請於清單中確認並勾選正確對象！', 'info');
+        return;
+    }
+
+    // 點擊正確後才送出提醒
+    await executeLinePushRequest(targets);
+}
+
+// 教師端手動解除某學生的 LINE 綁定
+async function unbindLineStudent(studentId, studentName) {
+    const confirmRes = await showConfirm(
+        '解除 LINE 綁定確認',
+        `確定要解除 ${studentName} 的 LINE 官方帳號綁定嗎？\n解除後家長將不再接收自動缺交通知。`,
+        'warning',
+        '解除綁定',
+        '取消'
+    );
+    if (!confirmRes || !confirmRes.isConfirmed) return;
+
+    const gasUrl = window.gasUrl || (appConfig && appConfig.gasUrl);
+    if (!gasUrl) {
+        showAlert('提示', '尚未設定 GAS 網址！');
+        return;
+    }
+
+    showLoading();
+    try {
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'line_unbind_student',
+                classPrefix: getActiveClassPrefix(),
+                studentId: studentId
+            })
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+            showToast(`已解除 ${studentName} 的 LINE 綁定！`, 'success');
+            fetchLineBindingStatus();
+        } else {
+            showAlert('解除失敗', res.message || '未知錯誤');
+        }
+    } catch(e) {
+        console.error(e);
+        showAlert('連線錯誤', '解除失敗，請確認網路連線');
+    } finally {
+        hideLoading();
+    }
+}
+
+// ==========================================
+// 家長閱覽即時足跡與歷程管理核心函式
+// ==========================================
+
+function updateParentViewCellsInTable() {
+    document.querySelectorAll('.parent-view-cell').forEach(cell => {
+        const sId = cell.getAttribute('data-student-id');
+        const s = (db.students || []).find(stu => stu.id.toString() === sId);
+        const sName = s ? s.name : '';
+        const vStat = currentParentViewStats ? currentParentViewStats[sId] : null;
+        if (vStat && vStat.totalViews > 0) {
+            const shortTime = formatShortViewTime(vStat.lastViewedAt);
+            const isLine = vStat.lastSource && vStat.lastSource.indexOf('LINE') !== -1;
+            const icon = isLine ? '💬' : '📱';
+            cell.innerHTML = `
+                <button type="button" onclick="openParentViewLogsModal('${sId}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition cursor-pointer active:scale-95" title="點擊查看 ${escapeCardHtml(sName)} 的完整閱覽足跡\n最後管道：${vStat.lastSource}\n最後時間：${vStat.lastViewedAt}\n備註：${vStat.lastNote || '無'}">
+                    <span>${icon} ${shortTime}</span>
+                    <span class="bg-indigo-200/80 text-indigo-900 rounded-full px-1 text-[10px] leading-tight">${vStat.totalViews}次</span>
+                </button>
+            `;
+        } else {
+            cell.innerHTML = '<span class="text-slate-300 font-bold text-[11px]">尚未閱覽</span>';
+        }
+    });
+}
+
+function formatShortViewTime(tsStr) {
+    if (!tsStr) return '-';
+    try {
+        const s = tsStr.replace(/-/g, '/');
+        const parts = s.split(' ');
+        if (parts.length >= 2) {
+            const dateParts = parts[0].split('/');
+            const timeParts = parts[1].split(':');
+            const mm = dateParts[1] || '';
+            const dd = dateParts[2] || '';
+            const hh = timeParts[0] || '';
+            const min = timeParts[1] || '';
+            if (mm && dd && hh && min) {
+                return `${mm}/${dd} ${hh}:${min}`;
+            }
+        }
+    } catch(e) {}
+    return tsStr.substring(5, 16);
+}
+
+async function openParentViewLogsModal(filterStudentId = null) {
+    const modal = document.getElementById('parent-view-logs-modal');
+    if (!modal) return;
+
+    const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+    const classLabel = cls ? cls.label : '目前班級';
+    const badgeEl = document.getElementById('parent-view-class-badge');
+    if (badgeEl) badgeEl.innerText = classLabel;
+
+    const searchInput = document.getElementById('parent-views-search-input');
+    if (searchInput) {
+        if (filterStudentId) {
+            const s = (db.students || []).find(st => st.id.toString() === filterStudentId.toString());
+            searchInput.value = s ? s.name : String(filterStudentId);
+        } else {
+            searchInput.value = '';
+        }
+    }
+    const chFilter = document.getElementById('parent-views-channel-filter');
+    if (chFilter) chFilter.value = 'ALL';
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    renderParentViewLogsContent();
+
+    if (!currentParentViewLogs || currentParentViewLogs.length === 0) {
+        await fetchParentViewLogs(false);
+    }
+}
+
+function closeParentViewLogsModal() {
+    const modal = document.getElementById('parent-view-logs-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+async function fetchParentViewLogs(isManual = false) {
+    const gasUrl = appConfig.gasUrl || '';
+    if (!gasUrl) {
+        if (isManual) showAlert('提示', '尚未設定 Google Apps Script 雲端網址！');
+        return;
+    }
+
+    const refreshIcon = document.getElementById('parent-views-refresh-icon');
+    if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+    try {
+        const resp = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'get_parent_views',
+                classPrefix: getActiveClassPrefix()
+            })
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+            currentParentViewStats = res.stats || {};
+            currentParentViewLogs = res.logs || [];
+            updateParentViewCellsInTable();
+            renderParentViewLogsContent();
+            if (isManual) showToast('已成功同步最新家長閱覽紀錄！', 'success');
+        } else {
+            if (isManual) showAlert('讀取失敗', res.message || '無法取得家長閱覽紀錄');
+        }
+    } catch (err) {
+        console.error('Fetch parent view logs error:', err);
+        if (isManual) showAlert('連線失敗', '無法連接 Google Apps Script 雲端試算表');
+    } finally {
+        if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+    }
+}
+
+function renderParentViewLogsContent() {
+    const totalStudents = db.students ? db.students.length : 0;
+    let viewedStudentsCount = 0;
+    let totalViewsCount = 0;
+    let latestTimeStr = '-';
+
+    if (currentParentViewStats) {
+        Object.keys(currentParentViewStats).forEach(sId => {
+            const st = currentParentViewStats[sId];
+            if (st && st.totalViews > 0) {
+                viewedStudentsCount++;
+                totalViewsCount += st.totalViews;
+                if (st.lastViewedAt && (latestTimeStr === '-' || st.lastViewedAt > latestTimeStr)) {
+                    latestTimeStr = st.lastViewedAt;
+                }
+            }
+        });
+    }
+
+    let boundCount = 0;
+    if (currentLineBindings) {
+        currentLineBindings.forEach(b => { if (b.isBound) boundCount++; });
+    }
+
+    const totalEl = document.getElementById('parent-views-stat-total');
+    if (totalEl) totalEl.innerText = `${totalViewsCount} 次`;
+
+    const coverageEl = document.getElementById('parent-views-stat-coverage');
+    if (coverageEl) {
+        const pct = totalStudents > 0 ? Math.round((viewedStudentsCount / totalStudents) * 100) : 0;
+        coverageEl.innerText = `${viewedStudentsCount} / ${totalStudents} 人 (${pct}%)`;
+    }
+
+    const lineEl = document.getElementById('parent-views-stat-line');
+    if (lineEl) {
+        const lPct = totalStudents > 0 ? Math.round((boundCount / totalStudents) * 100) : 0;
+        lineEl.innerText = `${boundCount} 人 (${lPct}%)`;
+    }
+
+    const lastTimeEl = document.getElementById('parent-views-stat-last-time');
+    if (lastTimeEl) {
+        lastTimeEl.innerText = latestTimeStr !== '-' ? formatShortViewTime(latestTimeStr) : '尚無紀錄';
+    }
+
+    filterParentViewLogsTable();
+}
+
+function filterParentViewLogsTable() {
+    const tbody = document.getElementById('parent-views-logs-tbody');
+    const emptyEl = document.getElementById('parent-views-empty');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    const searchVal = (document.getElementById('parent-views-search-input')?.value || '').trim().toLowerCase();
+    const chFilter = document.getElementById('parent-views-channel-filter')?.value || 'ALL';
+
+    const logs = currentParentViewLogs || [];
+    const filtered = logs.filter(log => {
+        // 排除教師端模擬器即時連線的紀錄
+        if ((log.source || '').includes('模擬器') || (log.source || '').includes('Simulator')) return false;
+
+        if (searchVal) {
+            const matchName = (log.studentName || '').toLowerCase().includes(searchVal);
+            const matchId = String(log.studentId || '').includes(searchVal);
+            const matchToken = (log.token || '').toLowerCase().includes(searchVal);
+            const matchNote = (log.note || '').toLowerCase().includes(searchVal);
+            if (!matchName && !matchId && !matchToken && !matchNote) return false;
+        }
+        if (chFilter !== 'ALL') {
+            if (!(log.source || '').includes(chFilter)) return false;
+        }
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+    }
+
+    if (emptyEl) emptyEl.classList.add('hidden');
+
+    filtered.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/80 transition';
+
+        const isLine = (log.source || '').includes('LINE');
+        const sourceBadge = isLine
+            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">${escapeCardHtml(log.source)}</span>`
+            : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">${escapeCardHtml(log.source)}</span>`;
+
+        const noteBadge = (log.note || '').includes('待補交') || (log.note || '').includes('缺交')
+            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">${escapeCardHtml(log.note)}</span>`
+            : `<span class="text-slate-600 text-xs">${escapeCardHtml(log.note || '正常瀏覽')}</span>`;
+
+        tr.innerHTML = `
+            <td class="p-3 text-slate-500 font-mono text-[11px]">${escapeCardHtml(log.timestamp)}</td>
+            <td class="p-3">
+                <span class="font-bold text-slate-800">${String(log.studentId).padStart(2, '0')} ${escapeCardHtml(log.studentName)}</span>
+                <span class="block text-[10px] text-slate-400 font-mono">${escapeCardHtml(log.token || '')}</span>
+            </td>
+            <td class="p-3">${sourceBadge}</td>
+            <td class="p-3">${noteBadge}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function exportParentViewLogsCsv() {
+    const logs = currentParentViewLogs || [];
+    if (logs.length === 0) {
+        showAlert('提示', '目前尚無家長閱覽紀錄可供匯出！');
+        return;
+    }
+
+    const cls = appConfig.classes ? appConfig.classes.find(c => c.id === appConfig.activeClassId) : null;
+    const classLabel = cls ? cls.label : '目前班級';
+
+    let csvContent = '\uFEFF時間戳記,座號,學生姓名,查詢代碼,閱覽管道,備註\n';
+    logs.forEach(log => {
+        const time = `"${(log.timestamp || '').replace(/"/g, '""')}"`;
+        const sid = `"${(log.studentId || '').replace(/"/g, '""')}"`;
+        const name = `"${(log.studentName || '').replace(/"/g, '""')}"`;
+        const tok = `"${(log.token || '').replace(/"/g, '""')}"`;
+        const src = `"${(log.source || '').replace(/"/g, '""')}"`;
+        const note = `"${(log.note || '').replace(/"/g, '""')}"`;
+        csvContent += `${time},${sid},${name},${tok},${src},${note}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `${classLabel}_家長閱覽足跡日誌_${dateStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('已成功匯出家長閱覽紀錄 CSV！', 'success');
+}
 
