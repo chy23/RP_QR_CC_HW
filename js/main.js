@@ -35,7 +35,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    console.log("System initialized with shortcuts.");
+    // 系統資訊與建立者致敬彩蛋 (Console Easter Egg)
+    if (typeof console !== 'undefined' && console.log) {
+        console.log(
+            "%c🎒 QRcode自動清點作業系統 %cVer. 3.4.3\n" +
+            "%c📍 創立與開發者：新北市林口區麗園國民小學 楊家驊 老師\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "📖 系統開發歷程與時間表：\n" +
+            " • 2026/07 (Ver 1.0) 系統誕生：相機掃碼清點、防偽QR生成、GAS雲端試算表雙向同步\n" +
+            " • 2026/08 (Ver 1.4~2.0) 自動化溝通：缺交提醒單多情境模板、個人成績報表PDF、聯絡簿專用沒帶優化\n" +
+            " • 2026/10 初 (Ver 2.2~3.0) 核心擴充：GAS雲端免手動熱更新引擎、多班級無縫切換、智慧連線診斷\n" +
+            " • 2026/10 中 (Ver 3.1~3.3) 原生手感與家長端：Apple HIG原生動效、parent.html家長手札、LINE推播中心\n" +
+            " • 2026/10 下 (Ver 3.4~3.4.3) 資安深化：學生姓名去識別化、離線佇列盲掃、雙端專屬Favicon、1970假別自動修復\n" +
+            " • 2026/10 底 中樞直連：接入 School LINE Hub 校園推播中樞、請假補繳交視為準時繳交",
+            "background: #1d4ed8; color: #ffffff; font-size: 13px; font-weight: bold; padding: 3px 8px; border-radius: 4px;",
+            "color: #475569; font-size: 11px; font-weight: bold;",
+            "color: #0f172a; font-size: 11px; line-height: 1.6;"
+        );
+    }
 });
 async function checkForUpdates() {
     try {
