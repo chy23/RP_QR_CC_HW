@@ -1,4 +1,54 @@
 <!DOCTYPE html>
+<!--
+================================================================================
+🏫 QRcode 自動清點作業系統 (RP_QR_CC_HW)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📍 創立與開發者：新北市林口區麗園國民小學 楊家驊 老師 (Teacher Yang Chia-Hua)
+📅 始於：2026 年 7 月 ｜ 適用對象：全國國民中小學導師、科任教師、學生與家長
+🎯 核心宗旨在於：消滅教學現場重複繁雜之作業清點登記，以無感秒級掃碼、
+   去個資高隱私手札、以及親師無縫連動，守護孩子的學習習慣與成長足跡。
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📖 系統開發歷程與里程碑時間表 (System Evolution & Timeline)：
+
+【階段一：系統誕生與作業清點基礎建設】
+• 2026/07/29 — 專案初始創立 (Initial Commit)，班級學生資料建置與 QR Code 條碼生成架構。
+• 2026/07/29~07/30 — 7 大核心升級：相機鏡頭即時掃碼、多作業同時批次清點、防偽暗碼條碼、
+  固定簿冊 (PDF) 與浮動卷單視覺拖曳排版列印、Google Apps Script (GAS) 雲端試算表雙向同步。
+
+【階段二：教學現場流程精煉與自動化親師溝通】
+• 2026/08/01~08/05 (Ver 1.3 - 1.4 正式版) — 整合全班與個別學生條碼列印中心；新增轉入生
+  「中途加入免罰歷史缺交」防呆機制；支援多科目分頁 Excel/Word/PDF 匯出。
+• 2026/08/06~08/16 (Beta Ver 1.41 - 1.60) — 全面程式碼模組化重構 (db, ui, scanner, export)；
+  導入 Web Audio 提示音效、IndexedDB 本機備份、快捷鍵 (Space/Ctrl+S)；
+  隆重推出【6. 缺交提醒單】自動化親師溝通模組與多情境溝通範本。
+• 2026/08/21~08/24 (Ver 1.70 - 2.0 正式發布) — 假別設定（病/事/公/喪假免計分母）；聯絡簿
+  「沒帶」情境優化；全新推出【7. 個人繳交狀況報表】PDF 匯出；SweetAlert2 原生對話框體驗。
+
+【階段三：多班級支援與免手動熱更新引擎】
+• 2026/10/07 (Ver 2.2) — 首創「GAS 雲端自動更新引擎」，後端核心邏輯動態自 GitHub 熱載入，
+  徹底實現「一次部署、終身免手動更新試算表程式碼」。
+• 2026/10/09 (Ver 3.0) — 多班級無縫切換系統，雲端自動依 [學年期-班級] 分頁上色與群組化；
+  防偽暗碼與系統代碼正式分離；智慧連線診斷工具。
+• 2026/10/10~10/13 (Ver 3.1 - 3.2) — Apple HIG 原生手感、觸覺震動回饋 (Haptics)；側邊懸浮
+  待掃作業小視窗（即時修改範圍與各項個別作業掃描人次累計）；GAS 網址動態響應綁定。
+
+【階段四：家長專屬手札、智慧推播與資安高標】
+• 2026/10/17 (Ver 3.3) — 隆重推出【8. 家長手札與專屬查詢小卡】、獨立家長端網頁 (parent.html)、
+  LINE 官方帳號智慧推播中心（放學一鍵私訊缺交）、常遲到作業 Top 3 弱點排行、未派發作業智慧過濾、
+  純相機 QR 掃碼防猜防窺登入。
+• 2026/10/17~10/18 (Ver 3.4) — 嚴格落實個資法保護「學生姓名去識別化」（如王○明）；作業查詢卡
+  零留白重排與教師自由編輯；二階作業歷次明細展開；家長閱覽即時足跡統計與防刷日誌。
+• 2026/10/19~10/20 (Ver 3.4.1 - 3.4.2 正式版) — 雙端專屬分頁圖示 (教師皇家藍 vs 家長森林綠)；
+  教室離線防斷線機制 (Offline Queue & Automatic Resync Engine) 斷網零中斷盲掃；GAS 網址
+  防旁窺遮罩；多階段連線同步動效；落實「只有教師明確註記遲交才算遲交」準則。
+• 2026/10/21~10/24 (Ver 3.4.3) — 條碼防偽暗碼自動修復；1970 假別異常雙層自動還原機制；
+  掃描前重整防呆與跨日重疊防護；學生小幫手版 (/student/) 與純清點版 (/check-only/) 獨立分頁部署。
+
+【階段五：校園推播中樞直連與親師數值對齊】
+• 2026/10/29 — 請假補繳交皆視為準時繳交，修正準時率公式（LINE 訊息與家長手札網頁 100% 對齊）；
+  引入 LineHubClient 接入 School LINE Hub 校園推播中樞，免個別金鑰，全校共享額度與綁定資料庫。
+================================================================================
+-->
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -6,6 +56,9 @@
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="author" content="新北市林口區麗園國民小學 楊家驊老師 (Teacher Yang Chia-Hua)">
+    <meta name="creator" content="新北市林口區麗園國民小學 楊家驊老師">
+    <meta name="description" content="QRcode自動清點作業系統 - 由新北市林口區麗園國小楊家驊老師建立與維護，支援作業秒級掃碼清點、防偽條碼印製、個人學習手札與LINE智慧推播。">
     <title>QRcode自動清點作業系統 (Ver. 3.4.2)</title>
     <!-- Favicon & Touch Icons -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIj4KICA8ZGVmcz4KICAgIDwhLS0gQmFja2dyb3VuZCBHcmFkaWVudCAtLT4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmctZ3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMzYjgyZjYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiMyNTYzZWIiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMWQ0ZWQ4Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgCiAgICA8IS0tIEVtZXJhbGQgQmFkZ2UgR3JhZGllbnQgLS0+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImNoZWNrLWdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMzRkMzk5Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzA1OTY2OSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIAogICAgPCEtLSBTdWJ0bGUgSW5uZXIgU2hhZG93IC8gR2xvdyAtLT4KICAgIDxmaWx0ZXIgaWQ9InNoYWRvdyIgeD0iLTEwJSIgeT0iLTEwJSIgd2lkdGg9IjEzMCUiIGhlaWdodD0iMTMwJSI+CiAgICAgIDxmZURyb3BTaGFkb3cgZHg9IjAiIGR5PSI4IiBzdGREZXZpYXRpb249IjEyIiBmbG9vZC1jb2xvcj0iIzAwMCIgZmxvb2Qtb3BhY2l0eT0iMC4yNSIvPgogICAgPC9maWx0ZXI+CiAgICA8ZmlsdGVyIGlkPSJiYWRnZS1zaGFkb3ciIHg9Ii0yMCUiIHk9Ii0yMCUiIHdpZHRoPSIxNDAlIiBoZWlnaHQ9IjE0MCUiPgogICAgICA8ZmVEcm9wU2hhZG93IGR4PSIwIiBkeT0iNCIgc3RkRGV2aWF0aW9uPSI2IiBmbG9vZC1jb2xvcj0iIzBmMTcyYSIgZmxvb2Qtb3BhY2l0eT0iMC4zIi8+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CgogIDwhLS0gaU9TIEFwcGxlIFNxdWlyY2xlIEJhc2UgLS0+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTUiIGZpbGw9InVybCgjYmctZ3JhZCkiLz4KICAKICA8IS0tIFN1YnRsZSBIaWdobGlnaHQgQm9yZGVyIC0tPgogIDxyZWN0IHg9IjYiIHk9IjYiIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIiByeD0iMTEwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LCAyNTUsIDI1NSwgMC4yMikiIHN0cm9rZS13aWR0aD0iOCIvPgoKICA8IS0tIFFSIEVsZW1lbnRzIEdyb3VwIHdpdGggU2hhZG93IC0tPgogIDxnIGZpbHRlcj0idXJsKCNzaGFkb3cpIj4KICAgIDwhLS0gVG9wLUxlZnQgRmluZGVyIFNxdWFyZSAtLT4KICAgIDxyZWN0IHg9Ijg4IiB5PSI4OCIgd2lkdGg9IjExNiIgaGVpZ2h0PSIxMTYiIHJ4PSIyNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIyIi8+CiAgICA8cmVjdCB4PSIxMjIiIHk9IjEyMiIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iMTIiIGZpbGw9IiNmZmZmZmYiLz4KCiAgICA8IS0tIFRvcC1SaWdodCBGaW5kZXIgU3F1YXJlIC0tPgogICAgPHJlY3QgeD0iMzA4IiB5PSI4OCIgd2lkdGg9IjExNiIgaGVpZ2h0PSIxMTYiIHJ4PSIyNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIyIi8+CiAgICA8cmVjdCB4PSIzNDIiIHk9IjEyMiIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iMTIiIGZpbGw9IiNmZmZmZmYiLz4KCiAgICA8IS0tIEJvdHRvbS1MZWZ0IEZpbmRlciBTcXVhcmUgLS0+CiAgICA8cmVjdCB4PSI4OCIgeT0iMzA4IiB3aWR0aD0iMTE2IiBoZWlnaHQ9IjExNiIgcng9IjI2IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMjIiLz4KICAgIDxyZWN0IHg9IjEyMiIgeT0iMzQyIiB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIxMiIgZmlsbD0iI2ZmZmZmZiIvPgoKICAgIDwhLS0gQ2VudGVyICYgTWF0cml4IERhdGEgRWxlbWVudHMgLS0+CiAgICA8cmVjdCB4PSIyMzQiIHk9IjIzNCIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjQ0IiByeD0iMTAiIGZpbGw9IiNmZmZmZmYiLz4KICAgIDxyZWN0IHg9IjIzOCIgeT0iMTI2IiB3aWR0aD0iMzYiIGhlaWdodD0iMzYiIHJ4PSI4IiBmaWxsPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuOTUpIi8+CiAgICA8cmVjdCB4PSIxMjgiIHk9IjIzOCIgd2lkdGg9IjM2IiBoZWlnaHQ9IjM2IiByeD0iOCIgZmlsbD0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjk1KSIvPgogICAgPHJlY3QgeD0iMjM4IiB5PSIzNDgiIHdpZHRoPSIzNiIgaGVpZ2h0PSIzNiIgcng9IjgiIGZpbGw9InJnYmEoMjU1LCAyNTUsIDI1NSwgMC45NSkiLz4KICAgIDxyZWN0IHg9IjM0OCIgeT0iMjM4IiB3aWR0aD0iMzYiIGhlaWdodD0iMzYiIHJ4PSI4IiBmaWxsPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuOTUpIi8+CiAgPC9nPgoKICA8IS0tIEJvdHRvbS1SaWdodCBDaGVjay1pbiBTdWNjZXNzIEJhZGdlIC0tPgogIDxnIGZpbHRlcj0idXJsKCNiYWRnZS1zaGFkb3cpIj4KICAgIDwhLS0gV2hpdGUgb3V0ZXIgcmltIC0tPgogICAgPGNpcmNsZSBjeD0iMzY2IiBjeT0iMzY2IiByPSI3NCIgZmlsbD0iI2ZmZmZmZiIvPgogICAgPCEtLSBFbWVyYWxkIENpcmNsZSAtLT4KICAgIDxjaXJjbGUgY3g9IjM2NiIgY3k9IjM2NiIgcj0iNjQiIGZpbGw9InVybCgjY2hlY2stZ3JhZCkiLz4KICAgIDwhLS0gQ2hlY2ttYXJrIC0tPgogICAgPHBhdGggZD0iTTMzNiAzNjYgTDM1NiAzODYgTDM5OCAzNDQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIxNyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPC9nPgo8L3N2Zz4=">
@@ -294,8 +347,8 @@
 </head>
 <body class="text-gray-800">
     <!-- Watermarks -->
-    <div class="fixed top-32 right-4 text-gray-400 opacity-10 pointer-events-none z-0 select-none no-print" style="font-size: 18pt;">網站建立自楊家驊老師</div>
-    <div class="fixed bottom-12 right-4 text-gray-400 opacity-10 pointer-events-none z-0 select-none no-print" style="font-size: 18pt;">網站建立自楊家驊老師</div>
+    <div class="fixed top-32 right-4 text-gray-400 opacity-10 pointer-events-none z-0 select-none no-print" style="font-size: 18pt;">網站建立自新北市林口區麗園國小 楊家驊老師</div>
+    <div class="fixed bottom-12 right-4 text-gray-400 opacity-10 pointer-events-none z-0 select-none no-print" style="font-size: 18pt;">網站建立自新北市林口區麗園國小 楊家驊老師</div>
 
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex flex-col items-center justify-center text-white text-2xl" style="display: none;">
