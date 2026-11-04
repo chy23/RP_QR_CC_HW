@@ -430,7 +430,8 @@ function(e, ss, getSheetNames) {
                 range: tRange,
                 date: tDate,
                 deadline: tDate,
-                status: cleanStatus
+                status: cleanStatus,
+                timestamp: cleanStatus
               };
               studentTasks.push(taskItem);
 

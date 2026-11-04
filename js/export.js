@@ -2628,10 +2628,11 @@ function classifyParentTaskStatus(statusStr, timestamp, deadline) {
         s.includes('leave_custom_請假補交') || s.includes('leave_custom_請假補繳交') ||
         ((s.includes('補交') || s.includes('補繳交')) && !s.includes('缺交') && !s.includes('[遲交]') && s !== '遲交' && !s.toLowerCase().includes('late'))
     ) {
+        let tsPart = s.replace(/\[?請假補交\]?/g, '').replace(/\[?請假補繳交\]?/g, '').replace(/leave_custom_請假補交/g, '').trim();
         return {
             type: 'ontime',
             label: '請假補交',
-            badge: '✅ 準時 (請假補交)',
+            badge: tsPart ? ('✅ 準時 (請假補交 ' + tsPart + ')') : '✅ 準時 (請假補交)',
             badgeClass: 'bg-teal-50 text-teal-800 border-teal-200',
             isPending: false
         };
