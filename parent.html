@@ -1262,10 +1262,11 @@
         s.includes('leave_custom_請假補交') || s.includes('leave_custom_請假補繳交') ||
         ((s.includes('補交') || s.includes('補繳交')) && !s.includes('缺交') && !s.includes('[遲交]') && s !== '遲交' && !s.toLowerCase().includes('late'))
       ) {
+        let tsPart = s.replace(/\[?請假補交\]?/g, '').replace(/\[?請假補繳交\]?/g, '').replace(/leave_custom_請假補交/g, '').trim();
         return {
           type: 'ontime',
           label: '請假補交',
-          badge: '✅ 準時 (請假補交)',
+          badge: tsPart ? ('✅ 準時 (請假補交 ' + tsPart + ')') : '✅ 準時 (請假補交)',
           badgeClass: 'bg-teal-50 text-teal-800 border-teal-200',
           isPending: false
         };
@@ -1607,11 +1608,16 @@
             subMissing++;
             tasksMap[tName].missing++;
           }
+          let itemTs = st.timestamp;
+          if (!itemTs && st.status) {
+            const match = st.status.match(/\d{1,2}\/\d{1,2}(?:\s+\d{1,2}:\d{2})?/);
+            if (match) itemTs = match[0];
+          }
           tasksMap[tName].items.push({
             range: st.range,
             date: st.date,
             status: st.status,
-            timestamp: st.timestamp,
+            timestamp: itemTs,
             c
           });
         });

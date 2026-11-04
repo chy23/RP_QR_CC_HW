@@ -324,7 +324,26 @@
                 const taskDateStr = getTaskDate(r.taskId, r.noticeName);
                 const deadlineStr = (task && task.deadline) ? task.deadline : taskDateStr;
 
-                if (r.manualStatus === 'late') {
+                const rawTs = (r.timestamp || r.fullTimestamp || '').toString().trim();
+                const statusName = getLeaveName(r.manualStatus) || (r.manualStatus ? r.manualStatus.toString() : '');
+                const isMakeUp = statusName.includes('請假補交') || statusName.includes('請假補繳交') || rawTs.includes('請假補交') || rawTs.includes('請假補繳交');
+
+                let finalTs = r.timestamp || r.fullTimestamp;
+                if (isMakeUp) {
+                    recStatus = '請假補交';
+                    let tsOnly = rawTs.replace(/\[?請假補交\]?/g, '').replace(/\[?請假補繳交\]?/g, '').trim();
+                    if (!tsOnly && r.fullTimestamp) {
+                        const fDate = new Date(r.fullTimestamp);
+                        if (!isNaN(fDate.getTime())) {
+                            tsOnly = `${fDate.getMonth()+1}/${fDate.getDate()} ${fDate.getHours().toString().padStart(2,'0')}:${fDate.getMinutes().toString().padStart(2,'0')}`;
+                        }
+                    }
+                    if (!tsOnly) {
+                        const now = new Date();
+                        tsOnly = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                    }
+                    finalTs = `[請假補交] ${tsOnly}`;
+                } else if (r.manualStatus === 'late') {
                     recStatus = '遲交';
                 } else if (r.manualStatus === 'ontime') {
                     recStatus = '已繳交';
@@ -337,7 +356,7 @@
                 }
 
                 return {
-                    timestamp: r.timestamp || r.fullTimestamp,
+                    timestamp: finalTs,
                     className: (() => {
                         const cls = appConfig.classes.find(c => c.id === appConfig.activeClassId);
                         return cls ? cls.label : '';
@@ -435,7 +454,23 @@
                         let cellValue = loopMissingText;
                         if (record) {
                             const rawTs = (record.timestamp || '').toString().trim();
-                            if (isLeaveStatus(record.manualStatus) || record.manualStatus === '其他假別' || ['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他', '請假', '免交', '請假補交'].includes(record.manualStatus)) {
+                            const statusName = getLeaveName(record.manualStatus) || (record.manualStatus ? record.manualStatus.toString() : '');
+                            const isMakeUp = statusName.includes('請假補交') || statusName.includes('請假補繳交') || rawTs.includes('請假補交') || rawTs.includes('請假補繳交');
+
+                            if (isMakeUp) {
+                                let tsOnly = rawTs.replace(/\[?請假補交\]?/g, '').replace(/\[?請假補繳交\]?/g, '').trim();
+                                if (!tsOnly && record.fullTimestamp) {
+                                    const fDate = new Date(record.fullTimestamp);
+                                    if (!isNaN(fDate.getTime())) {
+                                        tsOnly = `${fDate.getMonth()+1}/${fDate.getDate()} ${fDate.getHours().toString().padStart(2,'0')}:${fDate.getMinutes().toString().padStart(2,'0')}`;
+                                    }
+                                }
+                                if (!tsOnly) {
+                                    const now = new Date();
+                                    tsOnly = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                                }
+                                cellValue = `[請假補交] ${tsOnly}`;
+                            } else if (isLeaveStatus(record.manualStatus) || record.manualStatus === '其他假別' || ['事假', '病假', '公假', '喪假', '曠課', '遲到', '其他', '請假', '免交'].includes(record.manualStatus)) {
                                 cellValue = getLeaveName(record.manualStatus) || record.manualStatus || '請假';
                             } else if (record.manualStatus === 'missing') {
                                 cellValue = loopMissingText;
@@ -541,7 +576,15 @@
 
                             const r = db.records.find(rec => rec.studentId === studentId && rec.taskId === k.taskId && (rec.noticeName || '') === (k.noticeName || ''));
                             if (r) {
-                                if (isLeaveStatus(r.manualStatus) || r.manualStatus === '其他假別' || leavesToExempt.includes(r.manualStatus)) {
+                                const rawTs = (r.timestamp || r.fullTimestamp || '').toString().trim();
+                                const statusName = getLeaveName(r.manualStatus) || (r.manualStatus ? r.manualStatus.toString() : '');
+                                const isMakeUp = statusName.includes('請假補交') || statusName.includes('請假補繳交') || rawTs.includes('請假補交') || rawTs.includes('請假補繳交');
+
+                                if (isMakeUp) {
+                                    onTime++; // 請假補交視為準時繳交
+                                    if (leaveCounts['請假補交'] === undefined) leaveCounts['請假補交'] = 0;
+                                    leaveCounts['請假補交']++;
+                                } else if (isLeaveStatus(r.manualStatus) || r.manualStatus === '其他假別' || leavesToExempt.includes(r.manualStatus)) {
                                     const lName = getLeaveName(r.manualStatus) || r.manualStatus;
                                     if (leaveCounts[lName] === undefined) leaveCounts[lName] = 0;
                                     leaveCounts[lName]++;
@@ -1606,8 +1649,15 @@ function renderStatistics() {
                         } else if (record.manualStatus === 'ontime') {
                             isLate = false;
                         }
-                        
-                        if (isLeaveStatus(record.manualStatus)) {
+
+                        const rawTs = (record.timestamp || record.fullTimestamp || '').toString().trim();
+                        const statusName = getLeaveName(record.manualStatus) || (record.manualStatus ? record.manualStatus.toString() : '');
+                        const isMakeUpLeave = statusName.includes('請假補交') || statusName.includes('請假補繳交') || rawTs.includes('請假補交') || rawTs.includes('請假補繳交');
+
+                        if (isMakeUpLeave) {
+                            let displayTs = rawTs.replace(/\[?請假補交\]?/g, '').replace(/\[?請假補繳交\]?/g, '').trim();
+                            mark = `<span class="text-teal-700 font-bold text-xs bg-teal-50 border border-teal-200 px-1 rounded block truncate" title="請假補交: ${record.timestamp || rawTs}">補交:${displayTs || '準時'}</span>`;
+                        } else if (isLeaveStatus(record.manualStatus)) {
                             const lName = getLeaveName(record.manualStatus);
                             mark = `<span class="text-blue-700 font-bold text-xs bg-blue-100 border border-blue-200 px-1 rounded block truncate" title="${lName}">${lName}</span>`;
                         } else if (isLate) {
@@ -1648,6 +1698,8 @@ window.handleLeaveSelect = function(selectEl, studentId, taskId, noticeName) {
             selectEl.value = '';
             return;
         }
+    } else if (val === '請假補交' || val.includes('請假補交')) {
+        val = 'leave_custom_請假補交';
     } else {
         val = 'leave_' + val;
     }
@@ -1754,8 +1806,18 @@ let currentTargetRecord = null;
             
             const now = new Date();
             const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            const isMakeUpLeave = statusType && (statusType.includes('請假補交') || statusType.includes('請假補繳交') || (statusType.includes('補交') && !statusType.includes('遲交') && !statusType.includes('缺交')));
             const isLeave = isLeaveStatus(statusType);
-            const recordTs = isLeave ? (getLeaveName(statusType) || statusType) : (statusType === 'late' ? `[遲交] ${timeString}` : timeString);
+            let recordTs;
+            if (isMakeUpLeave) {
+                recordTs = `[請假補交] ${timeString}`;
+            } else if (isLeave) {
+                recordTs = getLeaveName(statusType) || statusType;
+            } else if (statusType === 'late') {
+                recordTs = `[遲交] ${timeString}`;
+            } else {
+                recordTs = timeString;
+            }
 
             if (studentId === null) {
                 // Batch operation
@@ -2125,8 +2187,15 @@ let currentTargetRecord = null;
                     if (hasLateTag || record.manualStatus === 'late') isLate = true;
                     else if (record.manualStatus === 'ontime') isLate = false;
                     
-                    if (isLeaveStatus(record.manualStatus)) {
-                            const lName = getLeaveName(record.manualStatus);
+                    const rawTs = (record.timestamp || record.fullTimestamp || '').toString().trim();
+                    const statusName = getLeaveName(record.manualStatus) || (record.manualStatus ? record.manualStatus.toString() : '');
+                    const isMakeUpLeave = statusName.includes('請假補交') || statusName.includes('請假補繳交') || rawTs.includes('請假補交') || rawTs.includes('請假補繳交');
+
+                    if (isMakeUpLeave) {
+                        statusHTML = `<span class="text-teal-700 font-bold bg-teal-50 px-2 py-1 rounded border border-teal-200 shadow-sm">請假補交 (${record.timestamp || rawTs})</span>`;
+                        currentStatusType = 'leave_custom_請假補交';
+                    } else if (isLeaveStatus(record.manualStatus)) {
+                        const lName = getLeaveName(record.manualStatus);
                         statusHTML = `<span class="text-blue-700 font-bold bg-blue-100 px-2 py-1 rounded border border-blue-200 shadow-sm">${lName}</span>`;
                         currentStatusType = record.manualStatus;
                     } else if (isLate) {
@@ -2156,6 +2225,7 @@ let currentTargetRecord = null;
                                         <option value="事假" class="text-black bg-white">事假</option>
                                         <option value="公假" class="text-black bg-white">公假</option>
                                         <option value="喪假" class="text-black bg-white">喪假</option>
+                                        <option value="請假補交" class="text-teal-800 bg-white font-bold">請假補交</option>
                                         <option value="其他假別" class="text-black bg-white">其他假別</option>
                                     </select>
                                 </div>`;
@@ -2172,8 +2242,18 @@ let currentTargetRecord = null;
         function updateStudentTaskStatus(studentId, taskId, noticeName, statusType) {
             const now = new Date();
             const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            const isMakeUpLeave = statusType && (statusType.includes('請假補交') || statusType.includes('請假補繳交') || (statusType.includes('補交') && !statusType.includes('遲交') && !statusType.includes('缺交')));
             const isLeave = isLeaveStatus(statusType);
-            const recordTs = isLeave ? (getLeaveName(statusType) || statusType) : (statusType === 'late' ? `[遲交] ${timeString}` : timeString);
+            let recordTs;
+            if (isMakeUpLeave) {
+                recordTs = `[請假補交] ${timeString}`;
+            } else if (isLeave) {
+                recordTs = getLeaveName(statusType) || statusType;
+            } else if (statusType === 'late') {
+                recordTs = `[遲交] ${timeString}`;
+            } else {
+                recordTs = timeString;
+            }
             
             const index = db.records.findIndex(r => r.studentId === studentId && r.taskId === taskId && (r.noticeName || '') === (noticeName || ''));
             

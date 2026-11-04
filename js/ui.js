@@ -750,6 +750,10 @@ function deleteClass(id) {
                         if (cellValue.startsWith('[遲交]') || cellValue.includes('遲交')) {
                             record.manualStatus = 'late';
                             record.timestamp = cellValue.startsWith('[遲交]') ? cellValue : (`[遲交] ${cellValue}`);
+                        } else if (cellValue.includes('請假補交') || cellValue.includes('請假補繳交')) {
+                            record.manualStatus = 'leave_custom_請假補交';
+                            let tsPart = cellValue.replace(/\[?請假補交\]?/g, '').replace(/\[?請假補繳交\]?/g, '').trim();
+                            record.timestamp = tsPart ? `[請假補交] ${tsPart}` : '[請假補交]';
                         } else if (leavesList.includes(cellValue) || (typeof isLeaveStatus === 'function' && isLeaveStatus(cellValue))) {
                             const cleanLeave = (typeof getLeaveName === 'function' && getLeaveName(cellValue)) ? getLeaveName(cellValue) : cellValue;
                             record.manualStatus = cleanLeave;
