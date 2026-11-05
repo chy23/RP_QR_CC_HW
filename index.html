@@ -617,7 +617,11 @@
                             <div id="reader" class="hidden" style="width: 100%; max-width: 500px; margin: 0 auto;"></div>
                             <!-- Overlay for drawing boxes -->
                             <canvas id="overlay-canvas" class="absolute top-0 left-0 w-full h-full pointer-events-none" style="display:none;"></canvas>
-                            <button onclick="toggleCameraScanner()" class="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-sm transition-all duration-150 active:scale-95 active:opacity-80">關閉鏡頭</button>
+                            <div class="mt-2 flex flex-wrap items-center justify-center gap-2">
+                                <select id="camera-select" onchange="switchCamera(this.value)" class="text-xs border border-gray-300 rounded-lg p-2 bg-white max-w-[280px] truncate font-medium text-slate-700 shadow-xs hidden outline-none cursor-pointer">
+                                </select>
+                                <button onclick="toggleCameraScanner()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow text-xs font-bold transition-all duration-150 active:scale-95 active:opacity-80">關閉鏡頭</button>
+                            </div>
                             <div id="scanner-debug" class="text-xs text-left text-gray-500 mt-2 bg-white p-1 rounded overflow-auto h-20">Debug Info...</div>
                         </div>
                         
