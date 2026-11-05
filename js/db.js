@@ -265,7 +265,133 @@
         let zxingReader = null;
         const scanCooldowns = new Map(); // Store cooldowns per code
         
-        async function startCustomScanner() {
+        async function getWorkingCameraStream(preferredId) {
+            let stream = null;
+            let activeDeviceId = null;
+
+            // 1. 列舉可用的視訊裝置清單
+            let videoDevices = [];
+            try {
+                if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+                    const allDevs = await navigator.mediaDevices.enumerateDevices();
+                    videoDevices = allDevs.filter(d => d.kind === 'videoinput');
+                }
+            } catch (e) {
+                console.warn("enumerateDevices error:", e);
+            }
+
+            // 2. 若有指定或儲存的 preferredId，且該 ID 存在於當前清單中，優先嘗試
+            if (preferredId && videoDevices.length > 0) {
+                const found = videoDevices.find(d => d.deviceId === preferredId);
+                if (found) {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: { deviceId: { exact: preferredId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+                        });
+                        return { stream, activeDeviceId: preferredId };
+                    } catch (e) {
+                        try {
+                            stream = await navigator.mediaDevices.getUserMedia({
+                                video: { deviceId: { exact: preferredId } }
+                            });
+                            return { stream, activeDeviceId: preferredId };
+                        } catch (e2) {
+                            console.warn("Preferred camera failed, auto-fallbacking...", e2);
+                            localStorage.removeItem('preferredCameraDeviceId');
+                        }
+                    }
+                } else {
+                    // 原先記錄的裝置已不存在（例如 OBS 被移除）
+                    localStorage.removeItem('preferredCameraDeviceId');
+                }
+            }
+
+            // 3. 遍歷列舉出的實體鏡頭（優先排除 OBS / Virtual 等虛擬鏡頭）
+            if (videoDevices.length > 0) {
+                const sortedDevs = [...videoDevices].sort((a, b) => {
+                    const aLabel = (a.label || '').toLowerCase();
+                    const bLabel = (b.label || '').toLowerCase();
+                    const aIsVirt = aLabel.includes('obs') || aLabel.includes('virtual');
+                    const bIsVirt = bLabel.includes('obs') || bLabel.includes('virtual');
+                    if (aIsVirt && !bIsVirt) return 1;
+                    if (!aIsVirt && bIsVirt) return -1;
+                    return 0;
+                });
+
+                for (const dev of sortedDevs) {
+                    if (!dev.deviceId) continue;
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: { deviceId: { exact: dev.deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+                        });
+                        return { stream, activeDeviceId: dev.deviceId };
+                    } catch (err1) {
+                        try {
+                            stream = await navigator.mediaDevices.getUserMedia({
+                                video: { deviceId: { exact: dev.deviceId } }
+                            });
+                            return { stream, activeDeviceId: dev.deviceId };
+                        } catch (err2) {
+                            console.warn(`Camera ${dev.label || dev.deviceId} failed:`, err2);
+                        }
+                    }
+                }
+            }
+
+            // 4. 若 deviceId 嘗試皆無效或尚未取得裝置列表，嘗試環境鏡頭與通用視訊
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: "continuous" }] }
+                });
+                return { stream, activeDeviceId: null };
+            } catch (e) {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    return { stream, activeDeviceId: null };
+                } catch (e2) {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1920 }, height: { ideal: 1080 } } });
+                        return { stream, activeDeviceId: null };
+                    } catch (e3) {
+                        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        return { stream, activeDeviceId: null };
+                    }
+                }
+            }
+        }
+
+        window.switchCamera = async function(deviceId) {
+            if (!deviceId) return;
+            localStorage.setItem('preferredCameraDeviceId', deviceId);
+            stopCustomScanner();
+            await startCustomScanner(deviceId);
+        };
+
+        async function updateCameraSelect(activeDeviceId) {
+            const sel = document.getElementById('camera-select');
+            if (!sel || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+            try {
+                const devs = await navigator.mediaDevices.enumerateDevices();
+                const vDevs = devs.filter(d => d.kind === 'videoinput');
+                if (vDevs.length > 1) {
+                    sel.innerHTML = '';
+                    vDevs.forEach((d, idx) => {
+                        const opt = document.createElement('option');
+                        opt.value = d.deviceId;
+                        opt.text = d.label || `攝影機 ${idx + 1}`;
+                        if (activeDeviceId && d.deviceId === activeDeviceId) opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+                    sel.classList.remove('hidden');
+                } else {
+                    sel.classList.add('hidden');
+                }
+            } catch (e) {
+                console.warn("updateCameraSelect error:", e);
+            }
+        }
+
+        async function startCustomScanner(requestedDeviceId) {
             const container = document.getElementById('camera-container');
             container.classList.remove('hidden');
             
@@ -295,19 +421,11 @@
             }
             
             try {
-                // 嘗試最佳畫質與連續對焦
-                try {
-                    customVideoStream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: "continuous" }] }
-                    });
-                } catch (e) {
-                    console.warn("High quality camera request failed, falling back to basic...", e);
-                    try {
-                        customVideoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                    } catch (e2) {
-                        console.warn("Environment camera request failed, falling back to ANY camera...", e2);
-                        customVideoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    }
+                const targetDevId = requestedDeviceId || localStorage.getItem('preferredCameraDeviceId');
+                const result = await getWorkingCameraStream(targetDevId);
+                customVideoStream = result.stream;
+                if (result.activeDeviceId) {
+                    localStorage.setItem('preferredCameraDeviceId', result.activeDeviceId);
                 }
                 
                 videoEl.srcObject = customVideoStream;
@@ -316,6 +434,9 @@
                 videoEl.setAttribute('playsinline', '');
                 videoEl.setAttribute('muted', '');
                 await videoEl.play();
+                
+                // 更新相機切換選單
+                updateCameraSelect(result.activeDeviceId);
                 
                 customScanInterval = setInterval(async () => {
                     if (videoEl.readyState !== videoEl.HAVE_ENOUGH_DATA) return;
@@ -396,8 +517,44 @@
                         
                     }, 200); // 5 FPS to balance performance
             } catch (err) {
-                showAlert('提示', "無法啟動相機，請允許權限：" + err);
+                console.error("Camera startup error:", err);
+                localStorage.removeItem('preferredCameraDeviceId');
                 container.classList.add('hidden');
+
+                const isNotFound = err.name === 'NotFoundError' || 
+                                   (err.message && err.message.includes('NotFoundError')) || 
+                                   (err.toString().includes('NotFoundError')) ||
+                                   (err.toString().includes('Requested device not found'));
+
+                if (isNotFound) {
+                    Swal.fire({
+                        title: '⚠️ 找不到攝影機裝置',
+                        html: `
+                            <div style="text-align: left; font-size: 14px; line-height: 1.6; color: #334155;">
+                                <p style="margin-bottom: 12px; font-weight: bold; color: #dc2626;">
+                                    瀏覽器目前可能鎖定在已移除的「OBS 虛擬相機」，導致無法抓取真實鏡頭。
+                                </p>
+                                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                                    <div style="font-weight: bold; margin-bottom: 6px; color: #0284c7;">💡 請依下列步驟切換回實體相機：</div>
+                                    <ol style="margin-left: 20px; padding: 0; line-height: 1.8;">
+                                        <li>點擊網址列最左側的<strong>「網站資訊 / 鎖頭 🔒 / 設定」</strong>圖示。</li>
+                                        <li>找到<strong>「相機」</strong>，將其下拉選單改為 <strong>FaceTime HD 相機</strong> 或您的實體 USB 視訊鏡頭。</li>
+                                        <li>（或於 Chrome 網址列開啟 <code style="background:#e2e8f0;padding:2px 4px;border-radius:4px;">chrome://settings/content/camera</code> 更改預設相機）</li>
+                                        <li>更改後<strong>重新整理網頁</strong>，再次點擊「開啟相機」即可！</li>
+                                    </ol>
+                                </div>
+                                <div style="font-size: 12px; color: #64748b;">
+                                    ※ 提示：若剛刪除 OBS，建議將瀏覽器完全結束（Mac 按 Cmd+Q）重新開啟，讓系統徹底釋放已被刪除的虛擬鏡頭快取。
+                                </div>
+                            </div>
+                        `,
+                        icon: 'warning',
+                        confirmButtonColor: '#3b82f6',
+                        confirmButtonText: '我知道了'
+                    });
+                } else {
+                    showAlert('提示', "無法啟動相機，請允許相機權限：" + err);
+                }
             }
         }
         
