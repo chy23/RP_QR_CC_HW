@@ -7,6 +7,7 @@
         
         let appConfig = {
             gasUrl: '',
+            gasSecret: '', // 雲端 API 通行暗碼 (Access Secret)
             sheetUrl: '',
             classes: [], // { id: '...', label: '112上-三年甲班', prefix: '112上-三年甲班' }
             activeClassId: null
@@ -98,6 +99,14 @@
 
         window.getGasUrl = getGasUrl;
         window.getSheetUrl = getSheetUrl;
+
+        window.getGasAuthSecret = function() {
+            return (window.appConfig && window.appConfig.gasSecret) ||
+                   localStorage.getItem(STORAGE_PREFIX + 'gas_auth_secret') ||
+                   localStorage.getItem('gas_auth_secret') ||
+                   (document.getElementById('global-gas-secret') && document.getElementById('global-gas-secret').value.trim()) ||
+                   '';
+        };
 
         try {
             Object.defineProperty(window, 'gasUrl', {

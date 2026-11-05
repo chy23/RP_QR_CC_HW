@@ -545,6 +545,35 @@
                 <button onclick="closeChangelogModal()" class="text-white hover:bg-white/20 w-8 h-8 flex items-center justify-center rounded-full text-2xl transition-colors active:scale-95 active:opacity-80">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700">
+                <!-- Ver 3.5.0 (資安防護與個資強化升級版) -->
+                <div class="border-l-4 border-emerald-600 pl-4 py-1 mb-4">
+                    <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
+                        <span class="text-emerald-700">Ver. 3.5.0 (資安防護、API 存取通行暗碼與個資強化升級版)</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">2026/11/06 (最新發布)</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-gray-600">
+                        <li><strong>🛡️ 雲端 GAS 引擎全端 API 通行暗碼 (Access Secret) 防護：</strong>
+                            <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-500">
+                                <li><strong>杜絕非授權存取：</strong>於「0. 資料建置」新增 API 通行暗碼欄位，後端 Google Apps Script 全面啟用連線暗碼驗證機制。未持有相符暗碼者，即使知曉 GAS 網址亦無法調用名單、拉取或覆寫試算表資料。</li>
+                                <li><strong>智慧連線綁定與診斷：</strong>連線診斷流程（Ping）自動檢測雲端暗碼狀態，支援一鍵為新試算表設定並啟用暗碼保護，並提供安全密碼遮罩（防旁窺）切換功能。</li>
+                                <li><strong>家長端手札無縫相容：</strong>家長查詢手札（<code>parent.html</code>）維持以學生專屬小卡防偽 Token 進行個別資料驗證，不需管理員暗碼，安全與便利兼具。</li>
+                            </ul>
+                        </li>
+                        <li><strong>🔐 前端原始碼全面移除 School LINE Hub 硬編碼金鑰：</strong>
+                            <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-500">
+                                <li><strong>落實零洩漏原則：</strong>前端公開程式碼與設定檔中完全拔除中樞 App Secret 預設值，改由教師於操作介面自訂並儲存於本機 <code>localStorage</code>，徹底杜絕公開原始碼曝光中樞金鑰之風險。</li>
+                                <li><strong>防呆引導提示：</strong>若尚未輸入中樞 Secret 點擊發送缺交通知時，系統主動提示並定位至設定面板，避免無效請求。</li>
+                            </ul>
+                        </li>
+                        <li><strong>⏱️ 請假補交登記時間戳全面對齊與相機故障容錯：</strong>
+                            <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-500">
+                                <li>「請假補交」於 Google 試算表與親師手札完整記錄登記時間戳（<code>[請假補交] M/D H:mm</code>），準時率維持準時採計。</li>
+                                <li>相機掃描引擎支援已刪除 OBS 虛擬鏡頭之自動排除與實體相機切換選單。</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
                 <!-- Ver 3.4.3 (正式版 & Beta 同步修復) -->
                 <div class="border-l-4 border-rose-600 pl-4 py-1 mb-4">
                     <div class="flex items-center justify-between font-bold text-gray-900 text-base mb-1">
@@ -1010,8 +1039,32 @@
                         <div id="gas-url-masked-hint" class="text-xs mb-3 px-1 flex items-center justify-between">
                             <!-- 動態更新連線與遮罩狀態提示 -->
                         </div>
+
+                        <!-- 雲端 API 通行暗碼 (安全存取防護) -->
+                        <div class="mb-3 pt-2 border-t border-slate-200">
+                            <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                                <span class="flex items-center gap-1.5">
+                                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                    API 通行暗碼 (Access Secret)：
+                                </span>
+                                <span class="text-[11px] text-slate-400 font-normal">保護試算表不被他人任意調用</span>
+                            </label>
+                            <div class="relative flex items-center mb-1">
+                                <input type="password" id="global-gas-secret" placeholder="請自訂通行暗碼 (例: my-secret-2026)" autocomplete="off" data-lpignore="true" spellcheck="false" class="border p-2.5 pr-24 w-full rounded focus:ring-2 focus:ring-green-300 outline-none font-mono text-sm shadow-inner tracking-wider bg-white" onchange="saveGlobalGasSecret()">
+                                <div class="absolute right-2 flex items-center gap-1">
+                                    <button type="button" id="btn-toggle-gas-secret-visibility" onclick="toggleGasSecretVisibility()" class="px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded font-bold transition flex items-center gap-1 cursor-pointer" title="切換顯示/隱藏明碼">
+                                        <span id="gas-secret-eye-icon">👁️</span>
+                                        <span id="gas-secret-eye-text">顯示</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="gas-secret-status-hint" class="text-[11px] px-1">
+                                <!-- 動態更新暗碼防護狀態 -->
+                            </div>
+                        </div>
+
                         <div class="flex gap-2">
-                            <button onclick="saveGlobalGasUrl(true)" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded flex-grow shadow transition-colors active:scale-95 active:opacity-80">儲存網址並測試連線</button>
+                            <button onclick="saveGlobalGasUrl(true)" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded flex-grow shadow transition-colors active:scale-95 active:opacity-80">儲存網址與暗碼並測試連線</button>
                         </div>
                     </div>
                 </div>
@@ -1891,7 +1944,7 @@
                                     </div>
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-600 mb-0.5">專案接入密碼 (Secret)：</label>
-                                        <input type="password" id="line-hub-secret" value="sec_hw_demo_9823471" class="w-full border border-slate-300 rounded px-2 py-1 text-[11px] font-mono text-slate-700 bg-slate-50 focus:bg-white outline-none">
+                                        <input type="password" id="line-hub-secret" value="" placeholder="請輸入中樞 Access Secret (如: sec_xxx)" autocomplete="off" class="w-full border border-slate-300 rounded px-2 py-1 text-[11px] font-mono text-slate-700 bg-white focus:bg-white outline-none">
                                     </div>
                                 </div>
                                 <div class="flex justify-end pt-2">

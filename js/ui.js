@@ -9,6 +9,8 @@ function renderClassManager() {
         gasInput.value = appConfig.gasUrl || '';
         updateGasUrlDisplay(false);
     }
+    // 渲染設定頁面的 GAS API 通行暗碼 (安全遮罩)
+    updateGasSecretDisplay(false);
 
     // 渲染設定頁面的班級清單 (下拉選單版本)
     const container = document.getElementById('class-list-container');
@@ -133,14 +135,79 @@ function saveGasUrl() {
 }
 window.saveGasUrl = saveGasUrl;
 
+// ==========================================
+// 雲端 API 通行暗碼 (Access Secret) 管理邏輯
+// ==========================================
+function saveGlobalGasSecret() {
+    const input = document.getElementById('global-gas-secret');
+    if (!input) return;
+    const secret = input.value.trim();
+    if (!appConfig) window.appConfig = {};
+    appConfig.gasSecret = secret;
+    localStorage.setItem('gas_auth_secret', secret);
+    saveAppConfig();
+    updateGasSecretDisplay(false);
+    showToast('API 通行暗碼已儲存！', 'success');
+}
+window.saveGlobalGasSecret = saveGlobalGasSecret;
+
+function toggleGasSecretVisibility() {
+    const input = document.getElementById('global-gas-secret');
+    const icon = document.getElementById('gas-secret-eye-icon');
+    const text = document.getElementById('gas-secret-eye-text');
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) icon.innerText = '🙈';
+        if (text) text.innerText = '隱藏';
+    } else {
+        input.type = 'password';
+        if (icon) icon.innerText = '👁️';
+        if (text) text.innerText = '顯示';
+    }
+}
+window.toggleGasSecretVisibility = toggleGasSecretVisibility;
+
+function updateGasSecretDisplay(showPlain = false) {
+    const input = document.getElementById('global-gas-secret');
+    const icon = document.getElementById('gas-secret-eye-icon');
+    const text = document.getElementById('gas-secret-eye-text');
+    const hint = document.getElementById('gas-secret-status-hint');
+    const secret = (appConfig && appConfig.gasSecret) || localStorage.getItem('gas_auth_secret') || '';
+    if (input && !input.value && secret) {
+        input.value = secret;
+    }
+    if (input) {
+        input.type = showPlain ? 'text' : 'password';
+    }
+    if (icon) icon.innerText = showPlain ? '🙈' : '👁️';
+    if (text) text.innerText = showPlain ? '隱藏' : '顯示';
+    if (hint) {
+        if (secret) {
+            hint.innerHTML = `<span class="text-emerald-700 font-bold flex items-center gap-1"><span>🛡️</span><span>已啟用 API 通行暗碼防護 (${secret.length} 碼)，未授權者無法讀寫試算表。</span></span>`;
+        } else {
+            hint.innerHTML = `<span class="text-amber-700 font-bold flex items-center gap-1"><span>⚠️</span><span>尚未設定 API 通行暗碼！強烈建議在此設定一組密碼，全面保護學生名單個資。</span></span>`;
+        }
+    }
+}
+window.updateGasSecretDisplay = updateGasSecretDisplay;
+
 async function saveGlobalGasUrl(testConnection = false) {
     const input = document.getElementById('global-gas-url') || document.getElementById('gas-url');
     if (!input) return;
     const url = input.value.trim();
     appConfig.gasUrl = url;
+    
+    const secretInput = document.getElementById('global-gas-secret');
+    if (secretInput && secretInput.value.trim()) {
+        appConfig.gasSecret = secretInput.value.trim();
+        localStorage.setItem('gas_auth_secret', secretInput.value.trim());
+    }
+    
     saveAppConfig();
     window.gasUrl = url;
     updateGasUrlDisplay(false); // 儲存與連線後一律不呈現明碼，自動遮罩保護
+    updateGasSecretDisplay(false);
     
     if (testConnection) {
         if (!url) {
@@ -176,11 +243,16 @@ async function saveGlobalGasUrl(testConnection = false) {
                     
                     addStep('正在發送連線請求 (Ping)...');
                     const timestamp = new Date().getTime();
+                    const currentSecret = (appConfig.gasSecret || localStorage.getItem('gas_auth_secret') || '').trim();
                     let response;
                     try {
                         response = await fetch(url + '?t=' + timestamp, {
                             method: 'POST',
-                            body: JSON.stringify({ action: 'ping', classPrefix: getActiveClassPrefix() }),
+                            body: JSON.stringify({
+                                action: 'ping',
+                                classPrefix: getActiveClassPrefix(),
+                                authSecret: currentSecret
+                            }),
                             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
                         });
                     } catch(netErr) {
@@ -209,6 +281,29 @@ async function saveGlobalGasUrl(testConnection = false) {
                     
                     if (data.status === 'success') {
                         addStep('連線測試成功！', 'ok');
+
+                        // 驗證 API 通行暗碼狀態
+                        if (data.hasSecret) {
+                            if (data.isAuthValid) {
+                                addStep('API 通行暗碼驗證通過 (已受加密保護)', 'ok');
+                            } else {
+                                throw new Error('雲端已啟用 API 通行暗碼保護，但您輸入的暗碼不相符！請確認暗碼是否正確 (ERR-07)');
+                            }
+                        } else if (currentSecret) {
+                            addStep('正在為雲端引擎綁定 API 通行暗碼...', 'loading');
+                            const setResp = await fetch(url, {
+                                method: 'POST',
+                                body: JSON.stringify({ action: 'set_auth_secret', newSecret: currentSecret }),
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                            });
+                            const setData = await setResp.json();
+                            if (setData.status === 'success') {
+                                addStep('雲端 API 通行暗碼已自動設定並啟用！', 'ok');
+                            }
+                        } else {
+                            addStep('💡 提醒：雲端尚未設定 API 通行暗碼，建議於暗碼欄自訂一組以提升個資安全', 'ok');
+                        }
+
                         if (data.sheetUrl) {
                             addStep('已自動取得綁定之試算表...', 'ok');
                             appConfig.sheetUrl = data.sheetUrl;
@@ -226,11 +321,12 @@ async function saveGlobalGasUrl(testConnection = false) {
                         }
                         
                         updateGasUrlDisplay(false);
+                        updateGasSecretDisplay(false);
                         setTimeout(() => {
                             Swal.fire({
                                 title: '連線成功',
                                 icon: 'success',
-                                text: '系統已成功與您的雲端引擎建立連線，並自動綁定試算表！網址已自動安全遮罩保護（不呈現明碼）。'
+                                text: '系統已成功與您的雲端引擎建立連線，並自動完成安全驗證！網址與通行暗碼均已安全遮罩保護。'
                             });
                         }, 500);
                     } else {
@@ -248,7 +344,8 @@ async function saveGlobalGasUrl(testConnection = false) {
                                    1. 請確認網址有完整複製，中間不可有空格。<br>
                                    2. 部署 Apps Script 時，請務必選擇<strong>「新增部署作業」</strong>而非測試部署。<br>
                                    3. <strong>「誰可以存取」</strong>請務必選擇<strong>「所有人」</strong>，否則會出現 CORS (ERR-03/04) 阻擋。<br>
-                                   4. 修改程式碼後，請再次點擊「新增部署作業」並選擇<strong>「建立新版本」</strong>，舊版本不會自動更新。
+                                   4. 若出現 <strong>ERR-07</strong>，代表雲端試算表已設定過 API 通行暗碼，請輸入相符之暗碼。<br>
+                                   5. 修改程式碼後，請再次點擊「新增部署作業」並選擇<strong>「建立新版本」</strong>，舊版本不會自動更新。
                                    </div>`
                         });
                     }, 800);
@@ -482,10 +579,16 @@ function deleteClass(id) {
                 fetch(gasUrl, {
                     method: 'POST',
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'sync_students', students: db.students.map(s => {
-                        if (!s.salt) s.salt = generateSalt();
-                        return { id: s.id, name: s.name, token: s.token, salt: s.salt };
-                    }), config: configPayload })
+                    body: JSON.stringify({
+                        classPrefix: getActiveClassPrefix(),
+                        action: 'sync_students',
+                        authSecret: (typeof getGasAuthSecret === 'function') ? getGasAuthSecret() : '',
+                        students: db.students.map(s => {
+                            if (!s.salt) s.salt = generateSalt();
+                            return { id: s.id, name: s.name, token: s.token, salt: s.salt };
+                        }),
+                        config: configPayload
+                    })
                 }).then(res => res.json())
                   .then(data => {
                       hideLoading();
@@ -526,7 +629,11 @@ function deleteClass(id) {
             fetch(gasUrl, {
                 method: 'POST',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'get_students' })
+                body: JSON.stringify({
+                    classPrefix: getActiveClassPrefix(),
+                    action: 'get_students',
+                    authSecret: (typeof getGasAuthSecret === 'function') ? getGasAuthSecret() : ''
+                })
             }).then(res => res.json())
               .then(data => {
                   hideLoading();
@@ -631,7 +738,11 @@ function deleteClass(id) {
                 const response = await fetch(gasUrl, {
                     method: 'POST',
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({ classPrefix: getActiveClassPrefix(), action: 'pull_sync' })
+                    body: JSON.stringify({
+                        classPrefix: getActiveClassPrefix(),
+                        action: 'pull_sync',
+                        authSecret: (typeof getGasAuthSecret === 'function') ? getGasAuthSecret() : ''
+                    })
                 });
                 const data = await response.json();
                 
@@ -1381,7 +1492,11 @@ async function clearStudents() {
                 const response = await fetch(gasUrl, {
                     method: 'POST',
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({ action: 'hide_class_tabs', classPrefix: prefix })
+                    body: JSON.stringify({
+                        action: 'hide_class_tabs',
+                        classPrefix: prefix,
+                        authSecret: (typeof getGasAuthSecret === 'function') ? getGasAuthSecret() : ''
+                    })
                 });
                 const data = await response.json();
                 hideLoading();
@@ -1412,7 +1527,11 @@ async function clearStudents() {
                 const response = await fetch(gasUrl, {
                     method: 'POST',
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({ action: 'show_class_tabs', classPrefix: prefix })
+                    body: JSON.stringify({
+                        action: 'show_class_tabs',
+                        classPrefix: prefix,
+                        authSecret: (typeof getGasAuthSecret === 'function') ? getGasAuthSecret() : ''
+                    })
                 });
                 const data = await response.json();
                 hideLoading();

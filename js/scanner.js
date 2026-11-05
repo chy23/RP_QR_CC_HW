@@ -665,13 +665,16 @@
 
             updateSyncStatusBadge('syncing');
             isFlushingOfflineQueue = true;
+            const authSec = (typeof getGasAuthSecret === 'function') ? getGasAuthSecret() : ((typeof appConfig !== 'undefined' && appConfig.gasSecret) || localStorage.getItem('gas_auth_secret') || '');
             fetch(gasUrl, {
                 method: 'POST',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ classPrefix: getActiveClassPrefix(),
+                body: JSON.stringify({
+                    classPrefix: getActiveClassPrefix(),
                     action: 'full_sync',
                     records: queue,
-                    sheets: fullSyncData
+                    sheets: fullSyncData,
+                    authSecret: authSec
                 })
             }).then(res => res.json()).then(data => {
                 isFlushingOfflineQueue = false;
