@@ -849,9 +849,26 @@ function(e, ss, getSheetNames) {
       return ContentService.createTextOutput("OK").setMimeType(ContentService.MimeType.TEXT);
     }
 
+    // ==========================================
+    // 0. API 通行暗碼 (Access Secret) 驗證防護
+    // ==========================================
+    var configuredSecret = "";
+    var configSheet = ss.getSheetByName("SystemConfig");
+    if (configSheet) {
+      try {
+        var cfgStr = configSheet.getRange("A1").getValue();
+        if (cfgStr) {
+          var cfgObj = JSON.parse(cfgStr);
+          configuredSecret = (cfgObj.apiAccessSecret || cfgObj.authSecret || "").toString().trim();
+        }
+      } catch (e) {}
+    }
+
+    var clientSecret = (payload.authSecret || payload.apiKey || payload.secret || "").toString().trim();
+    var isAuthValid = (!configuredSecret) || (clientSecret === configuredSecret);
+
     if (payload.action === 'ping') {
       var config = null;
-      var configSheet = ss.getSheetByName("SystemConfig");
       if (configSheet) {
         var configStr = configSheet.getRange("A1").getValue();
         if (configStr) {
@@ -876,7 +893,42 @@ function(e, ss, getSheetNames) {
       return ContentService.createTextOutput(JSON.stringify({
         status: 'success',
         sheetUrl: ss.getUrl(),
+        hasSecret: !!configuredSecret,
+        isAuthValid: isAuthValid,
         config: disc.config
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (payload.action === 'set_auth_secret') {
+      if (configuredSecret && clientSecret !== configuredSecret) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          code: 'UNAUTHORIZED',
+          message: '❌ 原 API 通行暗碼不符合，拒絕修改！'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      var newSec = (payload.newSecret || "").toString().trim();
+      if (!configSheet) configSheet = ss.insertSheet("SystemConfig");
+      var curCfg = {};
+      try {
+        var cStr = configSheet.getRange("A1").getValue();
+        if (cStr) curCfg = JSON.parse(cStr);
+      } catch(e) {}
+      curCfg.apiAccessSecret = newSec;
+      configSheet.getRange("A1").setValue(JSON.stringify(curCfg));
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        message: 'API 通行暗碼已成功更新並啟用！'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 教師管理端所有操作：若雲端已啟用 API 通行暗碼，必須通過驗證
+    // （家長手札查詢 parent_query 例外，因其已透過學生小卡專屬 QR 防偽代碼 token 驗證）
+    if (payload.action !== 'parent_query' && configuredSecret && !isAuthValid) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        code: 'UNAUTHORIZED',
+        message: '❌ API 通行暗碼驗證失敗！拒絕存取。請確認您的「0. 資料建置」中的 API 通行暗碼是否與雲端一致。'
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
