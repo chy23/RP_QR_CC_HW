@@ -2532,6 +2532,13 @@ function renderParentTab() {
     }
 
     // 4. 自動載入 LINE 官方帳號推播與綁定狀態
+    const hubUrlInput = document.getElementById('line-hub-url');
+    const hubAppIdInput = document.getElementById('line-hub-appid');
+    const hubSecretInput = document.getElementById('line-hub-secret');
+    if (hubUrlInput) hubUrlInput.value = localStorage.getItem('line_hub_url') || (appConfig && appConfig.lineHubUrl) || DEFAULT_LINE_HUB_CONFIG.hubUrl;
+    if (hubAppIdInput) hubAppIdInput.value = localStorage.getItem('line_hub_app_id') || (appConfig && appConfig.lineHubAppId) || DEFAULT_LINE_HUB_CONFIG.appId;
+    if (hubSecretInput && !hubSecretInput.value) hubSecretInput.value = localStorage.getItem('line_hub_app_secret') || (appConfig && appConfig.lineHubAppSecret) || "";
+
     if (typeof fetchLineBindingStatus === 'function') {
         fetchLineBindingStatus();
     }
@@ -3694,7 +3701,7 @@ function copyLineInviteText() {
 const DEFAULT_LINE_HUB_CONFIG = {
     hubUrl: "https://script.google.com/macros/s/AKfycby4yrSdmztcbnmdHlGdLqqM9nBRT4vo6DwK8LmW1R-wi22qEKC_vcD-VvrDnUTp4Bm_Yg/exec",
     appId: "PROJECT_HW",
-    appSecret: "sec_hw_demo_9823471"
+    appSecret: "" // 資安強化：移除硬編碼密鑰，改由教師於本機設定儲存，不隨公開原始碼釋出
 };
 
 function getLineHubClient() {
@@ -3712,7 +3719,7 @@ function getLineHubClient() {
                      DEFAULT_LINE_HUB_CONFIG.appSecret;
 
     if (typeof LineHubClient === 'function') {
-        return new LineHubClient({ hubUrl, appId, appSecret });
+        return new LineHubClient({ hubUrl, appId, appSecret: appSecret || "" });
     }
     return null;
 }
@@ -3735,6 +3742,10 @@ async function testLineHubConnection() {
     const hub = getLineHubClient();
     if (!hub) {
         showAlert('錯誤', 'LineHubClient 客戶端尚未正確載入！');
+        return;
+    }
+    if (!hub.appSecret) {
+        showAlert('請輸入中樞密碼', '尚未設定專案接入密碼 (Secret)！請在上方「⚙️ 展開進階連線設定」輸入您的密碼並點選儲存。', 'warning');
         return;
     }
     showLoading();
@@ -3881,7 +3892,8 @@ async function fetchLineBindingStatus() {
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
                     action: 'line_get_status',
-                    classPrefix: getActiveClassPrefix()
+                    classPrefix: getActiveClassPrefix(),
+                    authSecret: (typeof getGasAuthSecret === 'function') ? getGasAuthSecret() : ''
                 })
             });
             const res = await resp.json();
@@ -4050,6 +4062,10 @@ async function executeLinePushRequest(targets) {
     const hub = getLineHubClient();
     if (!hub) {
         showAlert('提示', 'LineHubClient 客戶端尚未正確載入，請重新整理網頁！');
+        return;
+    }
+    if (!hub.appSecret) {
+        showAlert('請輸入中樞密碼', '尚未設定專案接入密碼 (Secret)！請點擊上方「⚙️ 展開進階連線設定」輸入您的密碼並儲存。', 'warning');
         return;
     }
 
@@ -4240,7 +4256,8 @@ async function unbindLineStudent(studentId, studentName) {
             body: JSON.stringify({
                 action: 'line_unbind_student',
                 classPrefix: getActiveClassPrefix(),
-                studentId: studentId
+                studentId: studentId,
+                authSecret: (typeof getGasAuthSecret === 'function') ? getGasAuthSecret() : ''
             })
         });
         const res = await resp.json();
@@ -4358,7 +4375,8 @@ async function fetchParentViewLogs(isManual = false) {
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({
                 action: 'get_parent_views',
-                classPrefix: getActiveClassPrefix()
+                classPrefix: getActiveClassPrefix(),
+                authSecret: (typeof getGasAuthSecret === 'function') ? getGasAuthSecret() : ''
             })
         });
         const res = await resp.json();
